@@ -50,6 +50,8 @@ const router = createRouter({
 
 router.beforeEach((to, from, next) => {
     NProgress.start();
+    // 调用tauri API获取是否锁定
+    
     next();
 });
 

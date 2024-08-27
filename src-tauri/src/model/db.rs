@@ -6,6 +6,7 @@ use dirs;
 
 pub type SqlitePool = Pool<SqliteConnectionManager>;
 
+#[tauri::command]
 pub fn init() -> Result<SqlitePool> {
     let db_path = db_path();
     if !db_path.exists() {

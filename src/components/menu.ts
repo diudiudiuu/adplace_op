@@ -4,40 +4,40 @@ const menus: Menus[] = [
     {
         id: '1',
         title: '服务器1',
-        index: '1',
+        index: '/project/1',
         icon: 'Platform',
         children: [
             {
                 id: '1',
                 pid: '1',
-                index: '/system1',
+                index: '/project/1',
                 title: '系统1',
             },
             {
                 id: '2',
                 pid: '1',
-                index: '/system2',
+                index: '/project/2',
                 title: '系统2',
-            }
+            },
         ]
     }, 
 
     {
         id: '2',
         title: '服务器2',
-        index: '2',
+        index: '/system3',
         icon: 'Platform',
         children: [
             {
                 id: '3',
                 pid: '2',
-                index: '/system3',
+                index: '/project/3',
                 title: '系统3',
             },
             {
                 id: '4',
                 pid: '2',
-                index: '/system4',
+                index: '/project/4',
                 title: '系统4',
             },
         ],
@@ -46,7 +46,7 @@ const menus: Menus[] = [
     {
         id: '3',
         title: '追加服务器',
-        index: '3',
+        index: '/server',
         icon: 'CirclePlusFilled',
     }, 
 ];

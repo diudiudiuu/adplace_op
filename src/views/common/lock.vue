@@ -2,7 +2,7 @@
     <div class="login-bg">
         <div class="login-container">
             <div class="login-header">
-                <img class="logo mr10" src="../../assets/img/logo.svg" alt />
+                <img class="logo mr10" src="../../assets/img/logo.png" alt />
                 <div class="login-title">后台管理系统</div>
             </div>
             <el-form :model="param" :rules="rules" ref="login" size="large">

@@ -1,4 +1,4 @@
-import { createRouter, createWebHashHistory, RouteRecordRaw } from 'vue-router';
+import { createRouter, createWebHistory, RouteRecordRaw } from 'vue-router';
 import Layout from '@/views/layout.vue';
 import NProgress from 'nprogress';
 import 'nprogress/nprogress.css';
@@ -6,7 +6,7 @@ import 'nprogress/nprogress.css';
 const routes: RouteRecordRaw[] = [
     {
         path: '/',
-        redirect: '/server-list',
+        redirect: '/server',
     },
     {
         path: '/',
@@ -14,12 +14,20 @@ const routes: RouteRecordRaw[] = [
         component: Layout,
         children: [
             {
-                path: '/server-list',
-                name: 'server-list',
+                path: '/server',
+                name: 'server',
                 meta: {
                     auth : true,
                 },
-                component: () => import(/* webpackChunkName: "server/list" */ '@/views/server/list.vue'),
+                component: () => import(/* webpackChunkName: "server/form" */ '@/views/server/form.vue'),
+            },
+            {
+                path: '/project/:id',
+                name: '/project/id',
+                meta: {
+                    auth : true,
+                },
+                component: () => import(/* webpackChunkName: "server/list" */ '@/views/project/dashboard.vue'),
             },
             {
                 path: '/theme',
@@ -44,7 +52,7 @@ const routes: RouteRecordRaw[] = [
 ];
 
 const router = createRouter({
-    history: createWebHashHistory(),
+    history: createWebHistory(),
     routes,
 });
 

@@ -6,7 +6,7 @@ use dirs;
 
 pub type SqlitePool = Pool<SqliteConnectionManager>;
 
-#[tauri::command]
+
 pub fn init() -> Result<SqlitePool> {
     let db_path = db_path();
     if !db_path.exists() {
@@ -32,7 +32,7 @@ pub fn init() -> Result<SqlitePool> {
 // 获取数据库路径 同级目录下的 db.sqlite
 fn db_path() -> PathBuf {
     let mut path = dirs::data_dir().unwrap_or_else(|| PathBuf::from("."));
-    // path.push("todo");
+    path.push("todo");
     
     // 确保目录存在
     std::fs::create_dir_all(&path).expect("Failed to create database directory");

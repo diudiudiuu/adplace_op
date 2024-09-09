@@ -1,6 +1,9 @@
 
-// 调用 model server 查询列表, 并注解出去
-use model::server;
+use crate::tools::json;
 
-// #[tauri::command]
-// pub fn list_servers() 
+#[tauri::command]
+pub fn list() -> String {
+    let data = json::load_json_file();
+    data
+}
+

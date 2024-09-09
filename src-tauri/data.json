@@ -1,0 +1,18 @@
+[
+    {
+        "server_name": "Server 1",
+        "server_ip": "",
+        "server_port": "",
+        "server_user": "",
+        "server_password": "",
+        "project_list": [
+            {
+                "project_name": "Project 1",
+                "project_path": "",
+                "project_command": "",
+                "project_env": "",
+                "project_args": ""
+            }
+        ]
+    }
+]

@@ -1,4 +1,5 @@
 import { Menus } from '@/types/menu';
+import api from '@/api';
 
 const menus: Menus[] = [
     {
@@ -53,6 +54,8 @@ const menus: Menus[] = [
 
 
 const getMenus = () => {
+    console.log('getMenus');
+    console.log(api('list'));
     return menus;
 }
 

@@ -1,22 +1,15 @@
-import request from '../utils/request';
+import { invoke } from '@tauri-apps/api'
+import { InvokeArgs } from '@tauri-apps/api/tauri'
 
-export const fetchData = () => {
-    return request({
-        url: './mock/table.json',
-        method: 'get'
-    });
-};
+// promise api 调用 tauri api
+const api = async (uri: string, data: InvokeArgs | undefined) => {
+    try {
+        const response = await invoke(uri, data)
+        return response
+    } catch (error) {
+        console.error(error)
+    }
+}
 
-export const fetchUserData = () => {
-    return request({
-        url: './mock/user.json',
-        method: 'get'
-    });
-};
 
-export const fetchRoleData = () => {
-    return request({
-        url: './mock/role.json',
-        method: 'get'
-    });
-};
+export default api

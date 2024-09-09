@@ -55,7 +55,10 @@ const menus: Menus[] = [
 
 const getMenus = () => {
     console.log('getMenus');
-    console.log(api('list'));
+    console.log(api('list').then((res) => {
+        console.log(res);
+    }
+    ));
     return menus;
 }
 

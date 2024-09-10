@@ -29,13 +29,13 @@
                                     v-for="(threeItem, i) in subItem.children"
                                     :key="i"
                                     :index="threeItem.index"
-                                >
-                                    {{ threeItem.title }}
-                                </el-menu-item>
+                                >{{ threeItem.title }}</el-menu-item>
                             </el-sub-menu>
-                            <el-menu-item v-else :index="subItem.index" v-permiss="item.id">
-                                {{ subItem.title }}
-                            </el-menu-item>
+                            <el-menu-item
+                                v-else
+                                :index="subItem.index"
+                                v-permiss="item.id"
+                            >{{ subItem.title }}</el-menu-item>
                         </template>
                     </el-sub-menu>
                 </template>
@@ -53,17 +53,17 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
-import { useSidebarStore } from '../store/sidebar';
-import { useRoute } from 'vue-router';
-import { menuData } from '@/components/menu';
+import { computed } from 'vue'
+import { useSidebarStore } from '../store/sidebar'
+import { useRoute } from 'vue-router'
+import { menuData } from '@/components/menu'
 
-const route = useRoute();
+const route = useRoute()
 const onRoutes = computed(() => {
-    return route.path;
-});
+    return route.path
+})
 
-const sidebar = useSidebarStore();
+const sidebar = useSidebarStore()
 </script>
 
 <style scoped>

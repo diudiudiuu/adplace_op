@@ -1,17 +1,51 @@
 [
     {
-        "server_name": "Server 1",
+        "server_id": "s1",
+        "server_name": "服务器111",
         "server_ip": "",
         "server_port": "",
         "server_user": "",
         "server_password": "",
         "project_list": [
             {
+                "project_id": "s1p1",
+                "project_name": "测试项目",
+                "project_path": "u1s1"
+            },
+            {
+                "project_id": "s1p2",
+                "project_name": "y8hwe",
+                "project_path": "y8hwe"
+            },
+            {
+                "project_id": "s1p3",
                 "project_name": "Project 1",
-                "project_path": "",
-                "project_command": "",
-                "project_env": "",
-                "project_args": ""
+                "project_path": "ikunfans"
+            }
+        ]
+    },
+    {
+        "server_id": "s2",
+        "server_name": "服务器222",
+        "server_ip": "",
+        "server_port": "",
+        "server_user": "",
+        "server_password": "",
+        "project_list": [
+            {
+                "project_id": "s2p1",
+                "project_name": "测试项目",
+                "project_path": "u1s1"
+            },
+            {
+                "project_id": "s2p2",
+                "project_name": "y8hwe",
+                "project_path": "y8hwe"
+            },
+            {
+                "project_id": "s2p3",
+                "project_name": "Project 1",
+                "project_path": "ikunfans"
             }
         ]
     }

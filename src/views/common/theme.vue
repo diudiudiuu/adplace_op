@@ -5,9 +5,12 @@
                 <div class="content-title">系统主题</div>
             </template>
             <div class="theme-list mgb20">
-                <div class="theme-item" @click="setSystemTheme(item)" v-for="item in system"
-                    :style="{ backgroundColor: item.color, color: '#fff' }">{{ item.name }}
-                </div>
+                <div
+                    class="theme-item"
+                    @click="setSystemTheme(item)"
+                    v-for="item in system"
+                    :style="{ backgroundColor: item.color, color: '#fff' }"
+                >{{ item.name }}</div>
             </div>
             <div class="flex-center">
                 <el-button @click="resetSystemTheme">重置主题</el-button>
@@ -39,14 +42,18 @@
                         <div class="theme-item">
                             <el-button :color="color.headerBgColor">背景颜色</el-button>
                             <div class="theme-color">{{ color.headerBgColor }}</div>
-                            <el-color-picker v-model="color.headerBgColor"
-                                @change="themeStore.setHeaderBgColor(color.headerBgColor)" />
+                            <el-color-picker
+                                v-model="color.headerBgColor"
+                                @change="themeStore.setHeaderBgColor(color.headerBgColor)"
+                            />
                         </div>
                         <div class="theme-item">
                             <el-button :color="color.headerTextColor">文字颜色</el-button>
                             <div class="theme-color">{{ color.headerTextColor }}</div>
-                            <el-color-picker v-model="color.headerTextColor"
-                                @change="themeStore.setHeaderTextColor(color.headerTextColor)" />
+                            <el-color-picker
+                                v-model="color.headerTextColor"
+                                @change="themeStore.setHeaderTextColor(color.headerTextColor)"
+                            />
                         </div>
                     </div>
                     <div class="flex-center">
@@ -64,14 +71,18 @@
                         <div class="theme-item">
                             <el-button :color="sidebar.bgColor">背景颜色</el-button>
                             <div class="theme-color">{{ sidebar.bgColor }}</div>
-                            <el-color-picker v-model="sidebarColor.bgColor"
-                                @change="sidebar.setBgColor(sidebarColor.bgColor)" />
+                            <el-color-picker
+                                v-model="sidebarColor.bgColor"
+                                @change="sidebar.setBgColor(sidebarColor.bgColor)"
+                            />
                         </div>
                         <div class="theme-item">
                             <el-button :color="sidebar.textColor">文字颜色</el-button>
                             <div class="theme-color">{{ sidebar.textColor }}</div>
-                            <el-color-picker v-model="sidebarColor.textColor"
-                                @change="sidebar.setTextColor(sidebarColor.textColor)" />
+                            <el-color-picker
+                                v-model="sidebarColor.textColor"
+                                @change="sidebar.setTextColor(sidebarColor.textColor)"
+                            />
                         </div>
                     </div>
                     <div class="flex-center">
@@ -80,16 +91,15 @@
                 </el-card>
             </el-col>
         </el-row>
-
     </div>
 </template>
 
 <script setup lang="ts">
-import { useSidebarStore } from '@/store/sidebar';
+import { useSidebarStore } from '@/store/sidebar'
 import { useThemeStore } from '@/store/theme'
-import { reactive } from 'vue';
-const themeStore = useThemeStore();
-const sidebar = useSidebarStore();
+import { reactive } from 'vue'
+const themeStore = useThemeStore()
+const sidebar = useSidebarStore()
 
 const color = reactive({
     primary: localStorage.getItem('theme-primary') || '#409eff',
@@ -102,29 +112,29 @@ const color = reactive({
 })
 const sidebarColor = reactive({
     bgColor: sidebar.bgColor,
-    textColor: sidebar.textColor
+    textColor: sidebar.textColor,
 })
 const themes = [
     {
         name: 'primary',
-        color: themeStore.primary || color.primary
+        color: themeStore.primary || color.primary,
     },
     {
         name: 'success',
-        color: themeStore.success || color.success
+        color: themeStore.success || color.success,
     },
     {
         name: 'warning',
-        color: themeStore.warning || color.warning
+        color: themeStore.warning || color.warning,
     },
     {
         name: 'danger',
-        color: themeStore.danger || color.danger
+        color: themeStore.danger || color.danger,
     },
     {
         name: 'info',
-        color: themeStore.info || color.info
-    }
+        color: themeStore.info || color.info,
+    },
 ]
 
 const changeColor = (name: string) => {
@@ -147,24 +157,24 @@ const resetSidebar = () => {
 const system = [
     {
         name: '默认',
-        color: '#242f42'
+        color: '#242f42',
     },
     {
         name: '健康',
-        color: '#1ABC9C'
+        color: '#1ABC9C',
     },
     {
         name: '优雅',
-        color: '#722ed1'
+        color: '#722ed1',
     },
     {
         name: '热情',
-        color: '#f44336'
+        color: '#f44336',
     },
     {
         name: '宁静',
-        color: '#00bcd4'
-    }
+        color: '#00bcd4',
+    },
 ]
 const setSystemTheme = (data: any) => {
     if (data.name === '默认') {
@@ -178,9 +188,9 @@ const setSystemTheme = (data: any) => {
     }
 }
 const resetSystemTheme = () => {
-    resetTheme();
-    resetHeader();
-    resetSidebar();
+    resetTheme()
+    resetHeader()
+    resetSidebar()
 }
 </script>
 

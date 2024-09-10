@@ -16,17 +16,11 @@
     </div>
 </template>
 <script setup lang="ts">
-import { invoke } from '@tauri-apps/api'
-
 import { useSidebarStore } from '@/store/sidebar'
 import vHeader from '@/components/header.vue'
 import vSidebar from '@/components/sidebar.vue'
 
 const sidebar = useSidebarStore()
-
-invoke('greet', { name: 'World' })
-    // `invoke` 返回的是一个 Promise
-    .then((response) => console.log(response))
 </script>
 
 <style>

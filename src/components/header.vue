@@ -20,6 +20,12 @@
                     </el-tooltip>
                 </div>
 
+                <div class="btn-icon" @click="router.push('/lock')">
+                    <el-tooltip effect="dark" content="锁屏" placement="bottom">
+                        <i class="el-icon-lx-lock"></i>
+                    </el-tooltip>
+                </div>
+
                 <!-- 用户头像 -->
                 <el-avatar class="user-avator" :size="30" :src="imgurl" />
                 <!-- 用户名下拉菜单 -->

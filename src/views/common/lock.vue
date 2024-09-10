@@ -2,23 +2,13 @@
     <div class="login-bg">
         <div class="login-container">
             <div class="login-header">
-                <img class="logo mr10" src="../../assets/img/logo.png" alt />
-                <div class="login-title">后台管理系统</div>
+                <div class="login-title">服务器管理</div>
             </div>
             <el-form :model="param" :rules="rules" ref="login" size="large">
-                <el-form-item prop="username">
-                    <el-input v-model="param.username" placeholder="用户名">
-                        <template #prepend>
-                            <el-icon>
-                                <User />
-                            </el-icon>
-                        </template>
-                    </el-input>
-                </el-form-item>
                 <el-form-item prop="password">
                     <el-input
                         type="password"
-                        placeholder="密码"
+                        placeholder="请输入锁屏幕密码"
                         v-model="param.password"
                         @keyup.enter="submitForm(login)"
                     >
@@ -35,7 +25,7 @@
                     type="primary"
                     size="large"
                     @click="submitForm(login)"
-                >登录</el-button>
+                >解锁</el-button>
             </el-form>
         </div>
     </div>
@@ -48,7 +38,6 @@ import { ElMessage } from 'element-plus'
 import type { FormInstance, FormRules } from 'element-plus'
 
 interface LoginInfo {
-    username: string
     password: string
 }
 
@@ -57,31 +46,20 @@ const defParam = lgStr ? JSON.parse(lgStr) : null
 
 const router = useRouter()
 const param = reactive<LoginInfo>({
-    username: defParam ? defParam.username : '',
     password: defParam ? defParam.password : '',
 })
 
 const rules: FormRules = {
-    username: [
-        {
-            required: true,
-            message: '请输入用户名',
-            trigger: 'blur',
-        },
-    ],
-    password: [{ required: true, message: '请输入密码', trigger: 'blur' }],
+    password: [{ required: true, message: '请输入锁屏密码', trigger: 'blur' }],
 }
 
 const login = ref<FormInstance>()
 const submitForm = (formEl: FormInstance | undefined) => {
     if (!formEl) return
-    formEl.validate((valid: boolean) => {
+    formEl.validate((valid: boolean): void => {
         if (valid) {
-            ElMessage.success('登录成功')
+            ElMessage.success('解锁成功')
             router.push('/')
-        } else {
-            ElMessage.error('登录失败')
-            return false
         }
     })
 }

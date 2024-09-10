@@ -4,7 +4,7 @@
             <el-button text bg type="primary">
                 <i class="el-icon-lx-roundaddfill"></i> 新增
             </el-button>
-            <el-button text bg type="success">
+            <el-button text bg type="success" @click="handleReflash">
                 <i class="el-icon-lx-refresh"></i>刷新
             </el-button>
         </div>
@@ -23,7 +23,7 @@
                         </el-button>
                     </el-tooltip>
                     <el-tooltip content="删除" placement="top-start" :hide-after="0">
-                        <el-button text bg type="danger" size="small">
+                        <el-button text bg type="danger" size="small" @click="handleDelete">
                             <i class="el-icon-lx-deletefill"></i>
                         </el-button>
                     </el-tooltip>
@@ -44,6 +44,8 @@
 </template>
 <script lang="ts" setup>
 import { ref } from 'vue'
+import { defineProps } from 'vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import api from '@/api'
 
 // 定义接受 projectId 的 props
@@ -55,13 +57,44 @@ const props = defineProps({
 })
 // 定义域名列表
 const tableData = ref([])
-api('exec', {
-    projectId: props.projectId,
-    sql: 'select * from tb_domain',
-    sqlType: 'select_list',
-}).then((res: any) => {
-    tableData.value = res.data.result
-})
+const getDomainList = () => {
+    api('exec', {
+        projectId: props.projectId,
+        sql: 'select * from tb_domain',
+        sqlType: 'select_list',
+    }).then((res: any) => {
+        tableData.value = res.data.result
+    })
+}
+getDomainList()
+
+const handleReflash = () => {
+    getDomainList()
+}
+
+const delDomain = (id: string) => {
+    api('exec', {
+        projectId: props.projectId,
+        sql: `delete from tb_domain where id = ${id}`,
+        sqlType: 'delete',
+    }).then((res: any) => {
+        ElMessage.success('删除成功')
+        getDomainList()
+    })
+}
+
+const handleDelete = () => {
+    // 二次确认
+    ElMessageBox.confirm('此操作将永久删除该域名, 是否继续?', '提示', {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning',
+    })
+        .then(() => {
+            delDomain(2)
+        })
+        .catch(() => {})
+}
 </script>
 
 <style scoped>

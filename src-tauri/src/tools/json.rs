@@ -2,6 +2,8 @@
 use std::fs::File;
 use std::io::prelude::*;
 use std::path::PathBuf;
+use serde_json::{Value};
+
 
 
 // 加载当前目录下的json文件 返回json 数据
@@ -13,6 +15,35 @@ pub fn load_json_file() -> String {
     let data = read(file_path);
     data
 }
+
+// 根据 project_id 获取项目信息
+pub fn get_project_by_id(project_id: &str) -> Option<String> {
+    let data = load_json_file();
+    // 将 JSON 字符串转换为 JSON 对象
+    let json: Value = serde_json::from_str(&data).ok()?; // 安全地解析 JSON
+
+    // 检查 JSON 是否是一个数组
+    if let Some(servers) = json.as_array() {
+        // 循环 JSON 数组
+        for server in servers {
+            // 检查 "project_list" 是否是一个数组
+            if let Some(project_list) = server["project_list"].as_array() {
+                // 循环 project_list 数组
+                for project in project_list {
+                    // 判断是否是当前项目
+                    if let Some(id) = project["project_id"].as_str() {
+                        if id == project_id {
+                            return Some(project.to_string()); // 返回找到的项目
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    None // 如果没有找到，返回 None
+}
+
 
 // 读取文件
 fn read(file_path: PathBuf) -> String {

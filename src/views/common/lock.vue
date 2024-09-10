@@ -6,12 +6,7 @@
             </div>
             <el-form :model="param" :rules="rules" ref="login" size="large">
                 <el-form-item prop="password">
-                    <el-input
-                        type="password"
-                        placeholder="请输入锁屏幕密码"
-                        v-model="param.password"
-                        @keyup.enter="submitForm(login)"
-                    >
+                    <el-input type="password" placeholder="请输入锁屏幕密码" v-model="param.password">
                         <template #prepend>
                             <el-icon>
                                 <Lock />

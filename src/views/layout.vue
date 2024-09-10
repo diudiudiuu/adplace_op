@@ -4,7 +4,7 @@
         <v-sidebar />
         <div class="content-box" :class="{ 'content-collapse': sidebar.collapse }">
             <div class="content">
-                <router-view v-slot="{ Component }">
+                <router-view v-slot="{ Component }" :key="$route.fullPath">
                     <transition name="move" mode="out-in">
                         <keep-alive>
                             <component :is="Component"></component>
@@ -37,7 +37,7 @@ const sidebar = useSidebarStore()
     padding-bottom: 30px;
     -webkit-transition: left 0.3s ease-in-out;
     transition: left 0.3s ease-in-out;
-    background: #eef0fc;
+    background: #ffffff;
     overflow: hidden;
 }
 

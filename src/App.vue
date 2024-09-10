@@ -1,6 +1,6 @@
 <template>
     <el-config-provider :locale="zhCn">
-        <router-view :key="$route.fullPath" />
+        <router-view />
     </el-config-provider>
 </template>
 

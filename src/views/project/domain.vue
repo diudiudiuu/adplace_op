@@ -23,7 +23,13 @@
                         </el-button>
                     </el-tooltip>
                     <el-tooltip content="删除" placement="top-start" :hide-after="0">
-                        <el-button text bg type="danger" size="small" @click="handleDelete">
+                        <el-button
+                            text
+                            bg
+                            type="danger"
+                            size="small"
+                            @click="handleDelete(scope.row)"
+                        >
                             <i class="el-icon-lx-deletefill"></i>
                         </el-button>
                     </el-tooltip>
@@ -83,7 +89,7 @@ const delDomain = (id: string) => {
     })
 }
 
-const handleDelete = () => {
+const handleDelete = (row): void => {
     // 二次确认
     ElMessageBox.confirm('此操作将永久删除该域名, 是否继续?', '提示', {
         confirmButtonText: '确定',
@@ -91,7 +97,7 @@ const handleDelete = () => {
         type: 'warning',
     })
         .then(() => {
-            delDomain(2)
+            delDomain(row.id)
         })
         .catch(() => {})
 }

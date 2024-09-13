@@ -20,7 +20,7 @@ serde = { version = "1.0", features = ["derive"] }
 tauri = { version = "1.7.0", features = [] }
 reqwest = "0.12.7"
 tokio = "1.40.0"
-ed25519-dalek = "2.1.1"
+ed25519-dalek = { version = "2.1.1", features = ["digest"] }
 hex = "0.4.3"
 hex-literal = "0.4.1"
 sha2 = "0.10.8"

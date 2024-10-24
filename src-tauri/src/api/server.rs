@@ -1,6 +1,5 @@
 
 use crate::tools::json;
-use crate::tools::eddsa;
 use reqwest;
 use tokio::runtime::Runtime;
 
@@ -38,10 +37,8 @@ pub fn exec(project_id: String, sql: String, sql_type: String) -> String {
         // 向这个地址发送post 表单请求 
         let url = format!("{}/dbexec", project_api_url);
 
-        let signature = eddsa::signature(&sql);
         let params = [
             ("sql", sql),
-            ("signature", signature),
             ("sql_type", sql_type),
         ];
         let client = reqwest::Client::new();

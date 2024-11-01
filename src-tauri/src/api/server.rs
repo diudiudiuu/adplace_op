@@ -14,6 +14,14 @@ pub fn list() -> String {
 }
 
 #[tauri::command]
+// 服务器详情
+pub fn server_info(server_id: String) -> String {
+    // 根据服务器ID获取服务器信息
+    let data = json::get_server_by_id(&server_id);
+    data.unwrap_or("{}".to_string())
+}
+
+#[tauri::command]
 // 项目详情
 pub fn project_info(project_id: String) -> String {
     // 根据项目ID获取项目信息

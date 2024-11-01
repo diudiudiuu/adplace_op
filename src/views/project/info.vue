@@ -17,6 +17,14 @@
                 <template #label>API链接</template>
                 {{ projectInfo.project_api_url }}
             </el-descriptions-item>
+            <el-descriptions-item>
+                <template #label>API端口</template>
+                {{ projectInfo.api_port }}
+            </el-descriptions-item>
+            <el-descriptions-item>
+                <template #label>Front端口</template>
+                {{ projectInfo.front_port }}
+            </el-descriptions-item>
         </el-descriptions>
     </div>
 </template>
@@ -37,11 +45,14 @@ const projectInfo = ref({
     project_path: '',
     project_web_url: '',
     project_api_url: '',
+    api_port: '',
+    front_port: '',
 })
 
 api('project_info', {
     projectId: props.projectId,
 }).then((res: any) => {
+    console.log(res)
     projectInfo.value = res
 })
 </script>

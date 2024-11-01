@@ -12,21 +12,27 @@
                 "project_name": "测试项目",
                 "project_path": "u1s1",
                 "project_web_url": "https://www.baidu.com/",
-                "project_api_url": "http://localhost:8848/v1"
+                "project_api_url": "http://localhost:8848/v1",
+                "api_port": 3000,
+                "front_port": 3000
             },
             {
                 "project_id": "s1p2",
                 "project_name": "y8hwe",
                 "project_path": "y8hwe",
                 "project_web_url": "http://localhost:8080",
-                "project_api_url": "http://localhost:8848/v1"
+                "project_api_url": "http://localhost:8848/v1",
+                "api_port": 3000,
+                "front_port": 3000
             },
             {
                 "project_id": "s1p3",
                 "project_name": "Project 1",
                 "project_path": "ikunfans",
                 "project_web_url": "http://localhost:8080",
-                "project_api_url": "http://localhost:8848/v1"
+                "project_api_url": "http://localhost:8848/v1",
+                "api_port": 3000,
+                "front_port": 3000
             }
         ]
     },
@@ -43,21 +49,27 @@
                 "project_name": "测试项目",
                 "project_path": "u1s1",
                 "project_web_url": "http://localhost:8080",
-                "project_api_url": "http://localhost:8848/v1"
+                "project_api_url": "http://localhost:8848/v1",
+                "api_port": 3000,
+                "front_port": 3000
             },
             {
                 "project_id": "s2p2",
                 "project_name": "y8hwe",
                 "project_path": "y8hwe",
                 "project_web_url": "http://localhost:8080",
-                "project_api_url": "http://localhost:8848/v1"
+                "project_api_url": "http://localhost:8848/v1",
+                "api_port": 3000,
+                "front_port": 3000
             },
             {
                 "project_id": "s2p3",
                 "project_name": "Project 1",
                 "project_path": "ikunfans",
                 "project_web_url": "http://localhost:8080",
-                "project_api_url": "http://localhost:8848/v1"
+                "project_api_url": "http://localhost:8848/v1",
+                "api_port": 3000,
+                "front_port": 3000
             }
         ]
     }

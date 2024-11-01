@@ -6,7 +6,7 @@ import 'nprogress/nprogress.css';
 const routes: RouteRecordRaw[] = [
     {
         path: '/',
-        redirect: '/server',
+        redirect: '/server_form',
     },
     {
         path: '/',
@@ -14,8 +14,8 @@ const routes: RouteRecordRaw[] = [
         component: Layout,
         children: [
             {
-                path: '/server',
-                name: 'server',
+                path: '/server_form',
+                name: 'server_form',
                 meta: {
                     auth : true,
                 },

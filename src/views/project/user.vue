@@ -1,10 +1,10 @@
 <template>
     <div>
         <div class="search-box">
-            <el-button text bg type="primary" @click="openAddForm">
+            <el-button text bg type="primary" @click="openForm(false)">
                 <i class="el-icon-lx-roundaddfill"></i> 新增
             </el-button>
-            <el-button text bg type="success" @click="handleRefresh">
+            <el-button text bg type="success" @click="refreshData">
                 <i class="el-icon-lx-refresh"></i> 刷新
             </el-button>
         </div>
@@ -15,7 +15,7 @@
             header-cell-class-name="table-header"
             stripe
         >
-            <el-table-column label="操作" fixed width="240" align="left">
+            <el-table-column label="操作" fixed align="left">
                 <template #default="scope">
                     <el-tooltip content="编辑" placement="top-start" :hide-after="0">
                         <el-button
@@ -23,7 +23,7 @@
                             bg
                             type="primary"
                             size="small"
-                            @click="openEditForm(scope.row)"
+                            @click="openForm(true, scope.row)"
                         >
                             <i class="el-icon-lx-edit"></i>
                         </el-button>
@@ -34,7 +34,7 @@
                             bg
                             type="danger"
                             size="small"
-                            @click="handleDelete(scope.row)"
+                            @click="confirmDelete(scope.row)"
                         >
                             <i class="el-icon-lx-deletefill"></i>
                         </el-button>
@@ -42,126 +42,116 @@
                 </template>
             </el-table-column>
             <el-table-column
-                v-for="col in columns"
-                :key="col.prop"
-                :prop="col.prop"
-                :label="col.label"
+                v-for="field in fields"
+                :key="field"
+                :prop="field"
+                :label="field"
                 align="center"
-                :width="colWidth"
-            ></el-table-column>
+            />
         </el-table>
 
-        <!-- Add/Edit Form Modal -->
-        <el-dialog :title="isEditMode ? '编辑条目' : '新增条目'" :visible.sync="isFormVisible" width="50%">
+        <el-dialog :title="isEditMode ? '编辑条目' : '新增条目'" v-model="isFormVisible" width="50%">
             <el-form :model="formData" label-width="100px">
-                <el-form-item v-for="field in columns" :key="field.prop" :label="field.label">
-                    <el-input v-model="formData[field.prop]" />
+                <el-form-item
+                    v-for="field in fields"
+                    :key="field"
+                    :label="field"
+                    v-if="shouldShowField(field)"
+                >
+                    <el-input
+                        v-model="formData[field]"
+                        :disabled="isPrimaryKey(field) && isEditMode"
+                    />
                 </el-form-item>
             </el-form>
             <div slot="footer" class="dialog-footer">
                 <el-button @click="isFormVisible = false">取消</el-button>
                 <el-button
                     type="primary"
-                    @click="isEditMode ? submitEditForm() : submitAddForm()"
+                    @click="isEditMode ? submitForm('update') : submitForm('insert')"
                 >提交</el-button>
             </div>
         </el-dialog>
     </div>
 </template>
-  
-  <script lang="ts" setup>
+
+<script lang="ts" setup>
 import { ref, onMounted } from 'vue'
 import { defineProps } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import api from '@/api'
+import auth_user from '@/model/auth_user'
 
 const props = defineProps({
-    projectId: {
-        type: String,
-        required: true,
-    },
+    projectId: { type: String, required: true },
 })
 
+const userModel = new auth_user()
 const tableData = ref([])
-const columns = ref([])
 const formData = ref({})
 const isFormVisible = ref(false)
 const isEditMode = ref(false)
-const colWidth = 'auto' // Set column width to auto
 
-// Fetch data and set up columns dynamically
-const getDataList = () => {
-    api('exec', {
+const fields = userModel.fields
+const primaryKey = userModel.primaryKey
+
+const fetchData = async () => {
+    const res = await api('exec', {
         projectId: props.projectId,
-        sql: 'select * from tb_auth_user',
+        sql: userModel.select_list(),
         sqlType: 'select_list',
-    }).then((res: any) => {
-        tableData.value = res.data.result
-        if (tableData.value.length > 0) {
-            columns.value = Object.keys(tableData.value[0]).map((key) => ({
-                prop: key,
-                label: key, // Keep labels as they are in JSON response
-            }))
-        }
     })
+    tableData.value = res.data.result
 }
-onMounted(getDataList)
+onMounted(fetchData)
 
-const handleRefresh = () => {
-    getDataList()
+const refreshData = () => fetchData()
+
+const isPrimaryKey = (field) => field === primaryKey
+const shouldShowField = (field) => isEditMode.value || field !== primaryKey
+
+const openForm = (editMode, row = {}) => {
+    isEditMode.value = editMode
+    formData.value = { ...row }
+    userModel.formData = formData.value
+    isFormVisible.value = true
 }
 
-// Delete item function
-const handleDelete = (row) => {
+const confirmDelete = (row) => {
     ElMessageBox.confirm('此操作将永久删除该项, 是否继续?', '提示', {
         confirmButtonText: '确定',
         cancelButtonText: '取消',
         type: 'warning',
     })
-        .then(() => {
-            api('exec', {
-                projectId: props.projectId,
-                sql: `delete from tb_data where id = ${row.id}`,
-                sqlType: 'delete',
-            }).then(() => {
-                ElMessage.success('删除成功')
-                getDataList()
-            })
-        })
+        .then(() => deleteEntry(row))
         .catch(() => {})
 }
 
-// Open the form in add or edit mode
-const openAddForm = () => {
-    formData.value = {}
-    isEditMode.value = false
-    isFormVisible.value = true
+const deleteEntry = async (row) => {
+    userModel.formData = row
+    await api('exec', {
+        projectId: props.projectId,
+        sql: userModel.delete(),
+        sqlType: 'delete',
+    })
+    ElMessage.success('删除成功')
+    fetchData()
 }
 
-const openEditForm = (row) => {
-    formData.value = { ...row }
-    isEditMode.value = true
-    isFormVisible.value = true
-}
-
-// Submit add form
-const submitAddForm = () => {
-    // Call API to add a new item (logic to be implemented as needed)
-    ElMessage.success('添加成功')
+const submitForm = async (action) => {
+    userModel.formData = formData.value
+    await api('exec', {
+        projectId: props.projectId,
+        sql: action === 'insert' ? userModel.insert() : userModel.update(),
+        sqlType: action,
+    })
+    ElMessage.success(action === 'insert' ? '添加成功' : '编辑成功')
     isFormVisible.value = false
-    getDataList()
-}
-
-// Submit edit form
-const submitEditForm = () => {
-    // Call API to edit the item (logic to be implemented as needed)
-    ElMessage.success('编辑成功')
-    isFormVisible.value = false
-    getDataList()
+    fetchData()
 }
 </script>
-  
-  <style scoped>
+
+<style scoped>
 .search-box {
     margin-bottom: 20px;
 }
@@ -169,4 +159,3 @@ const submitEditForm = () => {
     width: 100%;
 }
 </style>
-  

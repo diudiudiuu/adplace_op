@@ -58,10 +58,22 @@
                     :label="field"
                     v-if="shouldShowField(field)"
                 >
-                    <el-input
-                        v-model="formData[field]"
-                        :disabled="isPrimaryKey(field) && isEditMode"
-                    />
+                    <template v-if="fieldsType[field]['type'] === 'enum'">
+                        <el-select v-model="formData[field]">
+                            <el-option
+                                v-for="item in fieldsType[field]['value']"
+                                :key="item"
+                                :label="item"
+                                :value="item"
+                            />
+                        </el-select>
+                    </template>
+                    <template v-else>
+                        <el-input
+                            v-model="formData[field]"
+                            :disabled="isPrimaryKey(field) && isEditMode"
+                        />
+                    </template>
                 </el-form-item>
             </el-form>
             <div slot="footer" class="dialog-footer">
@@ -76,29 +88,30 @@
 </template>
 
 <script lang="ts" setup>
-import { ref, onMounted } from 'vue'
-import { defineProps } from 'vue'
+import { ref, onMounted, defineProps } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import api from '@/api'
-import auth_user from '@/model/auth_user'
 
 const props = defineProps({
+    model: { type: Object, required: true },
     projectId: { type: String, required: true },
 })
 
-const userModel = new auth_user()
 const tableData = ref([])
 const formData = ref({})
 const isFormVisible = ref(false)
 const isEditMode = ref(false)
 
-const fields = userModel.fields
-const primaryKey = userModel.primaryKey
+const fields = props.model.fields
+const fieldsType = props.model.fieldsType
+console.log('fields', fields)
+console.log('fieldsType', fieldsType)
+const primaryKey = props.model.primaryKey
 
 const fetchData = async () => {
     const res = await api('exec', {
         projectId: props.projectId,
-        sql: userModel.select_list(),
+        sql: props.model.select_list(),
         sqlType: 'select_list',
     })
     tableData.value = res.data.result
@@ -113,7 +126,7 @@ const shouldShowField = (field) => isEditMode.value || field !== primaryKey
 const openForm = (editMode, row = {}) => {
     isEditMode.value = editMode
     formData.value = { ...row }
-    userModel.formData = formData.value
+    props.model.formData = formData.value
     isFormVisible.value = true
 }
 
@@ -128,10 +141,10 @@ const confirmDelete = (row) => {
 }
 
 const deleteEntry = async (row) => {
-    userModel.formData = row
+    props.model.formData = row
     await api('exec', {
         projectId: props.projectId,
-        sql: userModel.delete(),
+        sql: props.model.delete(),
         sqlType: 'delete',
     })
     ElMessage.success('删除成功')
@@ -139,10 +152,10 @@ const deleteEntry = async (row) => {
 }
 
 const submitForm = async (action) => {
-    userModel.formData = formData.value
+    props.model.formData = formData.value
     await api('exec', {
         projectId: props.projectId,
-        sql: action === 'insert' ? userModel.insert() : userModel.update(),
+        sql: action === 'insert' ? props.model.insert() : props.model.update(),
         sqlType: action,
     })
     ElMessage.success(action === 'insert' ? '添加成功' : '编辑成功')

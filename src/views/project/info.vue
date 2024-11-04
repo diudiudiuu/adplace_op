@@ -11,7 +11,7 @@
             </el-descriptions-item>
             <el-descriptions-item>
                 <template #label>管理端链接</template>
-                {{ projectInfo.project_web_url }}
+                {{ projectInfo.project_manage_url }}
             </el-descriptions-item>
             <el-descriptions-item>
                 <template #label>API链接</template>
@@ -43,7 +43,7 @@ const props = defineProps({
 const projectInfo = ref({
     project_name: '',
     project_path: '',
-    project_web_url: '',
+    project_manage_url: '',
     project_api_url: '',
     api_port: '',
     front_port: '',

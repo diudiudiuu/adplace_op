@@ -66,9 +66,7 @@ const getMenus = () => {
     });
 }
 
-const menuData = await getMenus()
-
 export {
-    menuData
+    getMenus
 }
 

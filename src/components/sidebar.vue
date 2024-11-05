@@ -52,10 +52,10 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useSidebarStore } from '../store/sidebar'
 import { useRoute } from 'vue-router'
-import { menuData } from '@/components/menu'
+import { getMenus } from '@/components/menu'
 
 const route = useRoute()
 const onRoutes = computed(() => {
@@ -63,6 +63,12 @@ const onRoutes = computed(() => {
 })
 
 const sidebar = useSidebarStore()
+
+const menuData = ref([])
+const getMenusData = async () => {
+    menuData.value = await getMenus()
+}
+getMenusData()
 </script>
 
 <style scoped>

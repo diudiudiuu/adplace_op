@@ -38,8 +38,8 @@
 
                 <el-col :span="24">
                     <el-form-item>
-                        <el-button type="primary" @click="onSubmit(formRef)">添加客户</el-button>
-                        <el-button @click="onReset(formRef)">重置信息</el-button>
+                        <el-button type="primary" @click="onSubmit">添加客户</el-button>
+                        <el-button @click="onReset">重置信息</el-button>
                     </el-form-item>
                 </el-col>
             </el-row>
@@ -56,10 +56,9 @@ import api from '@/api'
 
 const route = useRoute()
 const serverId = ref(route.params.id)
-console.log(serverId.value)
 
 const formRef = ref<FormInstance>()
-const form = reactive({
+const initialForm = {
     project_id: 's1p1',
     project_name: '测试项目',
     project_path: 'u1s1',
@@ -68,10 +67,11 @@ const form = reactive({
     project_api_url: 'http://localhost:8848/v1',
     api_port: 3000,
     front_port: 3000,
-})
+}
+const form = reactive({ ...initialForm })
 
 // 提交
-const onSubmit = (formEl: FormInstance | undefined) => {
+const onSubmit = () => {
     api('project_add', {
         serverId: serverId.value,
         projectInfo: JSON.stringify(form),
@@ -79,15 +79,17 @@ const onSubmit = (formEl: FormInstance | undefined) => {
         // biome-ignore lint/suspicious/noExplicitAny: <explanation>
         .then((res: any) => {
             ElMessage.success('添加成功')
+            window.location.href = `/project/${form.project_id}`
         })
         // biome-ignore lint/suspicious/noExplicitAny: <explanation>
         .catch((err: any) => {
             ElMessage.error('添加失败')
         })
 }
+
 // 重置
-const onReset = (formEl: FormInstance | undefined) => {
-    if (!formEl) return
-    formEl.resetFields()
+const onReset = () => {
+    Object.assign(form, initialForm) // Reset the form to its initial values
+    formRef.value?.resetFields() // Optionally call resetFields for additional form handling
 }
 </script>

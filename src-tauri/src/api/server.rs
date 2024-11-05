@@ -50,17 +50,15 @@ pub fn exec(project_id: String, sql: String, sql_type: String) -> String {
 
         // project_api_url
         let project_api_url = project["project_api_url"].as_str().unwrap();
-
         // 向这个地址发送post 表单请求 
         let url = format!("{}/dbexec", project_api_url);
-
-        let (signature, key) = aes::encrypt(&sql);
-
+        
+        let key = "01234567890123456789012345678901";
+        let signature = aes::encrypt(key, sql.as_str());
         let params = [
             ("sql", sql),
             ("sql_type", sql_type),
             ("signature", signature),
-            ("key", key),
         ];
         let client = reqwest::Client::new();
         let res = client.post(url)

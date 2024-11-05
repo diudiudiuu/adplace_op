@@ -73,6 +73,36 @@ pub fn get_project_by_id(project_id: &str) -> Option<String> {
     None // 如果没有找到，返回 None
 }
 
+// 添加项目
+pub fn project_add(server_id: &str, project_info: &str) -> String {
+    let data = load_json_file();
+    // 将 JSON 字符串转换为 JSON 对象
+    let mut json: Value = serde_json::from_str(&data).unwrap(); // 安全地解析 JSON
+
+    // 检查 JSON 是否是一个数组
+    if let Some(servers) = json.as_array_mut() {
+        // 循环 JSON 数组
+        for server in servers {
+            // 判断是否是当前服务器
+            if let Some(id) = server["server_id"].as_str() {
+                if id == server_id {
+                    // 检查 "project_list" 是否是一个数组
+                    if let Some(project_list) = server["project_list"].as_array_mut() {
+                        // 将项目信息转换为 JSON 对象
+                        let project: Value = serde_json::from_str(project_info).unwrap();
+                        project_list.push(project); // 添加项目
+                    }
+                }
+            }
+        }
+    }
+
+    let data = serde_json::to_string_pretty(&json).unwrap();
+    write(data.clone());
+
+    data
+
+}
 
 // 读取文件
 fn read(file_path: PathBuf) -> String {
@@ -90,4 +120,20 @@ fn read(file_path: PathBuf) -> String {
         Ok(_) => println!("{} read success", display),
     }
     s
+}
+
+// 写入文件
+fn write(data: String) {
+    let current_dir = std::env::current_dir().expect("Failed to get current directory");
+    let file_path = current_dir.join("data.json");
+
+    let mut file = match File::create(&file_path) {
+        Err(why) => panic!("couldn't create: {}", why),
+        Ok(file) => file,
+    };
+
+    match file.write_all(data.as_bytes()) {
+        Err(why) => panic!("couldn't write: {}", why),
+        Ok(_) => println!("write success"),
+    }
 }

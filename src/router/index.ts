@@ -1,4 +1,4 @@
-import { createRouter, createWebHistory, RouteRecordRaw } from 'vue-router';
+import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router';
 import Layout from '@/views/layout.vue';
 import NProgress from 'nprogress';
 import 'nprogress/nprogress.css';
@@ -30,6 +30,14 @@ const routes: RouteRecordRaw[] = [
                 component: () => import(/* webpackChunkName: "server/list" */ '@/views/project/dashboard.vue'),
             },
             {
+                path: '/project_form/:id',
+                name: '/project_form/id',
+                meta: {
+                    auth : true,
+                },
+                component: () => import(/* webpackChunkName: "server/list" */ '@/views/project/form.vue'),
+            },
+            {
                 path: '/theme',
                 name: 'theme',
                 meta: {
@@ -56,7 +64,7 @@ const router = createRouter({
     routes,
 });
 
-router.beforeEach((to, from, next) => {
+router.beforeEach((_to, _from, next) => {
     NProgress.start();
     // 调用tauri API获取是否锁定
     

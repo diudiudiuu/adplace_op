@@ -51,6 +51,7 @@ const projectInfo = ref({
 
 api('project_info', {
     projectId: props.projectId,
+    // biome-ignore lint/suspicious/noExplicitAny: <explanation>
 }).then((res: any) => {
     console.log(res)
     projectInfo.value = res

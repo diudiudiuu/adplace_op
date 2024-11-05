@@ -35,15 +35,15 @@ const getMenus = () => {
                     id: project.project_id,
                     pid: item.server_id,
                     index: `/project/${project.project_id}`,
-                    title: project.project_name,
+                    title: `😍${project.project_name}`,
                 });
             }
 
             children.push({
-                id: 'aaaaaaa',
+                id: `/project_form/${item.server_id}`,
                 pid: item.server_id,
-                index: '/project_from',
-                title: '+项目',
+                index: `/project_form/${item.server_id}`,
+                title: '👉🏼👉添加客户',
             });
 
             menus.push({
@@ -56,7 +56,7 @@ const getMenus = () => {
         }
 
         menus.push({
-            id: 'aaaa',
+            id: 'server_form',
             title: '追加服务器',
             index: '/server_form',
             icon: 'CirclePlusFilled',

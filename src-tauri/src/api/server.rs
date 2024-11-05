@@ -30,6 +30,14 @@ pub fn project_info(project_id: String) -> String {
 }
 
 #[tauri::command]
+// 添加项目
+pub fn project_add(server_id: String, project_info: String) -> String {
+    // 添加项目
+    let data = json::project_add(&server_id, &project_info);
+    data
+}
+
+#[tauri::command]
 // 执行命令
 pub fn exec(project_id: String, sql: String, sql_type: String) -> String {
     // 根据项目ID获取项目信息

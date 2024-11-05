@@ -39,10 +39,14 @@ class Base {
     escapeValue(value, field) {
         const type = this.fieldsType[field]?.type;
         if (type === 'string' || type === 'enum' || type === 'datetime') {
+            // null or undefined
+            if (value === null || value === undefined) {
+                return 'NULL';
+            }
             return `'${String(value).replace(/'/g, "''")}'`;
         }
         if (type === 'int') {
-            return parseInt(value, 10) || 0; // Default to 0 if NaN
+            return Number.parseInt(value, 10) || 0; // Default to 0 if NaN
         }
         return value;
     }

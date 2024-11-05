@@ -127,16 +127,19 @@ onMounted(fetchData)
 
 const refreshData = () => fetchData()
 
-const isPrimaryKey = (field) => field === primaryKey
-const shouldShowField = (field) => isEditMode.value || field !== primaryKey
+// biome-ignore lint/suspicious/noExplicitAny: <explanation>
+const isPrimaryKey = (field: any) => field === primaryKey
+// biome-ignore lint/suspicious/noExplicitAny: <explanation>
+const shouldShowField = (field: any) => isEditMode.value || field !== primaryKey
 
-const openForm = (editMode, row = {}) => {
+const openForm = (editMode: boolean, row = {}) => {
     isEditMode.value = editMode
     formData.value = { ...row }
     isFormVisible.value = true
 }
 
-const confirmDelete = (row) => {
+// biome-ignore lint/suspicious/noExplicitAny: <explanation>
+const confirmDelete = (row: any) => {
     ElMessageBox.confirm('此操作将永久删除该项, 是否继续?', '提示', {
         confirmButtonText: '确定',
         cancelButtonText: '取消',
@@ -146,7 +149,8 @@ const confirmDelete = (row) => {
         .catch(() => {})
 }
 
-const deleteEntry = async (row) => {
+// biome-ignore lint/suspicious/noExplicitAny: <explanation>
+const deleteEntry = async (row: any) => {
     props.model.formData = row
     await api('exec', {
         projectId: props.projectId,
@@ -157,7 +161,7 @@ const deleteEntry = async (row) => {
     fetchData()
 }
 
-const submitForm = async (action) => {
+const submitForm = async (action: string) => {
     props.model.formData = formData.value
     await api('exec', {
         projectId: props.projectId,

@@ -15,7 +15,7 @@
             header-cell-class-name="table-header"
             stripe
         >
-            <el-table-column label="操作" fixed align="left">
+            <el-table-column label="操作" align="left">
                 <template #default="scope">
                     <el-tooltip content="编辑" placement="top-start" :hide-after="0">
                         <el-button
@@ -46,7 +46,8 @@
                 :key="field"
                 :prop="field"
                 :label="field"
-                align="center"
+                align="left"
+                width="auto"
             />
         </el-table>
 

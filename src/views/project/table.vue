@@ -118,8 +118,8 @@ const primaryKey = props.model.primaryKey
 const fetchData = async () => {
     const res = await api('exec', {
         projectId: props.projectId,
-        sql: props.model.select_list(),
-        sqlType: 'select_list',
+        sql: props.model.selects(),
+        sqlType: 'selects',
     })
     tableData.value = res.data.result
 }

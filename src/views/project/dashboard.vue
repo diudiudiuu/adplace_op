@@ -1,7 +1,7 @@
 <template>
     <div>
         <el-tabs :tab-position="tabPosition" v-model="activeTab">
-            <el-tab-pane label="项目信息" name="info">
+            <el-tab-pane label="客户信息" name="info">
                 <Info v-if="activeTab === 'info'" :projectId="projectId" />
             </el-tab-pane>
             <el-tab-pane label="用户管理" name="user">

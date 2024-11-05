@@ -1,11 +1,11 @@
 # 广告投放管理面板
 
-## 启动项目
+## 启动客户
 
     npm run tauri dev  
 
 
-## 打包项目
+## 打包客户
 
     npm run tauri build
 

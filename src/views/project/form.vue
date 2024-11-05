@@ -3,28 +3,28 @@
         <el-form ref="formRef" :model="form" label-width="120px">
             <el-row :gutter="50">
                 <el-col :span="12">
-                    <el-form-item label="项目ID" prop="project_id">
-                        <el-input v-model="form.project_id" placeholder="请输入项目ID"></el-input>
+                    <el-form-item label="客户ID" prop="project_id">
+                        <el-input v-model="form.project_id" placeholder="请输入客户ID"></el-input>
                     </el-form-item>
 
-                    <el-form-item label="项目名称" prop="project_name">
-                        <el-input v-model="form.project_name" placeholder="请输入项目名称"></el-input>
+                    <el-form-item label="客户名称" prop="project_name">
+                        <el-input v-model="form.project_name" placeholder="请输入客户名称"></el-input>
                     </el-form-item>
 
-                    <el-form-item label="项目路径" prop="project_path">
-                        <el-input v-model="form.project_path" placeholder="请输入项目路径"></el-input>
+                    <el-form-item label="客户路径" prop="project_path">
+                        <el-input v-model="form.project_path" placeholder="请输入客户路径"></el-input>
                     </el-form-item>
 
                     <el-form-item label="合同日期" prop="contract_date">
                         <el-date-picker v-model="form.contract_date" type="date" placeholder="选择日期"></el-date-picker>
                     </el-form-item>
 
-                    <el-form-item label="项目管理地址" prop="project_manage_url">
-                        <el-input v-model="form.project_manage_url" placeholder="请输入项目管理地址"></el-input>
+                    <el-form-item label="客户管理地址" prop="project_manage_url">
+                        <el-input v-model="form.project_manage_url" placeholder="请输入客户管理地址"></el-input>
                     </el-form-item>
 
-                    <el-form-item label="项目API地址" prop="project_api_url">
-                        <el-input v-model="form.project_api_url" placeholder="请输入项目API地址"></el-input>
+                    <el-form-item label="客户API地址" prop="project_api_url">
+                        <el-input v-model="form.project_api_url" placeholder="请输入客户API地址"></el-input>
                     </el-form-item>
 
                     <el-form-item label="API端口" prop="api_port">
@@ -60,7 +60,7 @@ const serverId = ref(route.params.id)
 const formRef = ref<FormInstance>()
 const initialForm = {
     project_id: 's1p1',
-    project_name: '测试项目',
+    project_name: '测试客户',
     project_path: 'u1s1',
     contract_date: '2021-07-01',
     project_manage_url: 'https://www.baidu.com/',

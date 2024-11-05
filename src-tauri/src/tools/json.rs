@@ -45,7 +45,7 @@ pub fn get_server_by_id(server_id: &str) -> Option<String> {
     None // 如果没有找到，返回 None
 }
 
-// 根据 project_id 获取项目信息
+// 根据 project_id 获取客户信息
 pub fn get_project_by_id(project_id: &str) -> Option<String> {
     let data = load_json_file();
     // 将 JSON 字符串转换为 JSON 对象
@@ -59,10 +59,10 @@ pub fn get_project_by_id(project_id: &str) -> Option<String> {
             if let Some(project_list) = server["project_list"].as_array() {
                 // 循环 project_list 数组
                 for project in project_list {
-                    // 判断是否是当前项目
+                    // 判断是否是当前客户
                     if let Some(id) = project["project_id"].as_str() {
                         if id == project_id {
-                            return Some(project.to_string()); // 返回找到的项目
+                            return Some(project.to_string()); // 返回找到的客户
                         }
                     }
                 }
@@ -73,7 +73,7 @@ pub fn get_project_by_id(project_id: &str) -> Option<String> {
     None // 如果没有找到，返回 None
 }
 
-// 添加项目
+// 添加客户
 pub fn project_add(server_id: &str, project_info: &str) -> String {
     let data = load_json_file();
     // 将 JSON 字符串转换为 JSON 对象
@@ -88,9 +88,9 @@ pub fn project_add(server_id: &str, project_info: &str) -> String {
                 if id == server_id {
                     // 检查 "project_list" 是否是一个数组
                     if let Some(project_list) = server["project_list"].as_array_mut() {
-                        // 将项目信息转换为 JSON 对象
+                        // 将客户信息转换为 JSON 对象
                         let project: Value = serde_json::from_str(project_info).unwrap();
-                        project_list.push(project); // 添加项目
+                        project_list.push(project); // 添加客户
                     }
                 }
             }

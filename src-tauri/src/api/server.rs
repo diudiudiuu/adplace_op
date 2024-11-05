@@ -22,17 +22,17 @@ pub fn server_info(server_id: String) -> String {
 }
 
 #[tauri::command]
-// 项目详情
+// 客户详情
 pub fn project_info(project_id: String) -> String {
-    // 根据项目ID获取项目信息
+    // 根据客户ID获取客户信息
     let data = json::get_project_by_id(&project_id);
     data.unwrap_or("{}".to_string())
 }
 
 #[tauri::command]
-// 添加项目
+// 添加客户
 pub fn project_add(server_id: String, project_info: String) -> String {
-    // 添加项目
+    // 添加客户
     let data = json::project_add(&server_id, &project_info);
     data
 }
@@ -40,9 +40,9 @@ pub fn project_add(server_id: String, project_info: String) -> String {
 #[tauri::command]
 // 执行命令
 pub fn exec(project_id: String, sql: String, sql_type: String) -> String {
-    // 根据项目ID获取项目信息
+    // 根据客户ID获取客户信息
     async fn exec(project_id: String, sql: String, sql_type: String) -> String {
-        // 根据项目ID获取项目信息
+        // 根据客户ID获取客户信息
         let data = json::get_project_by_id(&project_id);
         let project = data.unwrap_or("{}".to_string());
         let project: serde_json::Value = serde_json::from_str(&project).unwrap();

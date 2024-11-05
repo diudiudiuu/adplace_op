@@ -35,11 +35,11 @@ class AuthUser extends Base {
             },
             level: {
                 type: 'enum',
-                value: [],
+                value: ['user', 'super'],
             },
             status: {
                 type: 'enum',
-                value: [],
+                value: ['normal', 'stop'],
             },
             created_at: {
                 type: 'datetime',

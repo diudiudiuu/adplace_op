@@ -30,6 +30,4 @@ const tabPosition = ref('left')
 
 const route = useRoute()
 const projectId = ref(route.params.id)
-
-console.log(1111)
 </script>

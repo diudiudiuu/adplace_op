@@ -59,14 +59,23 @@
                     v-if="shouldShowField(field)"
                 >
                     <template v-if="fieldsType[field]['type'] === 'enum'">
-                        <el-select v-model="formData[field]">
-                            <el-option
+                        <el-radio-group v-model="formData[field]">
+                            <el-radio-button
                                 v-for="item in fieldsType[field]['value']"
                                 :key="item"
                                 :label="item"
                                 :value="item"
                             />
-                        </el-select>
+                        </el-radio-group>
+                    </template>
+                    <template v-else-if="fieldsType[field]['type'] === 'datetime'">
+                        <el-date-picker
+                            v-model="formData[field]"
+                            type="datetime"
+                            placeholder="选择日期时间"
+                            value-format="YYYY-MM-DD HH:mm:ss"
+                            style="width: 100%"
+                        />
                     </template>
                     <template v-else>
                         <el-input
@@ -104,8 +113,6 @@ const isEditMode = ref(false)
 
 const fields = props.model.fields
 const fieldsType = props.model.fieldsType
-console.log('fields', fields)
-console.log('fieldsType', fieldsType)
 const primaryKey = props.model.primaryKey
 
 const fetchData = async () => {
@@ -126,7 +133,6 @@ const shouldShowField = (field) => isEditMode.value || field !== primaryKey
 const openForm = (editMode, row = {}) => {
     isEditMode.value = editMode
     formData.value = { ...row }
-    props.model.formData = formData.value
     isFormVisible.value = true
 }
 

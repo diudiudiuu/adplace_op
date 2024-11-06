@@ -26,7 +26,15 @@ const menus: Menus[] = [
 ];
 
 
+menus.push({
+    id: 'welcome',
+    title: '🔞🈲🔞🈲',
+    index: '/welcome',
+    icon: 'Grid',
+});
+
 const getMenus = () => {
+    // biome-ignore lint/suspicious/noExplicitAny: <explanation>
     return api('list').then((res: any) => {
         // 循环遍历数据 for of
         for (const item of res) {
@@ -55,14 +63,6 @@ const getMenus = () => {
                 children: children
             });
         }
-
-        menus.push({
-            id: 'server_form',
-            title: '追加服务器',
-            index: '/server_form',
-            icon: 'CirclePlusFilled',
-        });
-
         return menus;
     });
 }

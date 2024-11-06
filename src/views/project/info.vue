@@ -2,12 +2,16 @@
     <div>
         <el-descriptions :column="1" direction="vertical" border>
             <el-descriptions-item>
-                <template #label>名称</template>
+                <template #label>客户ID</template>
+                {{ projectInfo.project_id }}
+            </el-descriptions-item>
+            <el-descriptions-item>
+                <template #label>客户名称</template>
                 {{ projectInfo.project_name }}
             </el-descriptions-item>
             <el-descriptions-item>
-                <template #label>标识</template>
-                {{ projectInfo.project_path }}
+                <template #label>合同日期</template>
+                {{ projectInfo.contract_date }}
             </el-descriptions-item>
             <el-descriptions-item>
                 <template #label>管理端链接</template>
@@ -40,14 +44,7 @@ const props = defineProps({
     },
 })
 
-const projectInfo = ref({
-    project_name: '',
-    project_path: '',
-    project_manage_url: '',
-    project_api_url: '',
-    api_port: '',
-    front_port: '',
-})
+const projectInfo = ref({})
 
 api('project_info', {
     projectId: props.projectId,

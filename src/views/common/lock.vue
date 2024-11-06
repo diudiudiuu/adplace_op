@@ -14,7 +14,12 @@
                         </template>
                     </el-input>
                 </el-form-item>
-                <el-button class="login-btn" type="primary" size="large" @click="submitForm">用力使劲点!!</el-button>
+                <el-button
+                    class="login-btn"
+                    type="primary"
+                    size="large"
+                    @click="submitForm"
+                >🔐用力使劲点!!</el-button>
             </el-form>
         </div>
     </div>

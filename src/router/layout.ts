@@ -2,12 +2,13 @@ import layout from '@/views/layout.vue';
 const layoutRouter = {
     path: '/',
     name: 'layout',
+    redirect: '/welcome',
     component: layout,
     children: [
         {
-            path: '/server_form',
-            name: 'server_form',
-            component: () => import(/* webpackChunkName: "server/form" */ '@/views/server/form.vue'),
+            path: '/welcome',
+            name: 'welcome',
+            component: () => import(/* webpackChunkName: "server/form" */ '@/views/common/welcome.vue'),
         },
         {
             path: '/project/:id',

@@ -58,6 +58,7 @@
                     :key="field"
                     :label="field"
                     v-if="shouldShowField(field)"
+                    required
                 >
                     <template v-if="fieldsType[field]['type'] === 'enum'">
                         <el-radio-group v-model="formData[field]">

@@ -1,5 +1,5 @@
 <template>
-    <div>
+    <div class="select-none">
         <el-card class="mgb20" shadow="hover">
             <template #header>
                 <div class="content-title">系统主题</div>

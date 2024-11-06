@@ -11,10 +11,6 @@
                         <el-input v-model="form.project_name" placeholder="请输入客户名称"></el-input>
                     </el-form-item>
 
-                    <el-form-item label="客户路径" prop="project_path">
-                        <el-input v-model="form.project_path" placeholder="请输入客户路径"></el-input>
-                    </el-form-item>
-
                     <el-form-item label="合同日期" prop="contract_date">
                         <el-date-picker v-model="form.contract_date" type="date" placeholder="选择日期"></el-date-picker>
                     </el-form-item>
@@ -61,7 +57,6 @@ const formRef = ref<FormInstance>()
 const initialForm = {
     project_id: 's1p1',
     project_name: '测试客户',
-    project_path: 'u1s1',
     contract_date: '2021-07-01',
     project_manage_url: 'https://www.baidu.com/',
     project_api_url: 'http://localhost:8848/v1',

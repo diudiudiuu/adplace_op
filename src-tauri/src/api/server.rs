@@ -53,8 +53,7 @@ pub fn exec(project_id: String, sql: String, sql_type: String) -> String {
         // 向这个地址发送post 表单请求 
         let url = format!("{}/dbexec", project_api_url);
         
-        let key = "01234567890123456789012345678901";
-        let signature = aes::encrypt(key, sql.as_str());
+        let signature = aes::encrypt(sql.as_str());
         let params = [
             ("sql_type", sql_type),
             ("signature", signature),

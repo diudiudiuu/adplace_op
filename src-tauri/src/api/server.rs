@@ -54,7 +54,7 @@ pub fn exec(project_id: String, sql: String, sql_type: String) -> String {
         let url = format!("{}/dbexec", project_api_url);
         
         let key = "01234567890123456789012345678901";
-        let (signature, iv) = aes::encrypt(key, sql.as_str());
+        let (iv, signature) = aes::encrypt(key, sql.as_str());
         let params = [
             ("sql", sql),
             ("sql_type", sql_type),

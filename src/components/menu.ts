@@ -42,7 +42,7 @@ const getMenus = () => {
                 children.push({
                     id: project.project_id,
                     pid: item.server_id,
-                    index: `/project/${project.project_id}`,
+                    index: `/project/${item.server_id}/${project.project_id}`,
                     title: `${emoji.generate()}${project.project_name}`,
                 });
             }

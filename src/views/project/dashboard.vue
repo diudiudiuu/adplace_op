@@ -2,7 +2,7 @@
     <div>
         <el-tabs :tab-position="tabPosition" v-model="activeTab">
             <el-tab-pane label="客户信息" name="info">
-                <Info v-if="activeTab === 'info'" :projectId="projectId" />
+                <Info v-if="activeTab === 'info'" :serverId="serverId" :projectId="projectId" />
             </el-tab-pane>
             <el-tab-pane label="用户管理" name="user">
                 <table-component
@@ -43,7 +43,7 @@ const tabPosition = ref('left')
 const activeTab = ref('info') // Set initial active tab here
 
 const route = useRoute()
-console.log(route)
+const serverId = ref(route.params.pid)
 const projectId = ref(route.params.id)
 const userModel = new auth_user()
 const domainModel = new domain()

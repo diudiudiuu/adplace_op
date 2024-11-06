@@ -11,8 +11,8 @@ const layoutRouter = {
             component: () => import(/* webpackChunkName: "server/form" */ '@/views/common/welcome.vue'),
         },
         {
-            path: '/project/:id',
-            name: '/project/id',
+            path: '/project/:pid/:id',
+            name: 'project/pid/id',
             component: () => import(/* webpackChunkName: "server/list" */ '@/views/project/dashboard.vue'),
         },
         {

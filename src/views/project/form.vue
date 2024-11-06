@@ -44,15 +44,13 @@
 </template>
 
 <script setup lang="ts">
-import { reactive, ref, watch, toRefs } from 'vue'
+import { reactive, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import type { FormInstance } from 'element-plus'
 import api from '@/api'
 
 const route = useRoute()
-const serverId = ref(route.params.id)
-
 // Props for component mode and initial form data
 const props = defineProps({
     mode: {
@@ -62,21 +60,35 @@ const props = defineProps({
     initialForm: {
         type: Object,
         default: () => ({
-            project_id: 's1p1',
-            project_name: '测试客户',
-            contract_date: '2021-07-01',
-            project_manage_url: 'https://www.baidu.com/',
-            project_api_url: 'http://localhost:8848/v1',
-            api_port: 3000,
-            front_port: 3000,
+            project_id: '',
+            project_name: '',
+            contract_date: '',
+            project_manage_url: '',
+            project_api_url: '',
+            api_port: '',
+            front_port: '',
         }),
     },
+    serverId: {
+        type: String,
+        required: false,
+    },
 })
+
+const serverId = ref('')
+
+// 编辑
+const isEdit = props.mode === 'edit'
+if (isEdit) {
+    serverId.value = props.serverId as string
+} else {
+    serverId.value = route.params.id as string
+}
+
 const emit = defineEmits(['editSuccess'])
 
 const formRef = ref<FormInstance>()
 const form = reactive({ ...props.initialForm })
-const isEdit = props.mode === 'edit'
 
 // Watch for changes to initialForm prop in edit mode
 watch(
@@ -99,7 +111,9 @@ const onSubmit = () => {
             if (isEdit) {
                 emit('editSuccess') // Notify parent on edit success
             } else {
-                window.location.href = `/project/${form.project_id}`
+                const key = 'GKQSZuLkJI0nPV65'
+                localStorage.setItem(key, key)
+                window.location.href = `/project/${serverId}${form.project_id}`
             }
         })
         .catch(() => {
@@ -109,7 +123,8 @@ const onSubmit = () => {
 
 // Reset function
 const onReset = () => {
-    Object.assign(form, props.initialForm) // Reset to initial form values
-    formRef.value?.resetFields() // Reset form fields
+    props.mode === 'edit'
+        ? Object.assign(form, props.initialForm)
+        : formRef.value?.resetFields()
 }
 </script>

@@ -1,5 +1,6 @@
 import type { Menus } from '@/types/menu';
 import api from '@/api';
+import emoji from "@/utils/emoji";
 
 const menus: Menus[] = [
     // {
@@ -35,7 +36,7 @@ const getMenus = () => {
                     id: project.project_id,
                     pid: item.server_id,
                     index: `/project/${project.project_id}`,
-                    title: `😍${project.project_name}`,
+                    title: `${emoji.generate()}${project.project_name}`,
                 });
             }
 

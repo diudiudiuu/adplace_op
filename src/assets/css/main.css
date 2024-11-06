@@ -85,3 +85,18 @@ i {
 	--header-text-color: #fff;
 	--active-color: var(--el-color-primary);
 }
+
+
+
+/* 禁用文本选择 */
+.select-none {
+	user-select: none;
+	-webkit-user-select: none; /* Chrome, Safari */
+	-moz-user-select: none;    /* Firefox */
+	-ms-user-select: none;     /* IE */
+	-webkit-user-drag: none;
+	-webkit-touch-callout: none;
+}
+  
+
+  

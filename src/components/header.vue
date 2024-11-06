@@ -1,5 +1,5 @@
 <template>
-    <div class="header">
+    <div class="header select-none">
         <!-- 折叠按钮 -->
         <div class="header-left">
             <div class="web-title">服务器管理</div>
@@ -27,32 +27,30 @@
                 </div>
 
                 <!-- 用户头像 -->
-                <el-avatar class="user-avator" :size="30" :src="imgurl" />
+                <span class="user-avator" @click="moodHandle">{{ mood }}</span>
                 <!-- 用户名下拉菜单 -->
-                <el-dropdown class="user-name" trigger="click" @command="handleCommand">
-                    <span class="el-dropdown-link">
-                        {{ username }}
-                        <el-icon class="el-icon--right">
-                            <arrow-down />
-                        </el-icon>
-                    </span>
-                    <template #dropdown>
-                        <el-dropdown-menu>
-                            <el-dropdown-item command="user">个人中心</el-dropdown-item>
-                        </el-dropdown-menu>
-                    </template>
+                <el-dropdown class="user-name">
+                    <span class="el-dropdown-link">{{ username }}</span>
                 </el-dropdown>
             </div>
         </div>
     </div>
 </template>
 <script setup lang="ts">
-import { onMounted } from 'vue'
+import { onMounted, ref } from 'vue'
 import { useSidebarStore } from '@/store/sidebar'
 import { useRouter } from 'vue-router'
 import imgurl from '@/assets/img/img.jpg'
+import emoji from '@/utils/emoji'
 
-const username: string | null = '鲲鲲'
+const mood = ref<string | null>(null)
+mood.value = emoji.generate()
+const username: string | null = '钞机官吏○'
+
+const moodHandle = () => {
+    mood.value = emoji.generate()
+}
+moodHandle()
 
 const sidebar = useSidebarStore()
 // 侧边栏折叠
@@ -66,11 +64,7 @@ onMounted(() => {
     }
 })
 
-// 用户名下拉菜单选择事件
 const router = useRouter()
-const handleCommand = () => {
-    localStorage.removeItem('vuems_name')
-}
 </script>
 <style scoped>
 .header {
@@ -159,6 +153,9 @@ const handleCommand = () => {
 
 .user-avator {
     margin: 0 10px 0 20px;
+    font-size: 28px;
+    cursor: pointer;
+    width: 50px;
 }
 
 .el-dropdown-link {

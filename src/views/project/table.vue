@@ -123,7 +123,11 @@ const fetchData = async () => {
         sql: props.model.selects(),
         sqlType: 'selects',
     })
-    tableData.value = res.data.result
+    if (res.code === 200) {
+        tableData.value = res.data.result
+    } else {
+        ElMessage.error('获取数据失败')
+    }
 }
 onMounted(fetchData)
 
@@ -154,22 +158,30 @@ const confirmDelete = (row: any) => {
 // biome-ignore lint/suspicious/noExplicitAny: <explanation>
 const deleteEntry = async (row: any) => {
     props.model.formData = row
-    await api('exec', {
+    const res = await api('exec', {
         projectId: props.projectId,
         sql: props.model.delete(),
         sqlType: 'delete',
     })
-    ElMessage.success('删除成功')
-    fetchData()
+    if (res.code === 200) {
+        ElMessage.success('删除成功')
+        fetchData()
+    } else {
+        ElMessage.error('删除失败')
+    }
 }
 
 const submitForm = async (action: string) => {
     props.model.formData = formData.value
-    await api('exec', {
+    const res = await api('exec', {
         projectId: props.projectId,
         sql: action === 'insert' ? props.model.insert() : props.model.update(),
         sqlType: action,
     })
+    if (res.code !== 200) {
+        ElMessage.error(action === 'insert' ? '添加失败' : '编辑失败')
+        return
+    }
     ElMessage.success(action === 'insert' ? '添加成功' : '编辑成功')
     isFormVisible.value = false
     fetchData()

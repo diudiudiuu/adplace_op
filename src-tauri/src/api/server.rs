@@ -65,7 +65,10 @@ pub fn exec(project_id: String, sql: String, sql_type: String) -> String {
             .await;
         let body = match res {
             Ok(response) => response.text().await.unwrap(),
-            Err(error) => panic!("Error: {}", error),
+            // 这里错误也要正常返回
+            Err(e) => {
+                format!("{{\"code\": 500, \"msg\": \"{}\"}}", e)
+            }
         };
         
         body

@@ -24,6 +24,7 @@ const router = createRouter({
 });
 
 if (localStorage.getItem(key)) {
+    console.log('锁定状态')
     //删除
     localStorage.removeItem(key)
     router.addRoute(layoutRouter)

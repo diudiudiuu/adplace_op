@@ -50,7 +50,7 @@ import { ElMessage } from 'element-plus'
 import type { FormInstance } from 'element-plus'
 import api from '@/api'
 
-const route = useRoute()
+const router = useRoute()
 // Props for component mode and initial form data
 const props = defineProps({
     mode: {
@@ -82,7 +82,7 @@ const isEdit = props.mode === 'edit'
 if (isEdit) {
     serverId.value = props.serverId as string
 } else {
-    serverId.value = route.params.id as string
+    serverId.value = router.params.id as string
 }
 
 const emit = defineEmits(['editSuccess'])
@@ -111,9 +111,10 @@ const onSubmit = () => {
             if (isEdit) {
                 emit('editSuccess') // Notify parent on edit success
             } else {
-                const key = 'GKQSZuLkJI0nPV65'
-                localStorage.setItem(key, key)
-                window.location.href = `/project/${serverId}${form.project_id}`
+                // 刷新页面
+                setTimeout(() => {
+                    window.location.reload()
+                }, 500)
             }
         })
         .catch(() => {

@@ -81,8 +81,8 @@ const getProjectInfo = () => {
 }
 
 getProjectInfo()
-
 const updateHandle = () => {
+    eidtmode.value = false
     getProjectInfo()
 }
 </script>

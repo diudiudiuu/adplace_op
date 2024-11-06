@@ -2,7 +2,7 @@
     <div>
         <div class="search-box">
             <el-button text bg type="primary" @click="openForm(false)">
-                <i class="el-icon-lx-roundaddfill"></i> 新增
+                <i class="el-icon-lx-roundaddfill"></i> 添加
             </el-button>
             <el-button text bg type="success" @click="refreshData">
                 <i class="el-icon-lx-refresh"></i> 刷新
@@ -51,7 +51,7 @@
             />
         </el-table>
 
-        <el-dialog :title="isEditMode ? '编辑条目' : '新增条目'" v-model="isFormVisible" width="50%">
+        <el-dialog :title="isEditMode ? '编辑条目' : '添加条目'" v-model="isFormVisible" width="50%">
             <el-form :model="formData" label-width="100px">
                 <el-form-item
                     v-for="field in fields"

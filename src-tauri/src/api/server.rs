@@ -31,10 +31,10 @@ pub fn project_info(project_id: String) -> String {
 }
 
 #[tauri::command]
-// 添加客户
-pub fn project_add(server_id: String, project_info: String) -> String {
+// 添加/更新客户
+pub fn project_form(server_id: String, project_info: String) -> String {
     // 添加客户
-    let data = json::project_add(&server_id, &project_info);
+    let data = json::project_form(&server_id, &project_info);
     data
 }
 

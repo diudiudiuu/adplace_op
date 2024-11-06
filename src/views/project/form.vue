@@ -34,7 +34,7 @@
 
                 <el-col :span="24">
                     <el-form-item>
-                        <el-button type="primary" @click="onSubmit">添加客户</el-button>
+                        <el-button type="primary" @click="onSubmit">{{ isEdit ? '更新客户' : '添加客户' }}</el-button>
                         <el-button @click="onReset">重置信息</el-button>
                     </el-form-item>
                 </el-col>
@@ -44,7 +44,7 @@
 </template>
 
 <script setup lang="ts">
-import { reactive, ref } from 'vue'
+import { reactive, ref, watch, toRefs } from 'vue'
 import { useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import type { FormInstance } from 'element-plus'
@@ -53,38 +53,63 @@ import api from '@/api'
 const route = useRoute()
 const serverId = ref(route.params.id)
 
-const formRef = ref<FormInstance>()
-const initialForm = {
-    project_id: 's1p1',
-    project_name: '测试客户',
-    contract_date: '2021-07-01',
-    project_manage_url: 'https://www.baidu.com/',
-    project_api_url: 'http://localhost:8848/v1',
-    api_port: 3000,
-    front_port: 3000,
-}
-const form = reactive({ ...initialForm })
+// Props for component mode and initial form data
+const props = defineProps({
+    mode: {
+        type: String,
+        default: 'add', // Default is 'add', can also be 'edit'
+    },
+    initialForm: {
+        type: Object,
+        default: () => ({
+            project_id: 's1p1',
+            project_name: '测试客户',
+            contract_date: '2021-07-01',
+            project_manage_url: 'https://www.baidu.com/',
+            project_api_url: 'http://localhost:8848/v1',
+            api_port: 3000,
+            front_port: 3000,
+        }),
+    },
+})
+const emit = defineEmits(['editSuccess'])
 
-// 提交
+const formRef = ref<FormInstance>()
+const form = reactive({ ...props.initialForm })
+const isEdit = props.mode === 'edit'
+
+// Watch for changes to initialForm prop in edit mode
+watch(
+    () => props.initialForm,
+    (newForm) => {
+        if (isEdit) {
+            Object.assign(form, newForm)
+        }
+    }
+)
+
+// Submit function
 const onSubmit = () => {
-    api('project_add', {
+    api('project_form', {
         serverId: serverId.value,
         projectInfo: JSON.stringify(form),
     })
-        // biome-ignore lint/suspicious/noExplicitAny: <explanation>
-        .then((res: any) => {
-            ElMessage.success('添加成功')
-            window.location.href = `/project/${form.project_id}`
+        .then(() => {
+            ElMessage.success(isEdit ? '更新成功' : '添加成功')
+            if (isEdit) {
+                emit('editSuccess') // Notify parent on edit success
+            } else {
+                window.location.href = `/project/${form.project_id}`
+            }
         })
-        // biome-ignore lint/suspicious/noExplicitAny: <explanation>
-        .catch((err: any) => {
-            ElMessage.error('添加失败')
+        .catch(() => {
+            ElMessage.error(isEdit ? '更新失败' : '添加失败')
         })
 }
 
-// 重置
+// Reset function
 const onReset = () => {
-    Object.assign(form, initialForm) // Reset the form to its initial values
-    formRef.value?.resetFields() // Optionally call resetFields for additional form handling
+    Object.assign(form, props.initialForm) // Reset to initial form values
+    formRef.value?.resetFields() // Reset form fields
 }
 </script>

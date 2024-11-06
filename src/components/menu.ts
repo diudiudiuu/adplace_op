@@ -25,15 +25,14 @@ const menus: Menus[] = [
     // }, 
 ];
 
-
-menus.push({
-    id: 'welcome',
-    title: '🔞🈲🔞🈲',
-    index: '/welcome',
-    icon: 'Grid',
-});
-
 const getMenus = () => {
+    menus.push({
+        id: 'welcome',
+        title: '🔞🈲🔞🈲',
+        index: '/welcome',
+        icon: 'Grid',
+    });
+
     // biome-ignore lint/suspicious/noExplicitAny: <explanation>
     return api('list').then((res: any) => {
         // 循环遍历数据 for of
@@ -68,6 +67,7 @@ const getMenus = () => {
 }
 
 export {
-    getMenus
+    getMenus,
+    menus
 }
 

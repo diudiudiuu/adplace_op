@@ -74,36 +74,48 @@ pub fn get_project_by_id(project_id: &str) -> Option<String> {
 }
 
 // 添加客户
-pub fn project_add(server_id: &str, project_info: &str) -> String {
+pub fn project_form(server_id: &str, project_info: &str) -> String {
     let data = load_json_file();
-    // 将 JSON 字符串转换为 JSON 对象
-    let mut json: Value = serde_json::from_str(&data).unwrap(); // 安全地解析 JSON
+    let mut json: Value = serde_json::from_str(&data).unwrap();
 
-    // 检查 JSON 是否是一个数组
     if let Some(servers) = json.as_array_mut() {
-        // 循环 JSON 数组
         for server in servers {
-            // 判断是否是当前服务器
             if let Some(id) = server["server_id"].as_str() {
                 if id == server_id {
-                    // 检查 "project_list" 是否是一个数组
+                    let project_json: Value = serde_json::from_str(project_info).unwrap();
+
                     if let Some(project_list) = server["project_list"].as_array_mut() {
-                        // 将客户信息转换为 JSON 对象
-                        let project: Value = serde_json::from_str(project_info).unwrap();
-                        project_list.push(project); // 添加客户
+                        let mut project_found = false;
+
+                        for project in project_list.iter_mut() {
+                            if let Some(project_id) = project["project_id"].as_str() {
+                                if project_id == project_json["project_id"].as_str().unwrap() {
+                                    *project = project_json.clone();
+                                    project_found = true;
+                                    break;
+                                }
+                            }
+                        }
+
+                        if !project_found {
+                            project_list.push(project_json);
+                        }
+
+                        write(json.to_string());
+
+                        return if project_found {
+                            "{}".to_string()
+                        } else {
+                            "{}".to_string()
+                        };
                     }
                 }
             }
         }
     }
 
-    let data = serde_json::to_string_pretty(&json).unwrap();
-    write(data.clone());
-
-    data
-
+    "{}".to_string()
 }
-
 // 读取文件
 fn read(file_path: PathBuf) -> String {
     let display = file_path.display();

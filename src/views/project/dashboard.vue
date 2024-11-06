@@ -43,16 +43,9 @@ const tabPosition = ref('left')
 const activeTab = ref('info') // Set initial active tab here
 
 const route = useRoute()
+console.log(route)
 const projectId = ref(route.params.id)
 const userModel = new auth_user()
 const domainModel = new domain()
 const userDomainModel = new user_domain()
-
-// CREATE TABLE "tb_user_domain" (
-//   "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-//   "user_id" INTEGER NOT NULL DEFAULT 0,
-//   "domain_id" INTEGER NOT NULL DEFAULT 0,
-//   "created_at" datetime,
-//   "updated_at" datetime
-// );
 </script>

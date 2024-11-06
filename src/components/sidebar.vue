@@ -55,7 +55,7 @@
 import { computed, ref, watch } from 'vue'
 import { useSidebarStore } from '../store/sidebar'
 import { useRoute } from 'vue-router'
-import { getMenus } from '@/components/menu'
+import { getMenus, menus } from '@/components/menu'
 
 const route = useRoute()
 const onRoutes = computed(() => {
@@ -65,10 +65,13 @@ const onRoutes = computed(() => {
 const sidebar = useSidebarStore()
 
 const menuData = ref([])
-const getMenusData = async () => {
-    menuData.value = await getMenus()
+if (menus.length) {
+    menuData.value = menus
+} else {
+    getMenus().then((res) => {
+        menuData.value = res
+    })
 }
-getMenusData()
 </script>
 
 <style scoped>

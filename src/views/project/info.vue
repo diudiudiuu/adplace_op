@@ -2,6 +2,11 @@
     <div>
         <el-descriptions :column="1" direction="vertical" border>
             <el-descriptions-item>
+                <template #label>操作</template>
+                <el-button text bg type="primary">编辑</el-button>
+                <Dform mode="edit" :initialForm="projectInfo" />
+            </el-descriptions-item>
+            <el-descriptions-item>
                 <template #label>客户ID</template>
                 {{ projectInfo.project_id }}
             </el-descriptions-item>
@@ -14,11 +19,11 @@
                 {{ projectInfo.contract_date }}
             </el-descriptions-item>
             <el-descriptions-item>
-                <template #label>管理端链接</template>
+                <template #label>客户管理地址</template>
                 {{ projectInfo.project_manage_url }}
             </el-descriptions-item>
             <el-descriptions-item>
-                <template #label>API链接</template>
+                <template #label>客户API地址</template>
                 {{ projectInfo.project_api_url }}
             </el-descriptions-item>
             <el-descriptions-item>
@@ -34,6 +39,7 @@
 </template>
 <script lang="ts" setup>
 import { ref, defineProps } from 'vue'
+import Dform from './form.vue'
 import api from '@/api'
 
 // 定义接受 projectId 的 props

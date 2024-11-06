@@ -28,11 +28,12 @@ import { ElMessage } from 'element-plus'
 import layoutRouter from '@/router/layout'
 
 const router = useRouter()
+const routes = router.getRoutes()
+
 const param = reactive({
     password: '',
 })
 
-const routes = router.getRoutes()
 const layout = routes.find((item) => item.name === 'layout')
 // 删除 layout路由
 if (layout) {

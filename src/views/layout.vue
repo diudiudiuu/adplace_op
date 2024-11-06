@@ -16,11 +16,22 @@
     </div>
 </template>
 <script setup lang="ts">
+import { useRouter } from 'vue-router'
 import { useSidebarStore } from '@/store/sidebar'
 import vHeader from '@/components/header.vue'
 import vSidebar from '@/components/sidebar.vue'
-
 const sidebar = useSidebarStore()
+
+const router = useRouter()
+const routes = router.getRoutes()
+const key = 'GKQSZuLkJI0nPV65'
+
+window.addEventListener('pagehide', () => {
+    const layout = routes.find((item) => item.name === 'layout')
+    if (layout) {
+        localStorage.setItem(key, key)
+    }
+})
 </script>
 
 <style>

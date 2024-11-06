@@ -116,6 +116,16 @@
         "project_api_url": "http://localhost:8848/v1",
         "api_port": 3000,
         "front_port": 3000
+      },
+      {
+        "project_id": "s1p1",
+        "project_name": "测试客户",
+        "project_path": "u1s1",
+        "contract_date": "2021-07-01",
+        "project_manage_url": "https://www.baidu.com/",
+        "project_api_url": "http://localhost:8848/v1",
+        "api_port": 3000,
+        "front_port": 3000
       }
     ]
   }

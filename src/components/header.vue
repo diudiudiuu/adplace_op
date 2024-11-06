@@ -153,9 +153,9 @@ const router = useRouter()
 
 .user-avator {
     margin: 0 10px 0 20px;
-    font-size: 28px;
+    font-size: 25px;
     cursor: pointer;
-    width: 50px;
+    width: 30px;
 }
 
 .el-dropdown-link {

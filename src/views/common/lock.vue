@@ -1,12 +1,12 @@
 <template>
-    <div class="login-bg">
+    <div class="login-bg select-none">
         <div class="login-container">
             <div class="login-header">
-                <div class="login-title">服务器管理</div>
+                <div class="login-title">脑神金不闷</div>
             </div>
-            <el-form :model="param" :rules="rules" ref="login" size="large">
+            <el-form size="large" @submit.prevent="submitForm">
                 <el-form-item prop="password">
-                    <el-input type="password" placeholder="请输入锁屏幕密码" v-model="param.password">
+                    <el-input type="password" placeholder="发挥你的想象力,使劲想" v-model="param.password">
                         <template #prepend>
                             <el-icon>
                                 <Lock />
@@ -14,49 +14,43 @@
                         </template>
                     </el-input>
                 </el-form-item>
-
-                <el-button
-                    class="login-btn"
-                    type="primary"
-                    size="large"
-                    @click="submitForm(login)"
-                >解锁</el-button>
+                <el-button class="login-btn" type="primary" size="large" @click="submitForm">用力使劲点!!</el-button>
             </el-form>
         </div>
     </div>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive } from 'vue'
+import { reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import type { FormInstance, FormRules } from 'element-plus'
 
-interface LoginInfo {
-    password: string
-}
-
-const lgStr = localStorage.getItem('login-param')
-const defParam = lgStr ? JSON.parse(lgStr) : null
+import layoutRouter from '@/router/layout'
 
 const router = useRouter()
-const param = reactive<LoginInfo>({
-    password: defParam ? defParam.password : '',
+const param = reactive({
+    password: '',
 })
 
-const rules: FormRules = {
-    password: [{ required: true, message: '请输入锁屏密码', trigger: 'blur' }],
+const routes = router.getRoutes()
+const layout = routes.find((item) => item.name === 'layout')
+// 删除 layout路由
+if (layout) {
+    router.removeRoute('layout')
 }
-
-const login = ref<FormInstance>()
-const submitForm = (formEl: FormInstance | undefined) => {
-    if (!formEl) return
-    formEl.validate((valid: boolean): void => {
-        if (valid) {
-            ElMessage.success('解锁成功')
-            router.push('/')
+const submitForm = () => {
+    if (param.password === 'yesok') {
+        ElMessage.success('🤙🤙🤙,你非常棒,居然猜对了')
+        // 添加 layout路由
+        if (layout) {
+            router.addRoute(layout)
+        } else {
+            router.addRoute(layoutRouter)
         }
-    })
+        router.replace({ path: '/' })
+    } else {
+        ElMessage.error('🖕🖕🖕换个姿势,再来一次')
+    }
 }
 </script>
 

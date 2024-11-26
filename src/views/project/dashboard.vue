@@ -11,6 +11,13 @@
                     :projectId="projectId"
                 />
             </el-tab-pane>
+            <el-tab-pane label="用户Token管理" name="user_token">
+                <table-component
+                    v-if="activeTab === 'user_token'"
+                    :model="userTokenModel"
+                    :projectId="projectId"
+                />
+            </el-tab-pane>
             <el-tab-pane label="域名管理" name="domain">
                 <table-component
                     v-if="activeTab === 'domain'"
@@ -36,6 +43,7 @@ import { useRoute } from 'vue-router'
 import Info from './info.vue'
 import tableComponent from './table.vue'
 import auth_user from '@/model/auth_user'
+import user_token from '@/model/auth_user_token'
 import domain from '@/model/domain'
 import user_domain from '@/model/user_domain'
 
@@ -46,6 +54,7 @@ const route = useRoute()
 const serverId = ref(route.params.pid)
 const projectId = ref(route.params.id)
 const userModel = new auth_user()
+const userTokenModel = new user_token()
 const domainModel = new domain()
 const userDomainModel = new user_domain()
 </script>

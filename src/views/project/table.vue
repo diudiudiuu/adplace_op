@@ -48,6 +48,7 @@
                 :label="field"
                 align="left"
                 width="auto"
+                show-overflow-tooltip
             />
         </el-table>
 

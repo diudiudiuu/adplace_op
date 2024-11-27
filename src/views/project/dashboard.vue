@@ -18,7 +18,7 @@
                     :projectId="projectId"
                 />
             </el-tab-pane>
-            <el-tab-pane label="用户Token管理" name="user_token">
+            <el-tab-pane label="Token管理" name="user_token">
                 <table-component
                     v-if="activeTab === 'user_token'"
                     :model="userTokenModel"

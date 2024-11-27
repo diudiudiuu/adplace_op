@@ -41,6 +41,10 @@
                     <template #label>Front端口</template>
                     {{ projectInfo.front_port }}
                 </el-descriptions-item>
+                <el-descriptions-item>
+                    <template #label>版本</template>
+                    {{ projectInfo.version }}
+                </el-descriptions-item>
             </template>
         </el-descriptions>
     </div>

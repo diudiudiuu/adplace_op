@@ -1,18 +1,20 @@
 <template>
     <div class="terminal">
-        <terminal
-            name="my-terminal"
-            :show-header="false"
-            @exec-cmd="onExecCmd"
-            :drag-conf="dragConf"
-            theme="dark"
+        <pre>{{ rawText }}</pre>
+        <el-progress :indeterminate="true" />
+        <el-button type="primary">启动</el-button>
+        <el-mention
+            v-model="value"
+            type="textarea"
+            :options="options"
+            style="width: 320px"
+            placeholder="Please input"
         />
     </div>
 </template>
   
-  <script setup>
+<script setup>
 import { ref, defineProps } from 'vue'
-import Terminal from 'vue-web-terminal'
 
 // 定义接受 projectId 的 props
 const props = defineProps({
@@ -26,31 +28,40 @@ const props = defineProps({
     },
 })
 
-// 设置 dragConf 配置
-const dragConf = ref({
-    width: '50%',
-    height: '70%',
-    zIndex: 100,
-    pinned: false,
-})
+const rawText = ref(`
+:::demo
+<div>水电费都是</div>
+<template>
+    <el-button type="primary">Primary Button</el-button>
+</template>
+:::
+`)
 
-// 定义 onExecCmd 方法
-const onExecCmd = (key, command, success, failed) => {
-    if (key === 'fail') {
-        failed('Something wrong!!!')
-    } else {
-        const allClass = ['success', 'error', 'system', 'info', 'warning']
-        const clazz = allClass[Math.floor(Math.random() * allClass.length)]
-
-        success({
-            type: 'normal',
-            class: clazz,
-            tag: clazz,
-            content: `Your command is '${command}'`,
-        })
-    }
-}
+const value = ref('')
+const options = ref([
+    {
+        label: 'Fuphoenixes',
+        value: 'Fuphoenixes',
+    },
+    {
+        label: 'kooriookami',
+        value: 'kooriookami',
+    },
+    {
+        label: 'Jeremy',
+        value: 'Jeremy',
+    },
+    {
+        label: 'btea',
+        value: 'btea',
+    },
+])
 </script>
   
 <style scoped>
+.terminal >>> pre {
+    background-color: #f5f5f5;
+    padding: 10px;
+    border-radius: 5px;
+}
 </style>

@@ -30,6 +30,10 @@
                     <el-form-item label="前端端口" prop="front_port">
                         <el-input v-model="form.front_port" placeholder="请输入前端端口"></el-input>
                     </el-form-item>
+
+                    <el-form-item label="版本" prop="version">
+                        <el-input v-model="form.version" placeholder="请输入版本"></el-input>
+                    </el-form-item>
                 </el-col>
 
                 <el-col :span="24">
@@ -67,6 +71,7 @@ const props = defineProps({
             project_api_url: '',
             api_port: '',
             front_port: '',
+            version: '',
         }),
     },
     serverId: {

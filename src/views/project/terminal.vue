@@ -1,55 +1,38 @@
 <template>
     <div class="terminal">
-        <div>
-            <el-upload
-                class="upload-demo"
-                drag
-                :auto-upload="false"
-                :before-upload="handleFileRead"
-            >
-                <el-icon class="el-icon--upload">
-                    <upload-filled />
-                </el-icon>
-                <div class="el-upload__text">
-                    拖拽文件到此处或
-                    <em>点击上传</em>
-                </div>
-                <template #tip>
-                    <div class="el-upload__tip">txt md等文件</div>
-                </template>
-            </el-upload>
-        </div>
-        <div>
-            <pre>{{ rawText }}</pre>
-            <el-progress :indeterminate="false" />
-            <el-button type="primary">启动</el-button>
-        </div>
+        <pre>{{ rawText }}</pre>
+
+        <el-button type="primary" @click="handleParse">粘贴</el-button>
+        <el-button type="primary" @click="handleRun" :disabled="isDisabled">执行</el-button>
     </div>
 </template>
   
-  <script setup>
-import { ref, defineProps } from 'vue'
-import { UploadFilled } from '@element-plus/icons-vue'
-
+<script setup>
+import { ref, defineProps, nextTick } from 'vue'
 const props = defineProps({
     serverId: { type: String, required: true },
     projectId: { type: String, required: true },
 })
 
-const rawText = ref(`:::demo
-  <div>水电费都是</div>
-  <template>
-    <el-button type="primary">Primary Button</el-button>
-  </template>
-  :::`)
+const rawText = ref('请点击粘贴按钮，粘贴内容')
 
-const handleFileRead = (file) => {
-    const reader = new FileReader()
-    reader.onload = (e) => {
-        rawText.value = e.target.result
+// 执行按钮禁用状态
+const isDisabled = ref(true)
+
+// 粘贴
+const handleParse = async () => {
+    const text = (await navigator.clipboard.readText()) || ''
+    if (!text) {
+        rawText.value = '剪贴板为空'
+        return
     }
-    reader.readAsText(file)
-    return false // 阻止默认上传
+    rawText.value = text
+    isDisabled.value = false
+}
+
+// 执行
+const handleRun = async () => {
+    console.log('执行', rawText.value)
 }
 </script>
   
@@ -59,6 +42,10 @@ const handleFileRead = (file) => {
     padding: 10px;
     border-radius: 5px;
     white-space: pre-wrap;
+    width: auto;
+    min-height: 200px;
+    max-height: calc(100vh - 200px);
+    overflow-y: auto;
 }
 </style>
   

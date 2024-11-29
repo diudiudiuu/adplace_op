@@ -6,7 +6,7 @@ class Client extends Base {
         const tableName = 'tb_client';
 
         // 主键
-        const primaryKey = 'client_id';
+        const primaryKey = 'id';
 
         // 显示的字段
         const fields = [

@@ -2,11 +2,11 @@
     <div class="login-bg select-none">
         <div class="login-container">
             <div class="login-header">
-                <div class="login-title">脑神金不闷</div>
+                <div class="login-title">脑筋急转弯</div>
             </div>
             <el-form size="large" @submit.prevent="submitForm">
-                <el-form-item prop="password">
-                    <el-input type="password" placeholder="发挥你的想象力,使劲想" v-model="param.password">
+                <el-form-item>
+                    <el-input type="text" placeholder="动物园里面生气时谁最安静?" v-model="param.password">
                         <template #prepend>
                             <el-icon>
                                 <Lock />
@@ -14,12 +14,7 @@
                         </template>
                     </el-input>
                 </el-form-item>
-                <el-button
-                    class="login-btn"
-                    type="primary"
-                    size="large"
-                    @click="submitForm"
-                >🔐用力使劲点!!</el-button>
+                <el-button class="login-btn" type="primary" size="large" @click="submitForm">尝试你的答案</el-button>
             </el-form>
         </div>
     </div>
@@ -44,8 +39,9 @@ const layout = routes.find((item) => item.name === 'layout')
 if (layout) {
     router.removeRoute('layout')
 }
+
 const submitForm = () => {
-    if (param.password === 'yesok') {
+    if (param.password === '大猩猩') {
         ElMessage.success('🤙🤙🤙,你非常棒,居然猜对了')
         // 添加 layout路由
         if (layout) {

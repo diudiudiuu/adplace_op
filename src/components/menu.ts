@@ -1,6 +1,5 @@
 import type { Menus } from '@/types/menu';
 import api from '@/api';
-import emoji from "@/utils/emoji";
 
 const menus: Menus[] = [
     // {
@@ -28,7 +27,7 @@ const menus: Menus[] = [
 const getMenus = () => {
     menus.push({
         id: 'welcome',
-        title: '🔞🈲🔞🈲',
+        title: '主页',
         index: '/welcome',
         icon: 'Grid',
     });
@@ -43,7 +42,7 @@ const getMenus = () => {
                     id: project.project_id,
                     pid: item.server_id,
                     index: `/project/${item.server_id}/${project.project_id}`,
-                    title: `${emoji.generate()}${project.project_name}`,
+                    title: `${project.project_name}`,
                 });
             }
 

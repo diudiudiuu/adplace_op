@@ -13,6 +13,7 @@ class Client extends Base {
             'id',
             'client_id',
             'status',
+            'expire_time',
             'created_at',
             'updated_at',
         ];
@@ -30,6 +31,10 @@ class Client extends Base {
             status: {
                 type: 'enum',
                 value: ['normal', 'stop'],
+            },
+            expire_time: {
+                type: 'datetime',
+                value: '',
             },
             created_at: {
                 type: 'datetime',

@@ -4,8 +4,11 @@
 
     npm run tauri dev  
 
-
 ## 打包客户端
 
     npm run tauri build
 
+## node 版本
+
+    22.12.0
+    

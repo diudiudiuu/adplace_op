@@ -30,7 +30,7 @@
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
-    "@tauri-apps/cli": "^1.6.0",
+    "@tauri-apps/cli": "^2.1.0",
     "@vitejs/plugin-vue": "^5.1.2",
     "@vue/compiler-sfc": "^3.4.38",
     "typescript": "^5.5.4",

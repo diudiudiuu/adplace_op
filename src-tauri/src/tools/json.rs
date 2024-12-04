@@ -1,10 +1,7 @@
-
+use serde_json::Value;
 use std::fs::File;
 use std::io::prelude::*;
 use std::path::PathBuf;
-use serde_json::{Value};
-
-
 
 // 加载当前目录下的json文件 返回json 数据
 pub fn load_json_file() -> String {

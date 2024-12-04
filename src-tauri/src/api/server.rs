@@ -1,11 +1,7 @@
-
-use crate::tools::json;
 use crate::tools::aes;
+use crate::tools::json;
 use reqwest;
 use tokio::runtime::Runtime;
-
-
-
 
 #[tauri::command]
 // 全部列表
@@ -50,19 +46,13 @@ pub fn exec(project_id: String, sql: String, sql_type: String) -> String {
 
         // project_api_url
         let project_api_url = project["project_api_url"].as_str().unwrap();
-        // 向这个地址发送post 表单请求 
+        // 向这个地址发送post 表单请求
         let url = format!("{}/dbexec", project_api_url);
-        
+
         let signature = aes::encrypt(sql.as_str());
-        let params = [
-            ("sql_type", sql_type),
-            ("signature", signature),
-        ];
+        let params = [("sql_type", sql_type), ("signature", signature)];
         let client = reqwest::Client::new();
-        let res = client.post(url)
-            .form(&params)
-            .send()
-            .await;
+        let res = client.post(url).form(&params).send().await;
         let body = match res {
             Ok(response) => response.text().await.unwrap(),
             // 这里错误也要正常返回
@@ -70,10 +60,10 @@ pub fn exec(project_id: String, sql: String, sql_type: String) -> String {
                 format!("{{\"code\": 500, \"msg\": \"{}\"}}", e)
             }
         };
-        
+
         body
     }
-    
+
     let rt = Runtime::new().unwrap();
     let result = rt.block_on(exec(project_id, sql, sql_type));
     result

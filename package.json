@@ -10,6 +10,7 @@
   "dependencies": {
     "@element-plus/icons-vue": "*",
     "@tauri-apps/api": "^1.6.0",
+    "@tauri-apps/plugin-fs": "^2.0.3",
     "@wangeditor/editor": "^5.1.23",
     "@wangeditor/editor-for-vue": "^5.1.12",
     "axios": "^1.7.4",

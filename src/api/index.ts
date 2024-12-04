@@ -1,5 +1,5 @@
 import { invoke } from '@tauri-apps/api'
-import { InvokeArgs } from '@tauri-apps/api/tauri'
+import { InvokeArgs } from '@tauri-apps/api/core'
 import { ElLoading } from 'element-plus'
 
 // promise api 调用 tauri api

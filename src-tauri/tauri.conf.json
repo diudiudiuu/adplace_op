@@ -9,7 +9,7 @@
   "bundle": {
     "active": true,
     "category": "DeveloperTool",
-    "copyright": "",
+    "copyright": "aaa",
     "targets": "all",
     "externalBin": [],
     "icon": [
@@ -40,8 +40,8 @@
       }
     }
   },
-  "productName": "adplace_op",
-  "mainBinaryName": "adplace_op",
+  "productName": "adsplat",
+  "mainBinaryName": "adsplat",
   "version": "1.0.0",
   "identifier": "com.adsplat.dev",
   "plugins": {},
@@ -51,7 +51,7 @@
         "fullscreen": false,
         "height": 1000,
         "resizable": true,
-        "title": "🤩脑壳顽疾",
+        "title": "adsplat",
         "width": 1600,
         "useHttpsScheme": true
       }

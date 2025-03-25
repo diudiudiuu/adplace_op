@@ -173,6 +173,7 @@ const deleteEntry = async (row: any) => {
 }
 
 const submitForm = async (action: string) => {
+    isFormVisible.value = false
     props.model.formData = formData.value
     const res = await api('exec', {
         projectId: props.projectId,
@@ -181,10 +182,11 @@ const submitForm = async (action: string) => {
     })
     if (res.code !== 200) {
         ElMessage.error(action === 'insert' ? '添加失败' : '编辑失败')
+        isFormVisible.value = true
         return
     }
     ElMessage.success(action === 'insert' ? '添加成功' : '编辑成功')
-    isFormVisible.value = false
+    
     fetchData()
 }
 </script>

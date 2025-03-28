@@ -22,15 +22,6 @@
                     <el-form-item label="客户API地址" prop="project_api_url">
                         <el-input v-model="form.project_api_url" placeholder="请输入客户API地址"></el-input>
                     </el-form-item>
-
-                    <el-form-item label="API端口" prop="api_port">
-                        <el-input v-model="form.api_port" placeholder="请输入API端口"></el-input>
-                    </el-form-item>
-
-                    <el-form-item label="前端端口" prop="front_port">
-                        <el-input v-model="form.front_port" placeholder="请输入前端端口"></el-input>
-                    </el-form-item>
-
                 </el-col>
 
                 <el-col :span="24">
@@ -66,8 +57,6 @@ const props = defineProps({
             contract_date: '',
             project_manage_url: '',
             project_api_url: '',
-            api_port: '',
-            front_port: '',
         }),
     },
     serverId: {

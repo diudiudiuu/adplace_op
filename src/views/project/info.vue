@@ -33,14 +33,6 @@
                     <template #label>客户API地址</template>
                     {{ projectInfo.project_api_url }}
                 </el-descriptions-item>
-                <el-descriptions-item>
-                    <template #label>API端口</template>
-                    {{ projectInfo.api_port }}
-                </el-descriptions-item>
-                <el-descriptions-item>
-                    <template #label>Front端口</template>
-                    {{ projectInfo.front_port }}
-                </el-descriptions-item>
             </template>
         </el-descriptions>
     </div>

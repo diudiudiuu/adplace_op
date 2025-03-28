@@ -14,6 +14,8 @@ class Client extends Base {
             'client_id',
             'status',
             'expire_time',
+            'api_port',
+            'front_port',
             'created_at',
             'updated_at',
         ];
@@ -35,6 +37,14 @@ class Client extends Base {
             expire_time: {
                 type: 'datetime',
                 value: '',
+            },
+            api_port: {
+                type: 'int',
+                value: 0,
+            },
+            front_port: {
+                type: 'int',
+                value: 0,
             },
             created_at: {
                 type: 'datetime',

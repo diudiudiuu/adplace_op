@@ -35,7 +35,7 @@ class Domain extends Base {
             },
             ping_flag: {
                 type: 'enum',
-                value: ['error', 'normal'],
+                value: ['deploy', 'error', 'normal'],
             },
             memo: {
                 type: 'string',

@@ -16,6 +16,11 @@ class Client extends Base {
             'expire_time',
             'api_port',
             'front_port',
+            'license_key',
+            'domain_deploy_flag',
+            'domain_ping_flag',
+            'domain_delete_flag',
+            'domain_delete_days',
             'created_at',
             'updated_at',
         ];
@@ -33,6 +38,7 @@ class Client extends Base {
             status: {
                 type: 'enum',
                 value: ['normal', 'stop'],
+                default: 'normal',
             },
             expire_time: {
                 type: 'datetime',
@@ -45,6 +51,34 @@ class Client extends Base {
             front_port: {
                 type: 'int',
                 value: 0,
+            },
+            license_key: {
+                type: 'string',
+                value: '',
+                disabled: true,
+                button: {
+                    text: '生成',
+                    action: 'generateLicenseKey',
+                },
+            },
+            domain_deploy_flag: {
+                type: 'enum',
+                value: [0, 1],
+                default: 1,
+            },
+            domain_ping_flag: {
+                type: 'enum',
+                value: [0, 1],
+                default: 1,
+            },
+            domain_delete_flag: {
+                type: 'enum',
+                value: [0, 1],
+                default: 1,
+            },
+            domain_delete_days: {
+                type: 'int',
+                value: 14,
             },
             created_at: {
                 type: 'datetime',

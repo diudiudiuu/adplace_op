@@ -15,7 +15,7 @@
             header-cell-class-name="table-header"
             stripe
         >
-            <el-table-column label="操作" align="left">
+            <el-table-column fixed label="操作" align="left" min-width="120px">
                 <template #default="scope">
                     <el-tooltip content="编辑" placement="top-start" :hide-after="0">
                         <el-button
@@ -52,8 +52,8 @@
             />
         </el-table>
 
-        <el-dialog :title="isEditMode ? '编辑条目' : '添加条目'" v-model="isFormVisible" width="50%">
-            <el-form :model="formData" label-width="100px">
+        <el-dialog :title="isEditMode ? '编辑' : '添加'" v-model="isFormVisible" width="65%">
+            <el-form :model="formData" label-width="180px">
                 <el-form-item
                     v-for="field in fields"
                     :key="field"
@@ -77,14 +77,21 @@
                             type="datetime"
                             placeholder="选择日期时间"
                             value-format="YYYY-MM-DD HH:mm:ss"
+                            format="YYYY-MM-DD HH:mm:ss"
                             style="width: 100%"
                         />
                     </template>
                     <template v-else>
                         <el-input
                             v-model="formData[field]"
-                            :disabled="isPrimaryKey(field) && isEditMode"
-                        />
+                            :disabled="(isPrimaryKey(field) && isEditMode) || fieldsType[field]['disabled']"
+                        >
+                            <template v-if="fieldsType[field]['button']" #append>
+                                <el-button
+                                    @click="handleClick(field, formData, fieldsType[field])"
+                                >{{ fieldsType[field]['button'].text }}</el-button>
+                            </template>
+                        </el-input>
                     </template>
                 </el-form-item>
             </el-form>
@@ -103,6 +110,7 @@
 import { ref, onMounted, defineProps } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import api from '@/api'
+import { encryptAes } from '@/utils'
 
 const props = defineProps({
     model: { type: Object, required: true },
@@ -142,6 +150,28 @@ const shouldShowField = (field: any) => isEditMode.value || field !== primaryKey
 const openForm = (editMode: boolean, row = {}) => {
     isEditMode.value = editMode
     formData.value = { ...row }
+    if (!editMode) {
+        for (const field in fieldsType) {
+            const type = fieldsType[field].type
+            if (type === 'int' || type === 'string') {
+                formData.value[field] = fieldsType[field].value
+            }
+            if (type === 'enum') {
+                formData.value[field] =
+                    fieldsType[field].default || fieldsType[field].value[0]
+            }
+            if (type === 'datetime') {
+                // 默认值为当前时间
+                formData.value[field] = new Date(
+                    new Date().getTime() -
+                        new Date().getTimezoneOffset() * 60000
+                )
+                    .toISOString()
+                    .slice(0, 19)
+                    .replace('T', ' ')
+            }
+        }
+    }
     isFormVisible.value = true
 }
 
@@ -186,8 +216,18 @@ const submitForm = async (action: string) => {
         return
     }
     ElMessage.success(action === 'insert' ? '添加成功' : '编辑成功')
-    
     fetchData()
+}
+
+const handleClick = async (field: string, formData: any, fieldsType: any) => {
+    console.log('Button clicked', field, formData, fieldsType)
+    if (fieldsType['button']['action'] === 'generateLicenseKey') {
+        console.log('Generating license key...')
+        console.log(formData.expire_time)
+        const license_key = encryptAes(formData.expire_time)
+        console.log('Generated license key:', license_key)
+        formData.license_key = license_key
+    }
 }
 </script>
 

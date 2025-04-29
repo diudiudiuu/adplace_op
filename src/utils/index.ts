@@ -46,3 +46,24 @@ export const decryptAes = (data:string ) => {
     const decryptedText = decrypted.toString(CryptoJS.enc.Utf8);
     return JSON.parse(decryptedText) || {}
 }
+
+// 加密
+export const encryptAes = (data: string) => {
+    // 生成随机密钥和初始向量
+    const key = CryptoJS.lib.WordArray.random(16);
+    const iv = CryptoJS.lib.WordArray.random(16);
+
+    // 将数据转换为字符串
+    const dataStr = JSON.stringify(data);
+
+    // 加密数据
+    const encrypted = CryptoJS.AES.encrypt(dataStr, key, {
+        iv: iv,
+        mode: CryptoJS.mode.CBC,
+        padding: CryptoJS.pad.Pkcs7,
+    });
+
+    // 将密钥、初始向量和加密后的数据拼接成一个字符串
+    const encryptedData = `${encrypted.toString()}/+/${key.toString()}/+/${iv.toString()}`;
+    return encryptedData;
+}

@@ -79,6 +79,7 @@
                             value-format="YYYY-MM-DD HH:mm:ss"
                             format="YYYY-MM-DD HH:mm:ss"
                             style="width: 100%"
+                            @change="handleChange(field, formData, fieldsType[field])"
                         />
                     </template>
                     <template v-else>
@@ -220,15 +221,28 @@ const submitForm = async (action: string) => {
 }
 
 const handleClick = async (field: string, formData: any, fieldsType: any) => {
-    console.log('Button clicked', field, formData, fieldsType)
     if (fieldsType['button']['action'] === 'generateLicenseKey') {
-        console.log('Generating license key...')
-        console.log(formData.expire_time)
         const license_key = encryptAes(formData.expire_time)
-        console.log('Generated license key:', license_key)
         formData.license_key = license_key
     }
 }
+
+const handleChange = async (
+    field: string,
+    formData: any,
+    fieldsType: any
+) => {
+    if (fieldsType['change'] && fieldsType['change'].length) {
+        for (const action of fieldsType['change']) {
+            console.log('action', action)
+            if (action === 'generateLicenseKey') {
+                const license_key = encryptAes(formData[field])
+                formData.license_key = license_key
+            }
+        }
+    }
+}
+
 </script>
 
 <style scoped>

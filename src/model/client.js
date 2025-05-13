@@ -43,6 +43,9 @@ class Client extends Base {
             expire_time: {
                 type: 'datetime',
                 value: '',
+                change:  [
+                    'generateLicenseKey'
+                ],
             },
             api_port: {
                 type: 'int',

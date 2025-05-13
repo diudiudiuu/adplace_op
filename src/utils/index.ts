@@ -53,11 +53,8 @@ export const encryptAes = (data: string) => {
     const key = CryptoJS.lib.WordArray.random(16);
     const iv = CryptoJS.lib.WordArray.random(16);
 
-    // 将数据转换为字符串
-    const dataStr = JSON.stringify(data);
-
     // 加密数据
-    const encrypted = CryptoJS.AES.encrypt(dataStr, key, {
+    const encrypted = CryptoJS.AES.encrypt(data, key, {
         iv: iv,
         mode: CryptoJS.mode.CBC,
         padding: CryptoJS.pad.Pkcs7,

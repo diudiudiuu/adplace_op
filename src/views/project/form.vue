@@ -11,10 +11,6 @@
                         <el-input v-model="form.project_name" placeholder="请输入客户名称"></el-input>
                     </el-form-item>
 
-                    <el-form-item label="合同日期" prop="contract_date">
-                        <el-date-picker v-model="form.contract_date" type="date" placeholder="选择日期"></el-date-picker>
-                    </el-form-item>
-
                     <el-form-item label="客户管理地址" prop="project_manage_url">
                         <el-input v-model="form.project_manage_url" placeholder="请输入客户管理地址"></el-input>
                     </el-form-item>
@@ -54,7 +50,6 @@ const props = defineProps({
         default: () => ({
             project_id: '',
             project_name: '',
-            contract_date: '',
             project_manage_url: '',
             project_api_url: '',
         }),

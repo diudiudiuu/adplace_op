@@ -234,7 +234,6 @@ const handleChange = async (
 ) => {
     if (fieldsType['change'] && fieldsType['change'].length) {
         for (const action of fieldsType['change']) {
-            console.log('action', action)
             if (action === 'generateLicenseKey') {
                 const license_key = encryptAes(formData[field])
                 formData.license_key = license_key

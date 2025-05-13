@@ -22,10 +22,6 @@
                     {{ projectInfo.project_name }}
                 </el-descriptions-item>
                 <el-descriptions-item>
-                    <template #label>合同日期</template>
-                    {{ projectInfo.contract_date }}
-                </el-descriptions-item>
-                <el-descriptions-item>
                     <template #label>客户管理地址</template>
                     {{ projectInfo.project_manage_url }}
                 </el-descriptions-item>

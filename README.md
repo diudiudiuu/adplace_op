@@ -11,4 +11,16 @@
 ## node 版本
 
     22.12.0
+
+## tauri 升级
+
+    cargo clean
+    cargo install tauri-cli --force
+    cargo update
+    cargo build
+
+
+## rust 升级
+
+    rustup update stable
     

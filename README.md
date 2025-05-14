@@ -22,5 +22,10 @@
 
 ## rust 升级
 
+    rustc更新
     rustup update stable
+
+    mac更新
+    brew update
+    brew upgrade rust
     

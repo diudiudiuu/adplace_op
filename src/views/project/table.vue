@@ -132,6 +132,7 @@ const fetchData = async () => {
         projectId: props.projectId,
         sql: props.model.selects(),
         sqlType: 'selects',
+        authorization: localStorage.getItem('authorization'),
     })
     if (res.code === 200) {
         tableData.value = res.data.result
@@ -194,6 +195,7 @@ const deleteEntry = async (row: any) => {
         projectId: props.projectId,
         sql: props.model.delete(),
         sqlType: 'delete',
+        authorization: localStorage.getItem('authorization'),
     })
     if (res.code === 200) {
         ElMessage.success('删除成功')
@@ -210,6 +212,7 @@ const submitForm = async (action: string) => {
         projectId: props.projectId,
         sql: action === 'insert' ? props.model.insert() : props.model.update(),
         sqlType: action,
+        authorization: localStorage.getItem('authorization'),
     })
     if (res.code !== 200) {
         ElMessage.error(action === 'insert' ? '添加失败' : '编辑失败')

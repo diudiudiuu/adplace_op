@@ -103,3 +103,30 @@ pub async fn project_form(server_id: &str, project_info: &str, authorization: &s
     "{}".to_string()
 }
 
+
+// 删除客户
+pub async fn project_delete(server_id: &str, project_id: &str, authorization: &str) -> String {
+    let data = load_json_file(authorization).await;
+    let mut json: Value = serde_json::from_str(&data).unwrap_or_else(|_| serde_json::json!([]));
+
+    if let Some(servers) = json.as_array_mut() {
+        for server in servers {
+            if let Some(id) = server["server_id"].as_str() {
+                if id == server_id {
+                    if let Some(project_list) = server["project_list"].as_array_mut() {
+                        project_list.retain(|project| {
+                            project["project_id"].as_str() != Some(project_id)
+                        });
+
+                        // 保存到 KV
+                        kv::update_key(KV_KEY, &json.to_string(), authorization).await;
+
+                        return "{}".to_string();
+                    }
+                }
+            }
+        }
+    }
+
+    "{}".to_string()
+}

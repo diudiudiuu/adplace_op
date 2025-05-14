@@ -18,6 +18,7 @@ pub async fn server_info(server_id: String, authorization: String) -> String {
     data.unwrap_or("{}".to_string())
 }
 
+
 #[tauri::command]
 // 客户详情
 pub async fn project_info(project_id: String, authorization: String) -> String {
@@ -31,6 +32,14 @@ pub async fn project_info(project_id: String, authorization: String) -> String {
 pub async fn project_form(server_id: String, project_info: String, authorization: String) -> String {
     // 添加客户
     let data = json::project_form(&server_id, &project_info, &authorization).await;
+    data
+}
+
+#[tauri::command]
+// 删除客户
+pub async fn project_delete(server_id: String, project_id: String, authorization: String) -> String {
+    // 删除客户
+    let data = json::project_delete(&server_id, &project_id, &authorization).await;
     data
 }
 

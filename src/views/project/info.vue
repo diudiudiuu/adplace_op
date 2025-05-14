@@ -4,6 +4,7 @@
             <el-descriptions-item>
                 <template #label>操作</template>
                 <el-button text bg type="primary" @click="handleEdit">{{ !eidtmode ? '编辑' : '取消' }}</el-button>
+                <el-button text bg type="danger" @click="handleDelete">删除</el-button>
                 <Dform
                     v-if="eidtmode"
                     mode="edit"
@@ -35,6 +36,7 @@
 </template>
 <script lang="ts" setup>
 import { ref, defineProps } from 'vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import Dform from './form.vue'
 import api from '@/api'
 
@@ -72,5 +74,28 @@ getProjectInfo()
 const updateHandle = () => {
     eidtmode.value = false
     getProjectInfo()
+}
+
+// 删除按钮点击事件
+const handleDelete = () => {
+    ElMessageBox.confirm('是否删除该客户吗?', '提示', {
+        type: 'warning',
+    })
+        .then(() => {
+            api('project_delete', {
+                serverId: props.serverId,
+                projectId: props.projectId,
+                authorization: localStorage.getItem('authorization'),
+            }).then((res: any) => {
+                ElMessage.success('删除成功')
+                // 刷新页面
+                setTimeout(() => {
+                    window.location.reload()
+                }, 500)
+            })
+        })
+        .catch(() => {
+            ElMessage.error('删除失败')
+        })
 }
 </script>

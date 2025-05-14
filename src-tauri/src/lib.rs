@@ -14,6 +14,7 @@ pub fn run() {
             server::server_info,  // 服务器信息
             server::project_info, // 客户信息
             server::project_form, // 添加/更新客户
+            server::project_delete, // 删除客户
             server::exec          // 远程服务器执行命令
         ])
         .run(tauri::generate_context!())

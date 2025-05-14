@@ -45,7 +45,7 @@ import emoji from '@/utils/emoji'
 
 const mood = ref<string | null>(null)
 mood.value = emoji.generate()
-const username: string | null = '钞🐔官吏🐵'
+const username: string | null = '管理员'
 
 const moodHandle = () => {
     mood.value = emoji.generate()

@@ -154,6 +154,7 @@ const handleExecute = async (row) => {
         projectId: props.projectId,
         sql: row.content,
         sqlType: 'insert',
+        authorization: localStorage.getItem('authorization'),
     })
         .then((res) => {
             if (res.code === 200) {

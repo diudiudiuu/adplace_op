@@ -3,7 +3,6 @@ use serde::{Deserialize, Serialize};
 use std::error::Error;
 
 const KV_BASE_URL: &str = "https://kv.adswds.com/1ep2d8wb";
-const KV_TOKEN: &str = "koyiq1c42xl9mdb80t5rwn7aehv6zjpf";
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct KvData {
@@ -23,6 +22,7 @@ pub struct ApiResponse {
 // 公共请求方法
 async fn request(
     method: Method,
+    authorization: &str,
     key: &str,
     value: Option<&str>,
 ) -> Result<ApiResponse, Box<dyn Error>> {
@@ -35,7 +35,7 @@ async fn request(
 
     let resp = client
         .request(method, &url)
-        .header("Authorization", format!("Bearer {}", KV_TOKEN))
+        .header("Authorization", format!("Bearer {}", authorization))
         .send()
         .await?
         .json::<ApiResponse>()
@@ -45,22 +45,22 @@ async fn request(
 }
 
 // 新增数据（POST）
-pub async fn create_key(key: &str, value: &str) -> ApiResponse {
-    let res = request(Method::POST, key, Some(value)).await.unwrap();
+pub async fn create_key(key: &str, value: &str, authorization: &str) -> ApiResponse {
+    let res = request(Method::POST, authorization, key, Some(value)).await.unwrap();
     println!("POST result: {:?}", res);
     res
 }
 
 // 查询数据（GET）
-pub async fn get_key(key: &str) -> ApiResponse {
-    let res = request(Method::GET, key, None).await.unwrap();
+pub async fn get_key(key: &str, authorization: &str) -> ApiResponse {
+    let res = request(Method::GET, authorization, key, None).await.unwrap();
     println!("GET result: {:?}", res);
     res
 }
 
 // 更新数据（PUT）
-pub async fn update_key(key: &str, value: &str) -> ApiResponse {
-    let res = request(Method::PUT, key, Some(value)).await.unwrap();
+pub async fn update_key(key: &str, value: &str, authorization: &str) -> ApiResponse {
+    let res = request(Method::PUT, authorization, key, Some(value)).await.unwrap();
     println!("PUT result: {:?}", res);
     res
 }

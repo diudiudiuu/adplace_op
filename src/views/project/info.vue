@@ -62,7 +62,7 @@ const handleEdit = () => {
 const getProjectInfo = () => {
     api('project_info', {
         projectId: props.projectId,
-        // biome-ignore lint/suspicious/noExplicitAny: <explanation>
+        authorization: localStorage.getItem('authorization'),
     }).then((res: any) => {
         projectInfo.value = res
     })

@@ -14,6 +14,15 @@
                         </template>
                     </el-input>
                 </el-form-item>
+                <el-form-item>
+                    <el-input type="password" placeholder="授权秘钥" v-model="param.authorization">
+                        <template #prepend>
+                            <el-icon>
+                                <Lock />
+                            </el-icon>
+                        </template>
+                    </el-input>
+                </el-form-item>
                 <el-button class="login-btn" type="primary" size="large" @click="submitForm">尝试你的答案</el-button>
             </el-form>
         </div>
@@ -32,17 +41,21 @@ const routes = router.getRoutes()
 
 const param = reactive({
     password: '',
+    authorization: '',
 })
 
 const layout = routes.find((item) => item.name === 'layout')
 // 删除 layout路由
 if (layout) {
     router.removeRoute('layout')
+    //删除 authorization
+    localStorage.removeItem('authorization')
 }
 
 const submitForm = () => {
     if (param.password === '大猩猩') {
         ElMessage.success('🤙🤙🤙,你非常棒,居然猜对了')
+        localStorage.setItem('authorization', param.authorization)
         // 添加 layout路由
         if (layout) {
             router.addRoute(layout)

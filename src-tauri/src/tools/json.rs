@@ -4,8 +4,8 @@ use crate::tools::kv;
 const KV_KEY: &str = "client_json";
 
 // 加载 KV 中 JSON 字符串
-pub async fn load_json_file() -> String {
-    let json = kv::get_key(KV_KEY).await;
+pub async fn load_json_file(authorization: &str) -> String {
+    let json = kv::get_key(KV_KEY, authorization).await;
 
     if json.code == 200 {
         if let Some(data) = json.data {
@@ -19,14 +19,14 @@ pub async fn load_json_file() -> String {
     } else {
         let empty_json = serde_json::json!([]);
         let empty_json_str = empty_json.to_string();
-        kv::create_key(KV_KEY, &empty_json_str).await;
+        kv::create_key(KV_KEY, &empty_json_str, authorization).await;
         empty_json_str
     }
 }
 
 // 根据 server_id 获取服务器信息
-pub async fn get_server_by_id(server_id: &str) -> Option<String> {
-    let data = load_json_file().await;
+pub async fn get_server_by_id(server_id: &str, authorization: &str) -> Option<String> {
+    let data = load_json_file(authorization).await;
     let json: Value = serde_json::from_str(&data).ok()?;
 
     if let Some(servers) = json.as_array() {
@@ -42,8 +42,8 @@ pub async fn get_server_by_id(server_id: &str) -> Option<String> {
 }
 
 // 根据 project_id 获取客户信息
-pub async fn get_project_by_id(project_id: &str) -> Option<String> {
-    let data = load_json_file().await;
+pub async fn get_project_by_id(project_id: &str, authorization: &str) -> Option<String> {
+    let data = load_json_file(authorization).await;
     let json: Value = serde_json::from_str(&data).ok()?;
 
     if let Some(servers) = json.as_array() {
@@ -63,8 +63,8 @@ pub async fn get_project_by_id(project_id: &str) -> Option<String> {
 }
 
 // 添加/更新客户
-pub async fn project_form(server_id: &str, project_info: &str) -> String {
-    let data = load_json_file().await;
+pub async fn project_form(server_id: &str, project_info: &str, authorization: &str) -> String {
+    let data = load_json_file(authorization).await;
     let mut json: Value = serde_json::from_str(&data).unwrap_or_else(|_| serde_json::json!([]));
 
     if let Some(servers) = json.as_array_mut() {
@@ -91,7 +91,7 @@ pub async fn project_form(server_id: &str, project_info: &str) -> String {
                         }
 
                         // 保存到 KV
-                        kv::update_key(KV_KEY, &json.to_string()).await;
+                        kv::update_key(KV_KEY, &json.to_string(), authorization).await;
 
                         return "{}".to_string();
                     }

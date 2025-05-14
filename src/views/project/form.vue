@@ -90,6 +90,7 @@ const onSubmit = () => {
     api('project_form', {
         serverId: serverId.value,
         projectInfo: JSON.stringify(form),
+        authorization: localStorage.getItem('authorization'),
     })
         .then(() => {
             ElMessage.success(isEdit ? '更新成功' : '添加成功')

@@ -33,7 +33,9 @@ const getMenus = () => {
     });
 
     // biome-ignore lint/suspicious/noExplicitAny: <explanation>
-    return api('list').then((res: any) => {
+    return api('list',{
+        authorization: localStorage.getItem('authorization'),
+    }).then((res: any) => {
         // 循环遍历数据 for of
         for (const item of res) {
             const children = [];

@@ -65,13 +65,11 @@ const onRoutes = computed(() => {
 const sidebar = useSidebarStore()
 
 const menuData = ref([])
-if (menus.length) {
-    menuData.value = menus
-} else {
-    getMenus().then((res) => {
-        menuData.value = res
-    })
-}
+
+getMenus().then((res) => {
+    // 合并数据 res 和 mainRoute
+    menuData.value = res
+})
 </script>
 
 <style scoped>

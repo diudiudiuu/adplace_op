@@ -1,7 +1,7 @@
 import type { Menus } from '@/types/menu';
 import api from '@/api';
 
-const menus: Menus[] = [
+let menus: Menus[] = [
     // {
     //     id: '1',
     //     title: '服务器1',
@@ -25,17 +25,19 @@ const menus: Menus[] = [
 ];
 
 const getMenus = () => {
-    menus.push({
-        id: 'welcome',
-        title: '主页',
-        index: '/welcome',
-        icon: 'Grid',
-    });
+    menus = [
+        {
+            id: 'welcome',
+            title: '主页',
+            index: '/welcome',
+            icon: 'Grid',
+        }
+    ];
 
-    // biome-ignore lint/suspicious/noExplicitAny: <explanation>
     return api('list',{
         authorization: localStorage.getItem('authorization'),
     }).then((res: any) => {
+
         // 循环遍历数据 for of
         for (const item of res) {
             const children = [];

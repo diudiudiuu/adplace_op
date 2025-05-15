@@ -88,10 +88,9 @@ const handleDelete = () => {
                 authorization: localStorage.getItem('authorization'),
             }).then((res: any) => {
                 ElMessage.success('删除成功')
-                // 刷新页面
-                setTimeout(() => {
-                    window.location.reload()
-                }, 500)
+                // 跳转到welcome页面
+                window.location.href = '/welcome'
+                
             })
         })
         .catch(() => {

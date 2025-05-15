@@ -15,7 +15,7 @@
                     </el-input>
                 </el-form-item>
                 <el-form-item>
-                    <el-input type="password" placeholder="授权秘钥" v-model="param.authorization">
+                    <el-input type="password" placeholder="授权秘钥信息" v-model="param.authorization">
                         <template #prepend>
                             <el-icon>
                                 <Lock />

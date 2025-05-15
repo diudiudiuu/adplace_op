@@ -97,10 +97,7 @@ const onSubmit = () => {
             if (isEdit) {
                 emit('editSuccess') // Notify parent on edit success
             } else {
-                // 刷新页面
-                setTimeout(() => {
-                    window.location.reload()
-                }, 500)
+                window.location.href = '/welcome'
             }
         })
         .catch(() => {

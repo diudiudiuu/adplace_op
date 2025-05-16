@@ -6,6 +6,7 @@ export const useSidebarStore = defineStore('sidebar', {
 			collapse: false,
 			bgColor: localStorage.getItem('sidebar-bg-color') || '#324157',
 			textColor: localStorage.getItem('sidebar-text-color') || '#bfcbd9',
+			boolroute: false,
 		};
 	},
 	getters: {},
@@ -20,6 +21,9 @@ export const useSidebarStore = defineStore('sidebar', {
 		setTextColor(color: string) {
 			this.textColor = color;
 			localStorage.setItem('sidebar-text-color', color);
+		},
+		setboolroute (bool: boolean) {
+			this.boolroute = bool;
 		}
 	}
 });

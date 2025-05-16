@@ -66,10 +66,24 @@ const sidebar = useSidebarStore()
 
 const menuData = ref([])
 
-getMenus().then((res) => {
-    // 合并数据 res 和 mainRoute
-    menuData.value = res
-})
+const getRouterList = () => {
+    getMenus().then((res) => {
+        // 合并数据 res 和 mainRoute
+        menuData.value = res
+    })
+}
+getRouterList()
+
+// sidebar 中boolroute变化
+watch(
+    () => sidebar.boolRoute,
+    (newVal) => {
+        if (newVal) {
+            getRouterList()
+            sidebar.boolRoute = false
+        }
+    },
+)
 </script>
 
 <style scoped>

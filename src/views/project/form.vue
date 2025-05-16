@@ -36,8 +36,10 @@ import { reactive, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import type { FormInstance } from 'element-plus'
+import { useSidebarStore } from '@/store/sidebar'
 import api from '@/api'
 
+const sidebar = useSidebarStore()
 const router = useRoute()
 // Props for component mode and initial form data
 const props = defineProps({
@@ -97,7 +99,7 @@ const onSubmit = () => {
             if (isEdit) {
                 emit('editSuccess') // Notify parent on edit success
             } else {
-                window.location.href = '/welcome'
+                sidebar.setboolroute(true)
             }
         })
         .catch(() => {

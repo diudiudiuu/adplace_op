@@ -55,7 +55,6 @@ if (layout) {
 const submitForm = () => {
     if (param.password === '大猩猩') {
         localStorage.setItem('authorization', param.authorization)
-        ElMessage.success('🤙🤙🤙,你非常棒,居然猜对了')
         // 添加 layout路由
         if (layout) {
             router.addRoute(layout)

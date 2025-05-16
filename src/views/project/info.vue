@@ -36,12 +36,15 @@
 </template>
 <script lang="ts" setup>
 import { ref, defineProps } from 'vue'
+import { useRouter  } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useSidebarStore } from '@/store/sidebar'
 import Dform from './form.vue'
 import api from '@/api'
 
 const sidebar = useSidebarStore()
+const route = useRouter()
+
 // 定义接受 projectId 的 props
 const props = defineProps({
     serverId: {
@@ -91,6 +94,7 @@ const handleDelete = () => {
             }).then((res: any) => {
                 ElMessage.success('删除成功')
                 sidebar.setboolroute(true)
+                route.push('/welcome')
             })
         })
         .catch(() => {

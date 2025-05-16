@@ -33,7 +33,7 @@
 
 <script setup lang="ts">
 import { reactive, ref, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter  } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import type { FormInstance } from 'element-plus'
 import { useSidebarStore } from '@/store/sidebar'
@@ -41,6 +41,7 @@ import api from '@/api'
 
 const sidebar = useSidebarStore()
 const router = useRoute()
+const route = useRouter()
 
 // Props for component mode and initial form data
 const props = defineProps({
@@ -102,7 +103,7 @@ const onSubmit = () => {
             } else {
                 sidebar.setboolroute(true)
                 // 跳转到welcome页面
-                
+                route.push(`/project/${serverId.value}/${form.project_id}`)
             }
         })
         .catch(() => {

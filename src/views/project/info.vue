@@ -91,7 +91,6 @@ const handleDelete = () => {
             }).then((res: any) => {
                 ElMessage.success('删除成功')
                 sidebar.setboolroute(true)
-                
             })
         })
         .catch(() => {

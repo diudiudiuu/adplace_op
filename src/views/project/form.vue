@@ -41,6 +41,7 @@ import api from '@/api'
 
 const sidebar = useSidebarStore()
 const router = useRoute()
+
 // Props for component mode and initial form data
 const props = defineProps({
     mode: {
@@ -100,6 +101,8 @@ const onSubmit = () => {
                 emit('editSuccess') // Notify parent on edit success
             } else {
                 sidebar.setboolroute(true)
+                // 跳转到welcome页面
+                
             }
         })
         .catch(() => {

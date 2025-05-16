@@ -2,6 +2,7 @@
     <div class="sidebar select-none">
         <el-menu
             class="sidebar-el-menu"
+            v-if="showMenu"
             :default-active="onRoutes"
             :collapse="sidebar.collapse"
             :background-color="sidebar.bgColor"
@@ -53,6 +54,7 @@
 
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
+import { storeToRefs } from 'pinia'
 import { useSidebarStore } from '../store/sidebar'
 import { useRoute } from 'vue-router'
 import { getMenus, menus } from '@/components/menu'
@@ -63,27 +65,26 @@ const onRoutes = computed(() => {
 })
 
 const sidebar = useSidebarStore()
+const { boolroute } = storeToRefs(sidebar)
 
 const menuData = ref([])
 
+const showMenu = ref(true)
 const getRouterList = () => {
+    // showMenu.value = false
     getMenus().then((res) => {
         // 合并数据 res 和 mainRoute
         menuData.value = res
     })
 }
 getRouterList()
+watch(boolroute, (newVal, oldVal) => {
+    if (newVal) {
+      getRouterList()
+      sidebar.setboolroute(false)
+    }
+})
 
-// sidebar 中boolroute变化
-watch(
-    () => sidebar.boolRoute,
-    (newVal) => {
-        if (newVal) {
-            getRouterList()
-            sidebar.boolRoute = false
-        }
-    },
-)
 </script>
 
 <style scoped>

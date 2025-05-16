@@ -14,7 +14,6 @@ const api = (uri: string, data: unknown) => {
         return invoke(uri, data as InvokeArgs | undefined).then((res: unknown) => { // Update the type of 'res' to 'unknown'
             loading.close();
             const data = JSON.parse(res as string); // Explicitly cast 'res' as string
-            console.log(data);
             if (data.data) {
                 data.data = decryptAes(data.data);
             }

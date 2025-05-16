@@ -40,8 +40,8 @@ const router = useRouter()
 const routes = router.getRoutes()
 
 const param = reactive({
-    password: '大猩猩',
-    authorization: 'koyiq1c42xl9mdb80t5rwn7aehv6zjpf',
+    password: '',
+    authorization: '',
 })
 
 const layout = routes.find((item) => item.name === 'layout')

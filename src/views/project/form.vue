@@ -3,19 +3,19 @@
         <el-form ref="formRef" :model="form" label-width="120px">
             <el-row :gutter="50">
                 <el-col :span="12">
-                    <el-form-item label="客户ID" prop="project_id">
+                    <el-form-item label="客户ID" prop="project_id" required>
                         <el-input v-model="form.project_id" placeholder="请输入客户ID"></el-input>
                     </el-form-item>
 
-                    <el-form-item label="客户名称" prop="project_name">
+                    <el-form-item label="客户名称" prop="project_name" required>
                         <el-input v-model="form.project_name" placeholder="请输入客户名称"></el-input>
                     </el-form-item>
 
-                    <el-form-item label="客户管理地址" prop="project_manage_url">
+                    <el-form-item label="客户管理地址" prop="project_manage_url" required>
                         <el-input v-model="form.project_manage_url" placeholder="请输入客户管理地址"></el-input>
                     </el-form-item>
 
-                    <el-form-item label="客户API地址" prop="project_api_url">
+                    <el-form-item label="客户API地址" prop="project_api_url" required>
                         <el-input v-model="form.project_api_url" placeholder="请输入客户API地址"></el-input>
                     </el-form-item>
                 </el-col>

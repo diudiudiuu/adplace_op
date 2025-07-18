@@ -14,6 +14,8 @@ class Domain extends Base {
             'domain',
             'expired_at',
             'ping_flag',
+            'hosting',
+            'ssl_type',
             "memo",
             "created_at",
             "updated_at"
@@ -36,6 +38,17 @@ class Domain extends Base {
             ping_flag: {
                 type: 'enum',
                 value: ['deploy', 'error', 'normal'],
+                default: 'deploy',
+            },
+            hosting: {
+                type: 'enum',
+                value: ['cloudflare', 'self'],
+                default: 'cloudflare',
+            },
+            ssl_type: {
+                type: 'enum',
+                value: ['none', 'letsencrypt'],
+                default: 'none',
             },
             memo: {
                 type: 'string',

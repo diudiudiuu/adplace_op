@@ -13,5 +13,6 @@ const theme = useThemeStore()
 theme.initTheme()
 </script>
 <style>
+@import './assets/css/font.css';
 @import './assets/css/main.css';
 </style>

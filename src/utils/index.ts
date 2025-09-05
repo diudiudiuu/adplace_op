@@ -22,9 +22,16 @@ export const decryptAes = (data:string ) => {
     const splitStr = '/+/'
     // 分割为数组
     const splitArr = data.split(splitStr)
-    const content = splitArr[0] || ''
-    const key = splitArr[1] || ''
-    const iv = splitArr[2] || ''
+
+    // iv 倒数第一个
+    const iv = splitArr[splitArr.length - 1] || ''
+
+    // key 倒数第二个
+    const key = splitArr[splitArr.length - 2] || ''
+
+    // content 剩下的部分拼接起来
+    const content = splitArr.slice(0, splitArr.length - 2).join(splitStr) || ''
+
 
     const parsedKey = CryptoJS.enc.Hex.parse(key);
     const parsedIv = CryptoJS.enc.Hex.parse(iv);

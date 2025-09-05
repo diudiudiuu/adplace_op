@@ -42,7 +42,7 @@
   },
   "productName": "adsplat",
   "mainBinaryName": "adsplat",
-  "version": "2.9.0",
+  "version": "2.9.1",
   "identifier": "com.adsplat.dev",
   "plugins": {},
   "app": {

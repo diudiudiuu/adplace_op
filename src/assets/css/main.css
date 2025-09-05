@@ -98,5 +98,9 @@ i {
 	-webkit-touch-callout: none;
 }
   
-
-  
+.custom-gradient-loading {
+    background: radial-gradient(circle at center, #60e4fc61 0%, #60e4fc20 50%, #ffffff 90%),
+                repeating-linear-gradient(0deg, #ffffff, #ffffff 1px, #60e4fc20 1px, #60e4fc20 2px),
+                repeating-linear-gradient(90deg, #ffffff, #ffffff 1px, #60e4fc20 1px, #60e4fc20 2px) !important;
+    box-shadow: inset 0 0 50px rgba(96, 228, 252, 0.2);
+}

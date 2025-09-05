@@ -8,7 +8,8 @@ const api = (uri: string, data: unknown) => {
     const loading = ElLoading.service({
         target: '.content-box',
         lock: true,
-        text: 'Loading',
+        text: 'Loading...',
+        customClass: 'custom-gradient-loading'
     })
     try {
         return invoke(uri, data as InvokeArgs | undefined).then((res: unknown) => { // Update the type of 'res' to 'unknown'

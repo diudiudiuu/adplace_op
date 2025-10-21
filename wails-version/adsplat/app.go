@@ -9,8 +9,10 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 
 	"github.com/wailsapp/wails/v2/pkg/runtime"
+	"golang.org/x/crypto/ssh"
 )
 
 // App struct
@@ -374,6 +376,139 @@ func (a *App) ServerDelete(serverID, authorization string) string {
 	response := ApiResponse{Code: 200, Msg: "Server deleted successfully"}
 	result, _ := json.Marshal(response)
 	return string(result)
+}
+
+// TestStoredServerSSH 测试已存储服务器的SSH连接
+func (a *App) TestStoredServerSSH(serverID, authorization string) string {
+	log.Printf("TestStoredServerSSH called with serverID: %s", serverID)
+
+	// 检查授权
+	if authorization == "" || strings.TrimSpace(authorization) == "" {
+		response := ApiResponse{Code: 401, Msg: "Authorization required"}
+		result, _ := json.Marshal(response)
+		return string(result)
+	}
+
+	// 获取服务器信息
+	server, err := a.jsonService.GetServerByID(serverID, authorization)
+	if err != nil {
+		log.Printf("Failed to get server info: %v", err)
+		response := ApiResponse{Code: 500, Msg: "获取服务器信息失败"}
+		result, _ := json.Marshal(response)
+		return string(result)
+	}
+
+	if server == nil {
+		response := ApiResponse{Code: 404, Msg: "服务器不存在"}
+		result, _ := json.Marshal(response)
+		return string(result)
+	}
+
+	// 执行SSH测试
+	testResult := a.performSSHTest(server.ServerIP, server.ServerPort, server.ServerUser, server.ServerPassword)
+
+	// 更新服务器的连接状态
+	err = a.jsonService.UpdateServerConnectionStatus(serverID, testResult, authorization)
+	if err != nil {
+		log.Printf("Failed to update server connection status: %v", err)
+	}
+
+	return testResult
+}
+
+// performSSHTest 执行SSH测试的核心逻辑
+func (a *App) performSSHTest(serverIP, serverPort, serverUser, serverPassword string) string {
+	log.Printf("performSSHTest called with serverIP: %s, serverPort: %s, serverUser: %s", serverIP, serverPort, serverUser)
+
+	// 检查必要参数
+	if serverIP == "" {
+		response := ApiResponse{Code: 400, Msg: "服务器IP不能为空"}
+		result, _ := json.Marshal(response)
+		return string(result)
+	}
+
+	// 设置默认端口
+	if serverPort == "" {
+		serverPort = "22"
+	}
+
+	// 设置默认用户名
+	if serverUser == "" {
+		serverUser = "root"
+	}
+
+	// 创建SSH配置
+	config := &ssh.ClientConfig{
+		User: serverUser,
+		Auth: []ssh.AuthMethod{},
+		HostKeyCallback: ssh.InsecureIgnoreHostKey(), // 注意：生产环境应该验证主机密钥
+		Timeout: 10 * time.Second,
+	}
+
+	// 添加密码认证（如果提供了密码）
+	if serverPassword != "" {
+		config.Auth = append(config.Auth, ssh.Password(serverPassword))
+	}
+
+	// 尝试连接
+	address := fmt.Sprintf("%s:%s", serverIP, serverPort)
+	client, err := ssh.Dial("tcp", address, config)
+	if err != nil {
+		log.Printf("SSH connection failed: %v", err)
+		response := ApiResponse{
+			Code: 500, 
+			Msg: fmt.Sprintf("SSH连接失败: %v", err),
+			Data: map[string]interface{}{
+				"connected": false,
+				"error": err.Error(),
+				"test_time": time.Now().Format("2006-01-02 15:04:05"),
+			},
+		}
+		result, _ := json.Marshal(response)
+		return string(result)
+	}
+	defer client.Close()
+
+	// 测试执行简单命令
+	session, err := client.NewSession()
+	if err != nil {
+		log.Printf("Failed to create SSH session: %v", err)
+		response := ApiResponse{
+			Code: 500,
+			Msg: fmt.Sprintf("创建SSH会话失败: %v", err),
+			Data: map[string]interface{}{
+				"connected": true,
+				"session_error": err.Error(),
+				"test_time": time.Now().Format("2006-01-02 15:04:05"),
+			},
+		}
+		result, _ := json.Marshal(response)
+		return string(result)
+	}
+	defer session.Close()
+
+	// 执行简单的whoami命令测试
+	output, err := session.Output("whoami")
+	if err != nil {
+		log.Printf("Failed to execute test command: %v", err)
+	}
+
+	response := ApiResponse{
+		Code: 200,
+		Msg: "SSH连接成功",
+		Data: map[string]interface{}{
+			"connected": true,
+			"user": strings.TrimSpace(string(output)),
+			"test_time": time.Now().Format("2006-01-02 15:04:05"),
+		},
+	}
+	result, _ := json.Marshal(response)
+	return string(result)
+}
+
+// TestSSHConnection 测试SSH连接
+func (a *App) TestSSHConnection(serverIP, serverPort, serverUser, serverPassword string) string {
+	return a.performSSHTest(serverIP, serverPort, serverUser, serverPassword)
 }
 
 // TestUnauthorized 测试 401 响应 (用于测试前端的 401 处理)

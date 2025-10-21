@@ -23,4 +23,8 @@ export function ServerUpdate(arg1:string,arg2:string,arg3:string,arg4:string,arg
 
 export function ShowMessage(arg1:string,arg2:string):Promise<void>;
 
+export function TestSSHConnection(arg1:string,arg2:string,arg3:string,arg4:string):Promise<string>;
+
+export function TestStoredServerSSH(arg1:string,arg2:string):Promise<string>;
+
 export function TestUnauthorized():Promise<string>;

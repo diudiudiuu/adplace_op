@@ -8,13 +8,16 @@ import (
 
 // ServerData 服务器数据结构
 type ServerData struct {
-	ServerID       string        `json:"server_id"`
-	ServerName     string        `json:"server_name"`
-	ServerIP       string        `json:"server_ip"`
-	ServerPort     string        `json:"server_port"`
-	ServerUser     string        `json:"server_user"`
-	ServerPassword string        `json:"server_password"`
-	ProjectList    []ProjectData `json:"project_list"`
+	ServerID         string        `json:"server_id"`
+	ServerName       string        `json:"server_name"`
+	ServerIP         string        `json:"server_ip"`
+	ServerPort       string        `json:"server_port"`
+	ServerUser       string        `json:"server_user"`
+	ServerPassword   string        `json:"server_password"`
+	ProjectList      []ProjectData `json:"project_list"`
+	ConnectionStatus string        `json:"connection_status,omitempty"` // "connected", "disconnected", "unknown"
+	LastTestTime     string        `json:"last_test_time,omitempty"`
+	LastTestResult   string        `json:"last_test_result,omitempty"`
 }
 
 // ProjectData 项目数据结构
@@ -150,6 +153,48 @@ func (s *JsonService) AddOrUpdateProject(serverID string, projectInfo ProjectDat
 			// 如果项目不存在，添加新项目
 			if !found {
 				servers[i].ProjectList = append(servers[i].ProjectList, projectInfo)
+			}
+
+			return s.SaveJsonFile(servers, authorization)
+		}
+	}
+
+	return fmt.Errorf("服务器ID %s 不存在", serverID)
+}
+
+// UpdateServerConnectionStatus 更新服务器连接状态
+func (s *JsonService) UpdateServerConnectionStatus(serverID, testResult, authorization string) error {
+	servers, err := s.LoadJsonFile(authorization)
+	if err != nil {
+		return err
+	}
+
+	// 解析测试结果
+	var result map[string]interface{}
+	if err := json.Unmarshal([]byte(testResult), &result); err != nil {
+		return fmt.Errorf("解析测试结果失败: %v", err)
+	}
+
+	// 查找并更新服务器
+	for i, server := range servers {
+		if server.ServerID == serverID {
+			// 更新连接状态
+			if data, ok := result["data"].(map[string]interface{}); ok {
+				if connected, ok := data["connected"].(bool); ok {
+					if connected {
+						servers[i].ConnectionStatus = "connected"
+					} else {
+						servers[i].ConnectionStatus = "disconnected"
+					}
+				}
+				
+				if testTime, ok := data["test_time"].(string); ok {
+					servers[i].LastTestTime = testTime
+				}
+			}
+			
+			if msg, ok := result["msg"].(string); ok {
+				servers[i].LastTestResult = msg
 			}
 
 			return s.SaveJsonFile(servers, authorization)

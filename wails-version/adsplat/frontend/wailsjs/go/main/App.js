@@ -46,6 +46,14 @@ export function ShowMessage(arg1, arg2) {
   return window['go']['main']['App']['ShowMessage'](arg1, arg2);
 }
 
+export function TestSSHConnection(arg1, arg2, arg3, arg4) {
+  return window['go']['main']['App']['TestSSHConnection'](arg1, arg2, arg3, arg4);
+}
+
+export function TestStoredServerSSH(arg1, arg2) {
+  return window['go']['main']['App']['TestStoredServerSSH'](arg1, arg2);
+}
+
 export function TestUnauthorized() {
   return window['go']['main']['App']['TestUnauthorized']();
 }

@@ -59,6 +59,8 @@ const apiMap: Record<string, (data: any) => Promise<string>> = {
     'server_add': (data: any) => window.go!.main!.App!.ServerAdd(data.server_id, data.server_name, data.server_ip, data.server_port, data.server_user, data.server_password, data.authorization),
     'server_update': (data: any) => window.go!.main!.App!.ServerUpdate(data.old_server_id || data.server_id, data.server_id, data.server_name, data.server_ip, data.server_port, data.server_user, data.server_password, data.authorization),
     'server_delete': (data: any) => window.go!.main!.App!.ServerDelete(data.server_id, data.authorization),
+    'test_ssh': (data: any) => window.go!.main!.App!.TestSSHConnection(data.server_ip, data.server_port, data.server_user, data.server_password),
+    'test_stored_ssh': (data: any) => window.go!.main!.App!.TestStoredServerSSH(data.server_id, data.authorization),
     'project_info': (data: any) => window.go!.main!.App!.ProjectInfo(data.projectId, data.authorization),
     'project_form': (data: any) => window.go!.main!.App!.ProjectForm(data.serverId, data.projectInfo, data.authorization),
     'project_delete': (data: any) => window.go!.main!.App!.ProjectDelete(data.serverId, data.projectId, data.authorization),
@@ -123,14 +125,19 @@ const api = async (uri: string, data: any, showLoading: boolean = true) => {
             return Array.isArray(parsedData) ? parsedData : [];
         }
 
-        // 处理服务器管理API
-        if (uri.startsWith('server_')) {
+        // 处理服务器管理API和SSH测试API
+        if (uri.startsWith('server_') || uri === 'test_ssh' || uri === 'test_stored_ssh') {
             return parsedData;
         }
 
-        // 解密数据
-        if (parsedData?.data) {
-            parsedData.data = decryptAes(parsedData.data);
+        // 解密数据（只对字符串类型的data进行解密）
+        if (parsedData?.data && typeof parsedData.data === 'string') {
+            try {
+                parsedData.data = decryptAes(parsedData.data);
+            } catch (error) {
+                console.warn(`Failed to decrypt data for API ${uri}:`, error);
+                // 如果解密失败，保持原始数据
+            }
         }
 
         return parsedData || {};

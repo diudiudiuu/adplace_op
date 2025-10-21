@@ -63,6 +63,7 @@
                         show-password-on="click"
                     />
                 </n-form-item>
+
             </n-form>
             <template #action>
                 <n-space>
@@ -94,7 +95,8 @@ import {
     TrashOutline, 
     CloseOutline, 
     CheckmarkOutline,
-    ServerOutline
+    ServerOutline,
+    LinkOutline
 } from '@vicons/ionicons5'
 import { useSidebarStore } from '@/store/sidebar'
 import { reloadMenus } from '@/components/menu'
@@ -135,6 +137,8 @@ const isServerFormVisible = ref(false)
 const isEditMode = ref(false)
 const serverFormRef = ref()
 
+const testingServers = ref(new Set<string>())
+
 // 分页配置
 const pagination = {
     pageSize: 10,
@@ -148,7 +152,7 @@ const serverColumns = computed(() => [
     {
         title: '操作',
         key: 'actions',
-        width: 120,
+        width: 160,
         render: (row: Server) => {
             return h(NSpace, { size: 'small' }, {
                 default: () => [
@@ -162,6 +166,18 @@ const serverColumns = computed(() => [
                             icon: () => h(NIcon, { size: 16 }, { default: () => h(CreateOutline) })
                         }),
                         default: () => '编辑'
+                    }),
+                    h(NTooltip, { trigger: 'hover' }, {
+                        trigger: () => h(NButton, {
+                            size: 'small',
+                            type: 'info',
+                            class: 'special-table-btn',
+                            onClick: () => testStoredServerSSH(row.server_id),
+                            loading: testingServers.value.has(row.server_id)
+                        }, {
+                            icon: () => h(NIcon, { size: 16 }, { default: () => h(LinkOutline) })
+                        }),
+                        default: () => '测试'
                     }),
                     h(NTooltip, { trigger: 'hover' }, {
                         trigger: () => h(NButton, {
@@ -208,6 +224,21 @@ const serverColumns = computed(() => [
         width: 100
     },
     {
+        title: '连接状态',
+        key: 'connection_status',
+        width: 100,
+        render: (row: Server) => {
+            const status = (row as any).connection_status
+            if (status === 'connected') {
+                return h('span', { style: 'color: #18a058;' }, '✓ 已连接')
+            } else if (status === 'disconnected') {
+                return h('span', { style: 'color: #d03050;' }, '✗ 连接失败')
+            } else {
+                return h('span', { style: 'color: #909399;' }, '- 未测试')
+            }
+        }
+    },
+    {
         title: '项目数量',
         key: 'project_count',
         width: 100,
@@ -243,30 +274,7 @@ const refreshServers = () => {
     fetchServers()
 }
 
-// 打开服务器表单
-const openServerForm = (editMode: boolean, server?: Server) => {
-    isEditMode.value = editMode
-    if (editMode && server) {
-        serverFormData.value = {
-            server_id: server.server_id,
-            server_name: server.server_name,
-            server_ip: server.server_ip,
-            server_port: server.server_port,
-            server_user: server.server_user,
-            server_password: server.server_password
-        }
-    } else {
-        serverFormData.value = {
-            server_id: '',
-            server_name: '',
-            server_ip: '',
-            server_port: '',
-            server_user: '',
-            server_password: ''
-        }
-    }
-    isServerFormVisible.value = true
-}
+
 
 // 提交服务器表单
 const submitServerForm = async () => {
@@ -284,6 +292,8 @@ const submitServerForm = async () => {
         if (isEditMode.value) {
             requestData.old_server_id = serverFormData.value.server_id // 编辑时原ID就是当前ID
         }
+        
+
         
         console.log('Submitting server form:', action, requestData)
         const res = await api(action, requestData)
@@ -341,6 +351,61 @@ const deleteServer = async (server: Server) => {
     } catch (error) {
         console.error('Server deletion error:', error)
         message.error('服务器删除失败')
+    }
+}
+
+
+
+// 打开服务器表单
+const openServerForm = (editMode: boolean, server?: Server) => {
+    isEditMode.value = editMode
+    
+    if (editMode && server) {
+        serverFormData.value = {
+            server_id: server.server_id,
+            server_name: server.server_name,
+            server_ip: server.server_ip,
+            server_port: server.server_port,
+            server_user: server.server_user,
+            server_password: server.server_password
+        }
+    } else {
+        serverFormData.value = {
+            server_id: '',
+            server_name: '',
+            server_ip: '',
+            server_port: '',
+            server_user: '',
+            server_password: ''
+        }
+    }
+    isServerFormVisible.value = true
+}
+
+// 测试已存储服务器的SSH连接
+const testStoredServerSSH = async (serverId: string) => {
+    testingServers.value.add(serverId)
+    
+    try {
+        const res = await api('test_stored_ssh', {
+            server_id: serverId
+        })
+        
+        console.log('Stored SSH test result:', res)
+        
+        if (res && res.code === 200) {
+            message.success(`服务器 ${serverId} SSH连接测试成功`)
+        } else {
+            message.error(`服务器 ${serverId} SSH连接测试失败: ${res?.msg || '未知错误'}`)
+        }
+        
+        // 刷新服务器列表以显示最新状态
+        await fetchServers()
+    } catch (error) {
+        console.error('Stored SSH test error:', error)
+        message.error(`服务器 ${serverId} SSH连接测试异常`)
+    } finally {
+        testingServers.value.delete(serverId)
     }
 }
 

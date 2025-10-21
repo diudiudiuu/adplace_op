@@ -87,22 +87,22 @@ const { boolroute } = storeToRefs(sidebar)
 const message = useMessage()
 const dialog = useDialog()
 
-// 创建全屏 loading 实例
-const createLoading = () => {
-    return {
-        create: (options: any) => {
-            const loadingInstance = message.loading(options.description || '加载中...', {
-                duration: 0
-            });
-            return {
-                destroy: () => loadingInstance.destroy()
-            };
-        }
-    };
-};
-
 // 设置全局实例
 onMounted(() => {
+    // 创建简单的 loading 实例
+    const createLoading = () => {
+        return {
+            create: (options: any) => {
+                const loadingInstance = message.loading(options.description || '加载中...', {
+                    duration: 0
+                });
+                return {
+                    destroy: () => loadingInstance.destroy()
+                };
+            }
+        };
+    };
+    
     setGlobalInstances(message, createLoading())
 })
 
@@ -316,7 +316,7 @@ watch(boolroute, (newVal) => {
     padding: 12px;
     border: 1px solid #F1F5F9;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-    font-size: 12px;
+    font-size: var(--table-font-size, 12px);
     line-height: 1.3;
 }
 
@@ -427,22 +427,22 @@ watch(boolroute, (newVal) => {
     display: none !important;
 }
 
-/* 优化内容区域的字体和间距 */
+/* 优化内容区域的字体和间距 - 使用CSS变量 */
 :deep(.content-wrapper .n-card) {
-    font-size: 11px;
+    font-size: var(--table-font-size, 12px);
     margin-bottom: 12px;
 }
 
 :deep(.content-wrapper .n-card-header) {
     padding: 8px 12px;
-    font-size: 12px;
+    font-size: var(--menu-font-size, 14px);
     font-weight: 600;
     min-height: auto;
 }
 
 :deep(.content-wrapper .n-card__content) {
     padding: 8px 12px;
-    font-size: 11px;
+    font-size: var(--table-font-size, 12px);
 }
 
 :deep(.content-wrapper .n-form-item) {
@@ -450,13 +450,13 @@ watch(boolroute, (newVal) => {
 }
 
 :deep(.content-wrapper .n-form-item-label) {
-    font-size: 11px;
+    font-size: var(--table-font-size, 12px);
     font-weight: 500;
     padding-bottom: 4px;
 }
 
 :deep(.content-wrapper .n-input) {
-    font-size: 11px;
+    font-size: var(--table-font-size, 12px);
     min-height: 28px;
 }
 
@@ -465,35 +465,35 @@ watch(boolroute, (newVal) => {
 }
 
 :deep(.content-wrapper .n-button) {
-    font-size: 11px;
+    font-size: var(--table-font-size, 12px);
     padding: 0 10px;
     height: 28px;
     min-height: 28px;
 }
 
 :deep(.content-wrapper .n-data-table) {
-    font-size: 11px;
+    font-size: var(--table-font-size, 12px);
 }
 
 :deep(.content-wrapper .n-data-table th) {
-    font-size: 11px;
+    font-size: var(--table-font-size, 12px);
     font-weight: 600;
     padding: 6px 8px;
     height: 32px;
 }
 
 :deep(.content-wrapper .n-data-table td) {
-    font-size: 11px;
+    font-size: var(--table-font-size, 12px);
     padding: 4px 8px;
     height: 28px;
 }
 
 :deep(.content-wrapper .n-tabs) {
-    font-size: 11px;
+    font-size: var(--table-font-size, 12px);
 }
 
 :deep(.content-wrapper .n-tabs .n-tabs-tab) {
-    font-size: 11px;
+    font-size: var(--menu-font-size, 14px);
     padding: 6px 12px;
 }
 
@@ -506,40 +506,40 @@ watch(boolroute, (newVal) => {
 }
 
 :deep(.content-wrapper .n-descriptions) {
-    font-size: 11px;
+    font-size: var(--table-font-size, 12px);
 }
 
 :deep(.content-wrapper .n-descriptions-table-wrapper .n-descriptions-table th) {
-    font-size: 11px;
+    font-size: var(--table-font-size, 12px);
     padding: 4px 8px;
 }
 
 :deep(.content-wrapper .n-descriptions-table-wrapper .n-descriptions-table td) {
-    font-size: 11px;
+    font-size: var(--table-font-size, 12px);
     padding: 4px 8px;
 }
 
 :deep(.content-wrapper .n-tooltip) {
-    font-size: 10px;
+    font-size: var(--table-font-size, 12px);
 }
 
 :deep(.content-wrapper h1) {
-    font-size: 16px;
+    font-size: calc(var(--sidebar-font-size, 16px) + 2px);
     margin: 8px 0;
 }
 
 :deep(.content-wrapper h2) {
-    font-size: 14px;
+    font-size: var(--sidebar-font-size, 16px);
     margin: 6px 0;
 }
 
 :deep(.content-wrapper h3) {
-    font-size: 12px;
+    font-size: var(--menu-font-size, 14px);
     margin: 4px 0;
 }
 
 :deep(.content-wrapper p) {
-    font-size: 11px;
+    font-size: var(--table-font-size, 12px);
     margin: 4px 0;
     line-height: 1.3;
 }

@@ -5,23 +5,25 @@
                 <n-space>
                     <n-tooltip>
                         <template #trigger>
-                            <n-button type="primary" @click="handleEdit" circle>
+                            <n-button type="primary" @click="handleEdit">
                                 <template #icon>
                                     <n-icon>
                                         <CreateOutline v-if="!eidtmode" />
                                         <CloseOutline v-else />
                                     </n-icon>
                                 </template>
+                                {{ !eidtmode ? '编辑' : '取消' }}
                             </n-button>
                         </template>
                         {{ !eidtmode ? '编辑' : '取消' }}
                     </n-tooltip>
                     <n-tooltip>
                         <template #trigger>
-                            <n-button type="error" @click="handleDelete" circle>
+                            <n-button type="error" @click="handleDelete">
                                 <template #icon>
                                     <n-icon><TrashOutline /></n-icon>
                                 </template>
+                                删除
                             </n-button>
                         </template>
                         删除

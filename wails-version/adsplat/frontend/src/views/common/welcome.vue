@@ -49,16 +49,6 @@
                     <h3>项目配置</h3>
                     <p>统一管理所有项目设置</p>
                 </div>
-
-                <div class="feature-card">
-                    <div class="feature-icon terminal-icon">
-                        <n-icon size="28">
-                            <TerminalOutline />
-                        </n-icon>
-                    </div>
-                    <h3>数据操作</h3>
-                    <p>安全执行数据库操作</p>
-                </div>
             </div>
 
             <!-- 温馨提示 -->

@@ -4,20 +4,22 @@
             <n-space>
                 <n-tooltip>
                     <template #trigger>
-                        <n-button type="primary" @click="handleParse" circle>
+                        <n-button type="primary" @click="handleParse">
                             <template #icon>
                                 <n-icon><ClipboardOutline /></n-icon>
                             </template>
+                            粘贴
                         </n-button>
                     </template>
                     粘贴
                 </n-tooltip>
                 <n-tooltip>
                     <template #trigger>
-                        <n-button type="info" @click="handleAnalyze" :disabled="isDisabled" circle>
+                        <n-button type="info" @click="handleAnalyze" :disabled="isDisabled">
                             <template #icon>
                                 <n-icon><CodeOutline /></n-icon>
                             </template>
+                            解析
                         </n-button>
                     </template>
                     解析
@@ -32,10 +34,11 @@
         <div v-else class="exec">
             <n-tooltip>
                 <template #trigger>
-                    <n-button type="primary" @click="handleCancle" circle>
+                    <n-button type="primary" @click="handleCancle">
                         <template #icon>
                             <n-icon><ArrowBackOutline /></n-icon>
                         </template>
+                        返回
                     </n-button>
                 </template>
                 返回

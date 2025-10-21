@@ -4,7 +4,6 @@
 	outline: 0 !important;
 }
 
-
 body {
 	font-family: 'PingFang SC', 'Helvetica Neue', Helvetica, 'microsoft yahei', arial, STHeiTi, sans-serif;
 }
@@ -24,7 +23,8 @@ i {
 	border-radius: 5px;
 }
 
-.el-table th {
+/* Naive UI 表格样式 */
+.n-data-table th {
 	background-color: #f5f7fa !important;
 }
 
@@ -35,10 +35,10 @@ i {
 }
 
 .plugins-tips a {
-	color: var(--el-color-primary);
+	color: var(--primary-color);
 }
 
-.el-button+.el-tooltip {
+.n-button + .n-tooltip {
 	margin-left: 10px;
 }
 
@@ -64,9 +64,6 @@ i {
 	opacity: 0;
 }
 
-
-
-
 [hidden] {
 	display: none !important;
 }
@@ -80,20 +77,22 @@ i {
 :root {
 	--header-bg-color: #242f42;
 	--header-text-color: #fff;
-	--active-color: var(--el-color-primary);
+	--primary-color: #18a058;
+	--active-color: var(--primary-color);
+	
+	/* 字体大小变量 */
+	--sidebar-font-size: 16px;        /* 区域1：侧边栏字体（最大） */
+	--menu-font-size: 14px;           /* 区域2：中间菜单字体（中等） */
+	--table-font-size: 12px;          /* 区域3：表格区域字体（最小） */
+	--table-icon-size: 20px;          /* 区域3：表格图标按钮大小 */
 }
-
-
 
 /* 禁用文本选择 */
 .select-none {
 	user-select: none;
 	-webkit-user-select: none;
-	/* Chrome, Safari */
 	-moz-user-select: none;
-	/* Firefox */
 	-ms-user-select: none;
-	/* IE */
 	-webkit-user-drag: none;
 	-webkit-touch-callout: none;
 }
@@ -103,4 +102,173 @@ i {
 		repeating-linear-gradient(0deg, #ffffff, #ffffff 1px, #60e4fc20 1px, #60e4fc20 2px),
 		repeating-linear-gradient(90deg, #ffffff, #ffffff 1px, #60e4fc20 1px, #60e4fc20 2px) !important;
 	box-shadow: inset 0 0 50px rgba(96, 228, 252, 0.2);
+}
+
+/* 区域1：侧边栏样式调整 */
+.sidebar-menu {
+	font-size: var(--sidebar-font-size) !important;
+}
+
+.sidebar-menu .n-menu-item,
+.sidebar-menu .n-submenu-title {
+	font-size: var(--sidebar-font-size) !important;
+	font-weight: 500;
+}
+
+.sidebar-menu .n-menu-item-content {
+	font-size: var(--sidebar-font-size) !important;
+}
+
+/* 区域2：中间菜单区域样式调整 */
+.header .web-title {
+	font-size: var(--menu-font-size) !important;
+	font-weight: 600;
+}
+
+.header .collapse-btn {
+	font-size: var(--menu-font-size) !important;
+}
+
+.header .header-user-con {
+	font-size: var(--menu-font-size) !important;
+}
+
+.header .user-name {
+	font-size: var(--menu-font-size) !important;
+}
+
+/* 选中状态的背景色 */
+.sidebar-menu .n-menu-item.n-menu-item--selected {
+	background: linear-gradient(135deg, var(--primary-color), #36ad6a) !important;
+	color: #fff !important;
+	border-radius: 6px;
+	margin: 3px 10px;
+	position: relative;
+}
+
+.sidebar-menu .n-menu-item.n-menu-item--selected::before {
+	content: '';
+	position: absolute;
+	left: -6px;
+	top: 50%;
+	transform: translateY(-50%);
+	width: 3px;
+	height: 20px;
+	background-color: #fff;
+	border-radius: 2px;
+}
+
+.sidebar-menu .n-submenu-children .n-menu-item.n-menu-item--selected {
+	background: linear-gradient(135deg, 
+		rgba(24, 160, 88, 0.1), 
+		rgba(24, 160, 88, 0.2)) !important;
+	color: var(--primary-color) !important;
+	border-left: 3px solid var(--primary-color);
+	border-radius: 6px;
+	margin: 3px 10px;
+}
+
+/* 区域3：Naive UI 表格区域样式调整 */
+.n-data-table {
+	font-size: var(--table-font-size) !important;
+}
+
+.n-data-table .n-data-table-th {
+	font-size: var(--table-font-size) !important;
+	font-weight: 600 !important;
+	background-color: #f8f9fa !important;
+	color: #495057 !important;
+}
+
+.n-data-table .n-data-table-td {
+	font-size: var(--table-font-size) !important;
+	padding: 8px 12px !important;
+}
+
+/* 使用Naive UI原生样式，最小化自定义 */
+
+/* 搜索框区域按钮 */
+.search-box .n-button {
+	font-size: var(--table-font-size) !important;
+}
+
+/* 表单组件 */
+.n-form {
+	font-size: var(--table-font-size) !important;
+}
+
+.n-form-item-label {
+	font-size: var(--table-font-size) !important;
+}
+
+.n-input {
+	font-size: var(--table-font-size) !important;
+}
+
+.n-date-picker {
+	font-size: var(--table-font-size) !important;
+}
+
+.n-radio-button {
+	font-size: var(--table-font-size) !important;
+}
+
+/* 分页器 */
+.n-pagination {
+	font-size: var(--table-font-size) !important;
+}
+
+/* 对话框内容 */
+.n-modal .n-card__content {
+	font-size: var(--table-font-size) !important;
+}
+
+/* 响应式字体大小调整 */
+@media (max-width: 1200px) {
+    :root {
+        --sidebar-font-size: 15px;
+        --menu-font-size: 13px;
+        --table-font-size: 11px;
+        --table-icon-size: 20px;
+    }
+}
+
+@media (max-width: 768px) {
+    :root {
+        --sidebar-font-size: 14px;
+        --menu-font-size: 12px;
+        --table-font-size: 10px;
+        --table-icon-size: 20px;
+    }
+}/* 
+特殊表格的24px按钮样式 */
+.special-table .special-table-btn {
+	width: 24px !important;
+	height: 24px !important;
+	min-width: 24px !important;
+	max-width: 24px !important;
+	min-height: 24px !important;
+	max-height: 24px !important;
+	padding: 0 !important;
+	border-radius: 4px !important;
+	display: inline-flex !important;
+	align-items: center !important;
+	justify-content: center !important;
+}
+
+.special-table .special-table-btn .n-button__content {
+	padding: 0 !important;
+	margin: 0 !important;
+	width: 24px !important;
+	height: 24px !important;
+	display: flex !important;
+	align-items: center !important;
+	justify-content: center !important;
+}
+
+.special-table .special-table-btn .n-icon {
+	font-size: 16px !important;
+	width: 16px !important;
+	height: 16px !important;
+	margin: 0 !important;
 }

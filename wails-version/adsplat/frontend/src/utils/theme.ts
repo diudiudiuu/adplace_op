@@ -123,6 +123,9 @@ export const lightThemeOverrides: GlobalThemeOverrides = {
         tdTextColor: '#111827',
         thFontWeight: '600',
         borderRadius: '8px',
+        fontSize: '12px',
+        thFontSize: '12px',
+        tdFontSize: '12px',
     },
     Layout: {
         color: '#FFFFFF',

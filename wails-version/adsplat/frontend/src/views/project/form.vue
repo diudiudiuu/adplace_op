@@ -37,29 +37,21 @@
                     <n-grid-item :span="24">
                         <n-form-item>
                             <n-space>
-                                <n-tooltip>
-                                    <template #trigger>
-                                        <n-button type="primary" @click="onSubmit" circle>
-                                            <template #icon>
-                                                <n-icon>
-                                                    <SaveOutline v-if="!isEdit" />
-                                                    <RefreshOutline v-else />
-                                                </n-icon>
-                                            </template>
-                                        </n-button>
+                                <n-button type="primary" @click="onSubmit">
+                                    <template #icon>
+                                        <n-icon>
+                                            <SaveOutline v-if="!isEdit" />
+                                            <RefreshOutline v-else />
+                                        </n-icon>
                                     </template>
                                     {{ isEdit ? '更新客户' : '添加客户' }}
-                                </n-tooltip>
-                                <n-tooltip>
-                                    <template #trigger>
-                                        <n-button @click="onReset" circle>
-                                            <template #icon>
-                                                <n-icon><ReloadOutline /></n-icon>
-                                            </template>
-                                        </n-button>
+                                </n-button>
+                                <n-button @click="onReset">
+                                    <template #icon>
+                                        <n-icon><ReloadOutline /></n-icon>
                                     </template>
                                     重置信息
-                                </n-tooltip>
+                                </n-button>
                             </n-space>
                         </n-form-item>
                     </n-grid-item>

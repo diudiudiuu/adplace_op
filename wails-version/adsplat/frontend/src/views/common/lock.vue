@@ -79,11 +79,12 @@ import { useRouter } from 'vue-router'
 import { useMessage } from 'naive-ui'
 import { LockClosedOutline } from '@vicons/ionicons5'
 import { setAuthorization } from '@/utils/auth'
-
+import { useLoading } from '@/composables/useLoading'
 
 const router = useRouter()
 const message = useMessage()
 const loading = ref(false)
+const globalLoading = useLoading()
 
 const param = reactive({
     password: '',
@@ -98,14 +99,23 @@ const submitForm = async () => {
         }
 
         loading.value = true
+        globalLoading.show('验证中...')
+        
         try {
+            // 模拟验证过程
+            await new Promise(resolve => setTimeout(resolve, 1000))
+            
+            globalLoading.updateText('验证成功')
             setAuthorization(param.authorization)
             message.success('登录成功')
+            
+            await new Promise(resolve => setTimeout(resolve, 500))
             await router.push('/')
         } catch (error) {
             message.error('登录失败，请重试')
         } finally {
             loading.value = false
+            globalLoading.hide()
         }
     } else {
         message.error('答案错误，请重试')

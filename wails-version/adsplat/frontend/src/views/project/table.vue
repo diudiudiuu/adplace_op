@@ -4,20 +4,22 @@
             <n-space>
                 <n-tooltip>
                     <template #trigger>
-                        <n-button type="primary" @click="openForm(false)" circle>
+                        <n-button type="primary" @click="openForm(false)">
                             <template #icon>
                                 <n-icon><AddCircleOutline /></n-icon>
                             </template>
+                            添加
                         </n-button>
                     </template>
                     添加
                 </n-tooltip>
                 <n-tooltip>
                     <template #trigger>
-                        <n-button type="info" @click="refreshData" circle>
+                        <n-button type="info" @click="refreshData">
                             <template #icon>
                                 <n-icon><RefreshOutline /></n-icon>
                             </template>
+                            刷新
                         </n-button>
                     </template>
                     刷新
@@ -30,6 +32,7 @@
             :data="tableData"
             :pagination="pagination"
             striped
+            class="special-table"
         />
 
         <n-modal v-model:show="isFormVisible" preset="dialog" :title="isEditMode ? '编辑' : '添加'">
@@ -86,29 +89,21 @@
             </n-form>
             <template #action>
                 <n-space>
-                    <n-tooltip placement="top">
-                        <template #trigger>
-                            <n-button @click="isFormVisible = false">
-                                <template #icon>
-                                    <n-icon><CloseOutline /></n-icon>
-                                </template>
-                            </n-button>
+                    <n-button @click="isFormVisible = false">
+                        <template #icon>
+                            <n-icon><CloseOutline /></n-icon>
                         </template>
                         取消
-                    </n-tooltip>
-                    <n-tooltip placement="top">
-                        <template #trigger>
-                            <n-button
-                                type="primary"
-                                @click="isEditMode ? submitForm('update') : submitForm('insert')"
-                            >
-                                <template #icon>
-                                    <n-icon><CheckmarkOutline /></n-icon>
-                                </template>
-                            </n-button>
+                    </n-button>
+                    <n-button
+                        type="primary"
+                        @click="isEditMode ? submitForm('update') : submitForm('insert')"
+                    >
+                        <template #icon>
+                            <n-icon><CheckmarkOutline /></n-icon>
                         </template>
                         {{ isEditMode ? '更新' : '提交' }}
-                    </n-tooltip>
+                    </n-button>
                 </n-space>
             </template>
         </n-modal>
@@ -117,7 +112,7 @@
 
 <script lang="ts" setup>
 import { ref, onMounted, defineProps, computed, h } from 'vue'
-import { useMessage, useDialog, NButton, NIcon, NSpace } from 'naive-ui'
+import { useMessage, useDialog, NButton, NIcon, NSpace, NTooltip } from 'naive-ui'
 import { AddCircleOutline, RefreshOutline, CreateOutline, TrashOutline, CloseOutline, CheckmarkOutline } from '@vicons/ionicons5'
 import api from '@/api'
 import { encryptAes } from '@/utils'
@@ -156,19 +151,27 @@ const columns = computed(() => {
         render: (row) => {
             return h(NSpace, { size: 'small' }, {
                 default: () => [
-                    h(NButton, {
-                        size: 'small',
-                        type: 'primary',
-                        onClick: () => openForm(true, row)
-                    }, {
-                        default: () => h(NIcon, null, { default: () => h(CreateOutline) })
+                    h(NTooltip, { trigger: 'hover' }, {
+                        trigger: () => h(NButton, {
+                            size: 'small',
+                            type: 'primary',
+                            class: 'special-table-btn',
+                            onClick: () => openForm(true, row)
+                        }, {
+                            icon: () => h(NIcon, { size: 16 }, { default: () => h(CreateOutline) })
+                        }),
+                        default: () => '编辑'
                     }),
-                    h(NButton, {
-                        size: 'small',
-                        type: 'error',
-                        onClick: () => confirmDelete(row)
-                    }, {
-                        default: () => h(NIcon, null, { default: () => h(TrashOutline) })
+                    h(NTooltip, { trigger: 'hover' }, {
+                        trigger: () => h(NButton, {
+                            size: 'small',
+                            type: 'error',
+                            class: 'special-table-btn',
+                            onClick: () => confirmDelete(row)
+                        }, {
+                            icon: () => h(NIcon, { size: 16 }, { default: () => h(TrashOutline) })
+                        }),
+                        default: () => '删除'
                     })
                 ]
             })
@@ -310,7 +313,34 @@ const handleChange = async (
 .search-box {
     margin-bottom: 20px;
 }
-.table {
-    width: 100%;
+
+/* 特殊表格的24px按钮样式 */
+:deep(.special-table .special-table-btn) {
+    width: 24px !important;
+    height: 24px !important;
+    min-width: 24px !important;
+    max-width: 24px !important;
+    padding: 0 !important;
+    border-radius: 4px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+
+:deep(.special-table .special-table-btn .n-button__content) {
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 24px !important;
+    height: 24px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+
+:deep(.special-table .special-table-btn .n-icon) {
+    font-size: 16px !important;
+    width: 16px !important;
+    height: 16px !important;
+    margin: 0 !important;
 }
 </style>

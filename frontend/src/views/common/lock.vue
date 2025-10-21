@@ -10,13 +10,17 @@
                 >
                     <template #header>
                         <n-space justify="center">
-                            <n-icon size="32" color="var(--primary-color)">
-                                <LockClosedOutline />
-                            </n-icon>
+                            <div class="hero-avatar">
+                                <img src="@/assets/img/avatar.jpg" alt="用户头像" class="avatar-image" />
+                                <div class="avatar-ring"></div>
+                            </div>
                         </n-space>
-                        <n-h2 style="text-align: center; margin: 16px 0 0 0">
-                            脑筋急转弯
+                        <n-h2 style="text-align: center; margin: 16px 0 8px 0">
+                            欢迎回来
                         </n-h2>
+                        <p style="text-align: center; margin: 0; color: #7f8c8d; font-size: 14px;">
+                            请回答问题以继续您的数字体验
+                        </p>
                     </template>
                     
                     <n-form 
@@ -27,7 +31,7 @@
                         <n-form-item>
                             <n-input 
                                 type="text" 
-                                placeholder="动物园里面生气时谁最安静?" 
+                                placeholder="小问题：动物园里生气时谁最安静？" 
                                 v-model:value="param.password" 
                                 size="large"
                                 clearable
@@ -43,7 +47,7 @@
                         <n-form-item>
                             <n-input 
                                 type="password" 
-                                placeholder="授权秘钥信息" 
+                                placeholder="请输入您的专属授权密钥" 
                                 v-model:value="param.authorization" 
                                 size="large"
                                 show-password-on="mousedown"
@@ -64,7 +68,7 @@
                             block
                             :loading="loading"
                         >
-                            尝试你的答案
+                            开始我的数字之旅
                         </n-button>
                     </n-form>
                 </n-card>
@@ -92,12 +96,12 @@ const param = reactive({
 const submitForm = async () => {
     if (param.password === '大猩猩') {
         if (!param.authorization || param.authorization.trim() === '') {
-            message.error('请输入授权秘钥')
+            message.error('请输入您的专属密钥')
             return
         }
 
         loading.value = true
-        const loadingMessage = message.loading('验证中...', { duration: 0 })
+        const loadingMessage = message.loading('正在为您开启美好体验...', { duration: 0 })
         
         try {
             // 模拟验证过程
@@ -105,18 +109,18 @@ const submitForm = async () => {
             
             loadingMessage.destroy()
             setAuthorization(param.authorization)
-            message.success('登录成功')
+            message.success('欢迎回来！准备开始您的精彩旅程')
             
             await new Promise(resolve => setTimeout(resolve, 500))
             await router.push('/')
         } catch (error) {
             loadingMessage.destroy()
-            message.error('登录失败，请重试')
+            message.error('验证遇到问题，请稍后再试')
         } finally {
             loading.value = false
         }
     } else {
-        message.error('答案错误，请重试')
+        message.error('答案不太对哦，再想想看')
     }
 }
 </script>
@@ -217,6 +221,65 @@ const submitForm = async () => {
     box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4) !important;
 }
 
+/* 头像样式 */
+.hero-avatar {
+    margin-bottom: 16px;
+    position: relative;
+    display: inline-block;
+    animation: gentle-pulse 3s ease-in-out infinite;
+}
+
+.avatar-image {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 3px solid rgba(255, 255, 255, 0.8);
+    box-shadow: 0 8px 32px rgba(52, 152, 219, 0.3);
+    transition: all 0.3s ease;
+}
+
+.avatar-ring {
+    position: absolute;
+    top: -6px;
+    left: -6px;
+    right: -6px;
+    bottom: -6px;
+    border: 2px solid transparent;
+    border-radius: 50%;
+    background: linear-gradient(45deg, #3498db, #9b59b6, #e74c3c, #f39c12) border-box;
+    -webkit-mask: linear-gradient(#fff 0 0) padding-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: subtract;
+    mask: linear-gradient(#fff 0 0) padding-box, linear-gradient(#fff 0 0);
+    mask-composite: subtract;
+    animation: rotate-ring 4s linear infinite;
+}
+
+@keyframes rotate-ring {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+@keyframes gentle-pulse {
+    0%, 100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+    50% {
+        transform: scale(1.05);
+        opacity: 0.8;
+    }
+}
+
+.hero-avatar:hover .avatar-image {
+    transform: scale(1.05);
+    box-shadow: 0 12px 40px rgba(52, 152, 219, 0.4);
+}
+
 /* 响应式设计 */
 @media (max-width: 768px) {
     .login-layout {
@@ -235,6 +298,11 @@ const submitForm = async () => {
     
     :deep(.n-card__content) {
         padding: 12px 24px 24px !important;
+    }
+    
+    .avatar-image {
+        width: 60px;
+        height: 60px;
     }
 }
 </style>

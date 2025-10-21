@@ -100,11 +100,11 @@ const navigateToServerManagement = () => {
 const handleLogout = () => {
     dialog.warning({
         title: '确认退出',
-        content: '确定要退出登录吗？',
-        positiveText: '确定',
+        content: '确定要退出登录吗？退出后将清除所有缓存数据。',
+        positiveText: '确定退出',
         negativeText: '取消',
         onPositiveClick: () => {
-            message.success('已退出登录')
+            message.success('已安全退出，期待您的下次回来')
             handleUnauthorized()
         }
     })

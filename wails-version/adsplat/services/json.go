@@ -2,14 +2,19 @@ package services
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 )
 
 // ServerData 服务器数据结构
 type ServerData struct {
-	ServerID    string        `json:"server_id"`
-	ServerName  string        `json:"server_name"`
-	ProjectList []ProjectData `json:"project_list"`
+	ServerID       string        `json:"server_id"`
+	ServerName     string        `json:"server_name"`
+	ServerIP       string        `json:"server_ip"`
+	ServerPort     string        `json:"server_port"`
+	ServerUser     string        `json:"server_user"`
+	ServerPassword string        `json:"server_password"`
+	ProjectList    []ProjectData `json:"project_list"`
 }
 
 // ProjectData 项目数据结构
@@ -151,7 +156,7 @@ func (s *JsonService) AddOrUpdateProject(serverID string, projectInfo ProjectDat
 		}
 	}
 
-	return nil
+	return fmt.Errorf("服务器ID %s 不存在", serverID)
 }
 
 // DeleteProject 删除项目
@@ -175,6 +180,93 @@ func (s *JsonService) DeleteProject(serverID, projectID, authorization string) e
 					return s.SaveJsonFile(servers, authorization)
 				}
 			}
+		}
+	}
+
+	return nil
+}
+
+// AddServer 添加新服务器
+func (s *JsonService) AddServer(serverData ServerData, authorization string) error {
+	servers, err := s.LoadJsonFile(authorization)
+	if err != nil {
+		return err
+	}
+
+	// 检查服务器ID是否已存在
+	for _, server := range servers {
+		if server.ServerID == serverData.ServerID {
+			return fmt.Errorf("服务器ID %s 已存在", serverData.ServerID)
+		}
+	}
+
+	// 添加新服务器
+	servers = append(servers, serverData)
+
+	return s.SaveJsonFile(servers, authorization)
+}
+
+// UpdateServer 更新服务器信息
+func (s *JsonService) UpdateServer(serverID string, updatedServer ServerData, authorization string) error {
+	servers, err := s.LoadJsonFile(authorization)
+	if err != nil {
+		return err
+	}
+
+	// 查找并更新服务器
+	for i, server := range servers {
+		if server.ServerID == serverID {
+			// 保留原有的项目列表
+			updatedServer.ProjectList = server.ProjectList
+			servers[i] = updatedServer
+			return s.SaveJsonFile(servers, authorization)
+		}
+	}
+
+	return nil
+}
+
+// UpdateServerWithNewID 更新服务器信息（支持更改服务器ID）
+func (s *JsonService) UpdateServerWithNewID(oldServerID string, updatedServer ServerData, authorization string) error {
+	servers, err := s.LoadJsonFile(authorization)
+	if err != nil {
+		return err
+	}
+
+	// 如果新ID与旧ID不同，需要检查新ID是否已存在
+	if oldServerID != updatedServer.ServerID {
+		for _, server := range servers {
+			if server.ServerID == updatedServer.ServerID {
+				return fmt.Errorf("服务器ID %s 已存在", updatedServer.ServerID)
+			}
+		}
+	}
+
+	// 查找并更新服务器
+	for i, server := range servers {
+		if server.ServerID == oldServerID {
+			// 保留原有的项目列表
+			updatedServer.ProjectList = server.ProjectList
+			servers[i] = updatedServer
+			return s.SaveJsonFile(servers, authorization)
+		}
+	}
+
+	return fmt.Errorf("服务器ID %s 不存在", oldServerID)
+}
+
+// DeleteServer 删除服务器
+func (s *JsonService) DeleteServer(serverID string, authorization string) error {
+	servers, err := s.LoadJsonFile(authorization)
+	if err != nil {
+		return err
+	}
+
+	// 查找并删除服务器
+	for i, server := range servers {
+		if server.ServerID == serverID {
+			servers = append(servers[:i], servers[i+1:]...)
+			return s.SaveJsonFile(servers, authorization)
 		}
 	}
 

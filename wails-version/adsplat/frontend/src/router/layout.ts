@@ -21,6 +21,17 @@ const layoutRouter = {
             name: 'project-form',
             component: () => import('@/views/project/form.vue'),
         },
+        {
+            path: '/server-management',
+            name: 'server-management',
+            component: () => import('@/views/server/ServerManagement.vue'),
+        },
+        {
+            path: '/server/:serverId',
+            name: 'server-info',
+            component: () => import('@/views/server/ServerInfo.vue'),
+            props: true,
+        },
         // 动态路由将通过 addDynamicRoutes 函数添加
     ],
 }

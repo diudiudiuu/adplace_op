@@ -56,6 +56,7 @@ import { ref, defineProps } from 'vue'
 import { useRouter } from 'vue-router'
 import { useMessage, useDialog } from 'naive-ui'
 import { useSidebarStore } from '@/store/sidebar'
+import { reloadMenus } from '@/components/menu'
 import { CreateOutline, CloseOutline, TrashOutline } from '@vicons/ionicons5'
 import Dform from './form.vue'
 import api from '@/api'
@@ -118,17 +119,25 @@ const handleDelete = () => {
         content: '是否删除该客户吗？',
         positiveText: '确定',
         negativeText: '取消',
-        onPositiveClick: () => {
-            api('project_delete', {
-                serverId: props.serverId,
-                projectId: props.projectId,
-            }).then((res: any) => {
-                message.success('删除成功')
-                sidebar.setboolroute(true)
-                route.push('/welcome')
-            }).catch(() => {
+        onPositiveClick: async () => {
+            try {
+                const res = await api('project_delete', {
+                    serverId: props.serverId,
+                    projectId: props.projectId,
+                })
+                
+                if (res && (res.code === 200 || res.success)) {
+                    message.success('删除成功')
+                    await reloadMenus()
+                    sidebar.setboolroute(true)
+                    route.push('/welcome')
+                } else {
+                    message.error(res?.msg || res?.message || '删除失败')
+                }
+            } catch (error) {
+                console.error('Project deletion error:', error)
                 message.error('删除失败')
-            })
+            }
         }
     })
 }

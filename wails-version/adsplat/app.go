@@ -179,7 +179,7 @@ func (a *App) ProjectForm(serverID, projectInfo, authorization string) string {
 	err := a.jsonService.AddOrUpdateProject(serverID, project, authorization)
 	if err != nil {
 		log.Printf("Failed to add/update project: %v", err)
-		response := ApiResponse{Code: 500, Msg: "Failed to save project"}
+		response := ApiResponse{Code: 500, Msg: err.Error()}
 		result, _ := json.Marshal(response)
 		return string(result)
 	}
@@ -281,6 +281,99 @@ func (a *App) ShowMessage(title, message string) {
 // Greet returns a greeting for the given name (保留原有方法)
 func (a *App) Greet(name string) string {
 	return fmt.Sprintf("Hello %s, It's show time!", name)
+}
+
+// ServerAdd 添加新服务器
+func (a *App) ServerAdd(serverID, serverName, serverIP, serverPort, serverUser, serverPassword, authorization string) string {
+	log.Printf("ServerAdd called with serverID: %s, serverName: %s, authorization: %s", serverID, serverName, authorization)
+
+	// 检查授权
+	if authorization == "" || strings.TrimSpace(authorization) == "" {
+		response := ApiResponse{Code: 401, Msg: "Authorization required"}
+		result, _ := json.Marshal(response)
+		return string(result)
+	}
+
+	// 创建新服务器数据
+	newServer := services.ServerData{
+		ServerID:       serverID,
+		ServerName:     serverName,
+		ServerIP:       serverIP,
+		ServerPort:     serverPort,
+		ServerUser:     serverUser,
+		ServerPassword: serverPassword,
+		ProjectList:    []services.ProjectData{},
+	}
+
+	err := a.jsonService.AddServer(newServer, authorization)
+	if err != nil {
+		log.Printf("Failed to add server: %v", err)
+		response := ApiResponse{Code: 500, Msg: err.Error()}
+		result, _ := json.Marshal(response)
+		return string(result)
+	}
+
+	response := ApiResponse{Code: 200, Msg: "Server added successfully"}
+	result, _ := json.Marshal(response)
+	return string(result)
+}
+
+// ServerUpdate 更新服务器信息
+func (a *App) ServerUpdate(oldServerID, newServerID, serverName, serverIP, serverPort, serverUser, serverPassword, authorization string) string {
+	log.Printf("ServerUpdate called with oldServerID: %s, newServerID: %s, serverName: %s, authorization: %s", oldServerID, newServerID, serverName, authorization)
+
+	// 检查授权
+	if authorization == "" || strings.TrimSpace(authorization) == "" {
+		response := ApiResponse{Code: 401, Msg: "Authorization required"}
+		result, _ := json.Marshal(response)
+		return string(result)
+	}
+
+	// 创建更新的服务器数据
+	updatedServer := services.ServerData{
+		ServerID:       newServerID,
+		ServerName:     serverName,
+		ServerIP:       serverIP,
+		ServerPort:     serverPort,
+		ServerUser:     serverUser,
+		ServerPassword: serverPassword,
+	}
+
+	err := a.jsonService.UpdateServerWithNewID(oldServerID, updatedServer, authorization)
+	if err != nil {
+		log.Printf("Failed to update server: %v", err)
+		response := ApiResponse{Code: 500, Msg: err.Error()}
+		result, _ := json.Marshal(response)
+		return string(result)
+	}
+
+	response := ApiResponse{Code: 200, Msg: "Server updated successfully"}
+	result, _ := json.Marshal(response)
+	return string(result)
+}
+
+// ServerDelete 删除服务器
+func (a *App) ServerDelete(serverID, authorization string) string {
+	log.Printf("ServerDelete called with serverID: %s, authorization: %s", serverID, authorization)
+
+	// 检查授权
+	if authorization == "" || strings.TrimSpace(authorization) == "" {
+		response := ApiResponse{Code: 401, Msg: "Authorization required"}
+		result, _ := json.Marshal(response)
+		return string(result)
+	}
+
+	err := a.jsonService.DeleteServer(serverID, authorization)
+	if err != nil {
+		log.Printf("Failed to delete server: %v", err)
+		response := ApiResponse{Code: 500, Msg: "Failed to delete server"}
+		result, _ := json.Marshal(response)
+		return string(result)
+	}
+
+	response := ApiResponse{Code: 200, Msg: "Server deleted successfully"}
+	result, _ := json.Marshal(response)
+	return string(result)
 }
 
 // TestUnauthorized 测试 401 响应 (用于测试前端的 401 处理)

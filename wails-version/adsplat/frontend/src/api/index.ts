@@ -54,7 +54,11 @@ const handleUnauthorized = () => {
 // 简化的 API 调用映射
 const apiMap: Record<string, (data: any) => Promise<string>> = {
     'list': (data: any) => window.go!.main!.App!.List(data.authorization),
+    'server_list': (data: any) => window.go!.main!.App!.List(data.authorization),
     'server_info': (data: any) => window.go!.main!.App!.ServerInfo(data.serverId, data.authorization),
+    'server_add': (data: any) => window.go!.main!.App!.ServerAdd(data.server_id, data.server_name, data.server_ip, data.server_port, data.server_user, data.server_password, data.authorization),
+    'server_update': (data: any) => window.go!.main!.App!.ServerUpdate(data.old_server_id || data.server_id, data.server_id, data.server_name, data.server_ip, data.server_port, data.server_user, data.server_password, data.authorization),
+    'server_delete': (data: any) => window.go!.main!.App!.ServerDelete(data.server_id, data.authorization),
     'project_info': (data: any) => window.go!.main!.App!.ProjectInfo(data.projectId, data.authorization),
     'project_form': (data: any) => window.go!.main!.App!.ProjectForm(data.serverId, data.projectInfo, data.authorization),
     'project_delete': (data: any) => window.go!.main!.App!.ProjectDelete(data.serverId, data.projectId, data.authorization),
@@ -115,8 +119,13 @@ const api = async (uri: string, data: any, showLoading: boolean = true) => {
         }
 
         // 处理 list API
-        if (uri === 'list') {
+        if (uri === 'list' || uri === 'server_list') {
             return Array.isArray(parsedData) ? parsedData : [];
+        }
+
+        // 处理服务器管理API
+        if (uri.startsWith('server_')) {
+            return parsedData;
         }
 
         // 解密数据

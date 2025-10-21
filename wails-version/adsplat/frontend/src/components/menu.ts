@@ -79,6 +79,12 @@ class MenuManager {
                 title: '主页',
                 index: '/welcome',
                 icon: 'Grid',
+            },
+            {
+                id: 'server-management',
+                title: '服务器管理',
+                index: '/server-management',
+                icon: 'Platform',
             }
         ];
     }
@@ -195,6 +201,7 @@ class MenuManager {
     async reloadMenus(): Promise<Menus[]> {
         this.hasLoaded = false;
         this.menus = [];
+        this.clearCache(); // 清除缓存
         return this.loadMenus();
     }
 

@@ -30,14 +30,14 @@
 
             <!-- 功能卡片区域 -->
             <div class="features-section">
-                <div class="feature-card">
+                <div class="feature-card clickable" @click="navigateToServerManagement">
                     <div class="feature-icon server-icon">
                         <n-icon size="28">
                             <ServerOutline />
                         </n-icon>
                     </div>
-                    <h3>服务管理</h3>
-                    <p>轻松管理您的服务器资源</p>
+                    <h3>服务器管理</h3>
+                    <p>添加、编辑和管理您的服务器</p>
                 </div>
 
                 <div class="feature-card">
@@ -65,6 +65,7 @@
 </template>
 
 <script setup lang="ts">
+import { useRouter } from 'vue-router'
 import {
     ServerOutline,
     FolderOutline,
@@ -74,7 +75,11 @@ import {
     BulbOutline
 } from '@vicons/ionicons5'
 
+const router = useRouter()
 
+const navigateToServerManagement = () => {
+    router.push('/server-management')
+}
 </script>
 
 <style scoped>
@@ -223,6 +228,16 @@ import {
     transform: translateY(-12px) scale(1.03);
     box-shadow: 0 25px 60px rgba(255, 107, 157, 0.2);
     border-color: rgba(255, 107, 157, 0.3);
+}
+
+.feature-card.clickable {
+    cursor: pointer;
+}
+
+.feature-card.clickable:hover {
+    transform: translateY(-12px) scale(1.03);
+    box-shadow: 0 25px 60px rgba(108, 92, 231, 0.3);
+    border-color: rgba(108, 92, 231, 0.4);
 }
 
 .feature-icon {

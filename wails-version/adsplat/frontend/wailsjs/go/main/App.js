@@ -26,8 +26,20 @@ export function ProjectInfo(arg1, arg2) {
   return window['go']['main']['App']['ProjectInfo'](arg1, arg2);
 }
 
+export function ServerAdd(arg1, arg2, arg3, arg4, arg5, arg6, arg7) {
+  return window['go']['main']['App']['ServerAdd'](arg1, arg2, arg3, arg4, arg5, arg6, arg7);
+}
+
+export function ServerDelete(arg1, arg2) {
+  return window['go']['main']['App']['ServerDelete'](arg1, arg2);
+}
+
 export function ServerInfo(arg1, arg2) {
   return window['go']['main']['App']['ServerInfo'](arg1, arg2);
+}
+
+export function ServerUpdate(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8) {
+  return window['go']['main']['App']['ServerUpdate'](arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8);
 }
 
 export function ShowMessage(arg1, arg2) {

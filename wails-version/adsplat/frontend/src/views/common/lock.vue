@@ -124,14 +124,27 @@ const submitForm = async () => {
 <style scoped>
 .login-layout {
     height: 100vh;
+    background-image: url('@/assets/img/login-bg.jpg');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-attachment: fixed;
 }
 
 .login-content {
     height: 100%;
+    background: rgba(0, 0, 0, 0.3);
+    backdrop-filter: blur(2px);
+    -webkit-backdrop-filter: blur(2px);
 }
 
 .login-card {
     border-radius: 16px !important;
+    background: rgba(255, 255, 255, 0.95) !important;
+    backdrop-filter: blur(20px) !important;
+    -webkit-backdrop-filter: blur(20px) !important;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3) !important;
+    border: 1px solid rgba(255, 255, 255, 0.8) !important;
 }
 
 :deep(.n-card-header) {
@@ -154,5 +167,74 @@ const submitForm = async () => {
 
 :deep(.n-h2) {
     font-weight: 600;
+    color: #2c3e50;
+}
+
+/* 登录卡片动画 */
+.login-card {
+    animation: fadeInUp 0.8s ease-out;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* 输入框样式优化 */
+:deep(.n-input) {
+    background: rgba(255, 255, 255, 0.9) !important;
+    border: 1px solid rgba(255, 255, 255, 0.6) !important;
+    border-radius: 8px !important;
+}
+
+:deep(.n-input:hover) {
+    background: rgba(255, 255, 255, 1) !important;
+    border-color: rgba(99, 102, 241, 0.5) !important;
+}
+
+:deep(.n-input.n-input--focus) {
+    background: rgba(255, 255, 255, 1) !important;
+    border-color: rgba(99, 102, 241, 0.8) !important;
+    box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2) !important;
+}
+
+/* 按钮样式优化 */
+:deep(.n-button--primary-type) {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+    border: none !important;
+    border-radius: 8px !important;
+}
+
+:deep(.n-button--primary-type:hover) {
+    background: linear-gradient(135deg, #5a67d8 0%, #6b46c1 100%) !important;
+    transform: translateY(-2px) !important;
+    box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4) !important;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+    .login-layout {
+        background-attachment: scroll;
+    }
+    
+    .login-card {
+        margin: 20px !important;
+        width: calc(100vw - 40px) !important;
+        max-width: none !important;
+    }
+    
+    :deep(.n-card-header) {
+        padding: 24px 24px 12px !important;
+    }
+    
+    :deep(.n-card__content) {
+        padding: 12px 24px 24px !important;
+    }
 }
 </style>

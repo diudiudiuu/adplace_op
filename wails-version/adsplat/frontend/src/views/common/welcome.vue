@@ -3,10 +3,9 @@
         <div class="welcome-content">
             <!-- 主标题区域 -->
             <div class="hero-section">
-                <div class="hero-icon">
-                    <n-icon size="64">
-                        <HeartOutline />
-                    </n-icon>
+                <div class="hero-avatar">
+                    <img src="@/assets/img/avatar.jpg" alt="用户头像" class="avatar-image" />
+                    <div class="avatar-ring"></div>
                 </div>
                 <h1 class="hero-title">欢迎回来</h1>
                 <p class="hero-subtitle">让我们一起创造美好的数字体验</p>
@@ -133,10 +132,51 @@ const handleLogout = () => {
     position: relative;
 }
 
-.hero-icon {
+.hero-avatar {
     margin-bottom: 24px;
-    color: #3498db;
+    position: relative;
+    display: inline-block;
     animation: gentle-pulse 3s ease-in-out infinite;
+}
+
+.avatar-image {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 4px solid rgba(255, 255, 255, 0.8);
+    box-shadow: 0 8px 32px rgba(52, 152, 219, 0.3);
+    transition: all 0.3s ease;
+}
+
+.avatar-ring {
+    position: absolute;
+    top: -8px;
+    left: -8px;
+    right: -8px;
+    bottom: -8px;
+    border: 2px solid transparent;
+    border-radius: 50%;
+    background: linear-gradient(45deg, #3498db, #9b59b6, #e74c3c, #f39c12) border-box;
+    -webkit-mask: linear-gradient(#fff 0 0) padding-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: subtract;
+    mask: linear-gradient(#fff 0 0) padding-box, linear-gradient(#fff 0 0);
+    mask-composite: subtract;
+    animation: rotate-ring 4s linear infinite;
+}
+
+@keyframes rotate-ring {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.hero-avatar:hover .avatar-image {
+    transform: scale(1.05);
+    box-shadow: 0 12px 40px rgba(52, 152, 219, 0.4);
 }
 
 .hero-title {

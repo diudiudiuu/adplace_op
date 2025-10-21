@@ -31,11 +31,13 @@
             :columns="columns"
             :data="tableData"
             :pagination="pagination"
+            @update:page="handlePageChange"
+            @update:page-size="handlePageSizeChange"
             striped
             class="special-table"
         />
 
-        <n-modal v-model:show="isFormVisible" preset="dialog" :title="isEditMode ? '编辑' : '添加'">
+        <n-modal v-model:show="isFormVisible" preset="dialog" :title="isEditMode ? '编辑' : '添加'" style="width: 600px; max-width: 90vw;">
             <n-form :model="formData" label-placement="left" label-width="180">
                 <n-form-item
                     v-for="field in fields"
@@ -135,12 +137,15 @@ const fieldsType = props.model.fieldsType
 const primaryKey = props.model.primaryKey
 
 // 分页配置
-const pagination = {
+const pagination = ref({
+    page: 1,
     pageSize: 10,
     showSizePicker: true,
     pageSizes: [10, 20, 50],
-    showQuickJumper: true
-}
+    showQuickJumper: true,
+    itemCount: 0,
+    prefix: ({ itemCount }) => `共 ${itemCount} 条`
+})
 
 // 表格列配置
 const columns = computed(() => {
@@ -190,21 +195,46 @@ const columns = computed(() => {
 })
 
 const fetchData = async () => {
-    const res = await api('exec', {
-        projectId: props.projectId,
-        sql: props.model.selects(),
-        sqlType: 'selects',
-        authorization: localStorage.getItem('authorization'),
-    })
-    if (res.code === 200) {
-        tableData.value = res.data.result
-    } else {
+    try {
+        const res = await api('exec', {
+            projectId: props.projectId,
+            sql: props.model.selects(),
+            sqlType: 'selects',
+            authorization: localStorage.getItem('authorization'),
+        })
+        if (res.code === 200) {
+            tableData.value = res.data.result || []
+            // 更新分页信息
+            pagination.value.itemCount = tableData.value.length
+        } else {
+            message.error('获取数据失败')
+            tableData.value = []
+            pagination.value.itemCount = 0
+        }
+    } catch (error) {
+        console.error('Failed to fetch data:', error)
         message.error('获取数据失败')
+        tableData.value = []
+        pagination.value.itemCount = 0
     }
 }
 onMounted(fetchData)
 
-const refreshData = () => fetchData()
+const refreshData = () => {
+    pagination.value.page = 1 // 重置到第一页
+    fetchData()
+}
+
+// 处理分页变化
+const handlePageChange = (page: number) => {
+    pagination.value.page = page
+}
+
+// 处理每页大小变化
+const handlePageSizeChange = (pageSize: number) => {
+    pagination.value.pageSize = pageSize
+    pagination.value.page = 1 // 重置到第一页
+}
 
 // biome-ignore lint/suspicious/noExplicitAny: <explanation>
 const isPrimaryKey = (field: any) => field === primaryKey
@@ -342,5 +372,78 @@ const handleChange = async (
     width: 16px !important;
     height: 16px !important;
     margin: 0 !important;
+}
+
+/* 弹框样式优化 */
+:deep(.n-modal .n-dialog) {
+    width: 600px !important;
+    max-width: 90vw !important;
+    min-width: 500px !important;
+}
+
+:deep(.n-modal .n-dialog .n-dialog__content) {
+    padding: 20px 24px !important;
+}
+
+:deep(.n-modal .n-form) {
+    width: 100%;
+}
+
+:deep(.n-modal .n-form-item) {
+    margin-bottom: 16px !important;
+}
+
+:deep(.n-modal .n-form-item-label) {
+    width: 140px !important;
+    min-width: 140px !important;
+    text-align: right !important;
+    padding-right: 12px !important;
+}
+
+:deep(.n-modal .n-form-item-blank) {
+    flex: 1 !important;
+    min-width: 0 !important;
+}
+
+/* 输入框组合样式 */
+:deep(.n-modal .n-input-group) {
+    width: 100% !important;
+}
+
+:deep(.n-modal .n-input-group .n-input) {
+    flex: 1 !important;
+}
+
+/* 单选按钮组样式 */
+:deep(.n-modal .n-radio-group) {
+    width: 100% !important;
+}
+
+:deep(.n-modal .n-radio-button) {
+    margin-right: 8px !important;
+}
+
+/* 日期选择器样式 */
+:deep(.n-modal .n-date-picker) {
+    width: 100% !important;
+}
+
+/* 响应式弹框 */
+@media (max-width: 768px) {
+    :deep(.n-modal .n-dialog) {
+        width: 95vw !important;
+        min-width: auto !important;
+        margin: 10px !important;
+    }
+    
+    :deep(.n-modal .n-form-item-label) {
+        width: 100px !important;
+        min-width: 100px !important;
+        font-size: 12px !important;
+    }
+    
+    :deep(.n-modal .n-dialog .n-dialog__content) {
+        padding: 16px 20px !important;
+    }
 }
 </style>

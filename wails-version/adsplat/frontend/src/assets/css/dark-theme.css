@@ -7,35 +7,35 @@
   --primary-hover: #f5f5f5;
   --primary-active: #e5e5e5;
   --primary-light: #f9f9f9;
-  
+
   /* 功能色彩 */
   --success-color: #22c55e;
   --warning-color: #f59e0b;
   --error-color: #ef4444;
   --info-color: #3b82f6;
-  
+
   /* 背景色 - 经典黑灰色调 */
   --bg-primary: #0a0a0a;
   --bg-secondary: #1a1a1a;
   --bg-tertiary: #2a2a2a;
   --bg-quaternary: #3a3a3a;
-  
+
   /* 文字颜色 */
   --text-primary: #ffffff;
   --text-secondary: #e5e5e5;
   --text-tertiary: #a3a3a3;
   --text-disabled: #737373;
-  
+
   /* 边框和分割线 */
   --border-color: #404040;
   --border-light: #525252;
-  
+
   /* 阴影 */
   --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.5);
   --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.6);
   --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.7);
   --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.8);
-  
+
   /* 渐变 */
   --gradient-primary: linear-gradient(135deg, #ffffff 0%, #f5f5f5 100%);
   --gradient-secondary: linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%);
@@ -234,7 +234,7 @@ body {
   left: 0;
   right: 0;
   bottom: 0;
-  background: 
+  background:
     radial-gradient(circle at 20% 80%, rgba(255, 255, 255, 0.05) 0%, transparent 50%),
     radial-gradient(circle at 80% 20%, rgba(255, 255, 255, 0.03) 0%, transparent 50%),
     radial-gradient(circle at 40% 40%, rgba(255, 255, 255, 0.02) 0%, transparent 50%);
@@ -297,6 +297,7 @@ body {
     opacity: 0;
     transform: translateY(20px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -304,9 +305,12 @@ body {
 }
 
 @keyframes pulse {
-  0%, 100% {
+
+  0%,
+  100% {
     opacity: 1;
   }
+
   50% {
     opacity: 0.8;
   }
@@ -325,11 +329,11 @@ body {
   .content-box {
     padding: 10px;
   }
-  
+
   .header .web-title {
     font-size: 16px;
   }
-  
+
   .login-container {
     margin: 20px;
     border-radius: 12px !important;

@@ -37,6 +37,7 @@ const getMenus = () => {
     return api('list',{
         authorization: localStorage.getItem('authorization'),
     }).then((res: any) => {
+        console.log(res)
 
         // 循环遍历数据 for of
         for (const item of res) {

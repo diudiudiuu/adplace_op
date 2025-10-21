@@ -1,0 +1,19 @@
+{
+  "$schema": "https://wails.io/schemas/config.v2.json",
+  "name": "adsplat",
+  "outputfilename": "adsplat",
+  "frontend:install": "npm install",
+  "frontend:build": "npm run build",
+  "frontend:dev:watcher": "npm run dev",
+  "frontend:dev:serverUrl": "auto",
+  "author": {
+    "name": "adiudiuu",
+    "email": "admin@example.com"
+  },
+  "info": {
+    "productName": "adsplat",
+    "productVersion": "2.9.1",
+    "copyright": "Copyright © 2024 adiudiuu",
+    "comments": "AD Manage - 广告投放管理面板"
+  }
+}

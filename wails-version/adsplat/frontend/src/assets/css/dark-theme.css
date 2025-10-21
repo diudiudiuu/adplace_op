@@ -1,0 +1,354 @@
+/* 现代化暗黑主题 CSS */
+
+/* 全局根变量 */
+:root {
+  /* 主色调 - 经典灰色系 */
+  --primary-color: #ffffff;
+  --primary-hover: #f5f5f5;
+  --primary-active: #e5e5e5;
+  --primary-light: #f9f9f9;
+  
+  /* 功能色彩 */
+  --success-color: #22c55e;
+  --warning-color: #f59e0b;
+  --error-color: #ef4444;
+  --info-color: #3b82f6;
+  
+  /* 背景色 - 经典黑灰色调 */
+  --bg-primary: #0a0a0a;
+  --bg-secondary: #1a1a1a;
+  --bg-tertiary: #2a2a2a;
+  --bg-quaternary: #3a3a3a;
+  
+  /* 文字颜色 */
+  --text-primary: #ffffff;
+  --text-secondary: #e5e5e5;
+  --text-tertiary: #a3a3a3;
+  --text-disabled: #737373;
+  
+  /* 边框和分割线 */
+  --border-color: #404040;
+  --border-light: #525252;
+  
+  /* 阴影 */
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.5);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.6);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.7);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.8);
+  
+  /* 渐变 */
+  --gradient-primary: linear-gradient(135deg, #ffffff 0%, #f5f5f5 100%);
+  --gradient-secondary: linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%);
+  --gradient-card: linear-gradient(145deg, #1a1a1a 0%, #2a2a2a 100%);
+}
+
+/* 全局样式重置 */
+* {
+  box-sizing: border-box;
+}
+
+body {
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: 'Lato', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  line-height: 1.6;
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
+}
+
+/* 滚动条样式 */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-primary);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-light);
+  border-radius: 4px;
+  transition: background 0.3s ease;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-tertiary);
+}
+
+/* 主容器样式 */
+#app {
+  min-height: 100vh;
+  background: var(--bg-primary);
+}
+
+/* 侧边栏头部样式增强 */
+.sidebar-header {
+  background: var(--gradient-secondary) !important;
+  border-bottom: 1px solid var(--border-color) !important;
+  box-shadow: var(--shadow-md);
+}
+
+.sidebar-title {
+  color: var(--text-primary) !important;
+  font-weight: 600;
+}
+
+.title-icon {
+  color: var(--primary-color) !important;
+}
+
+.collapse-btn {
+  color: var(--text-secondary) !important;
+  transition: all 0.3s ease !important;
+}
+
+.collapse-btn:hover {
+  color: var(--primary-color) !important;
+  background: var(--bg-quaternary) !important;
+  transform: scale(1.1) !important;
+}
+
+/* 侧边栏样式增强 */
+.sidebar {
+  background: var(--bg-secondary) !important;
+  border-right: 1px solid var(--border-color) !important;
+  box-shadow: var(--shadow-lg);
+}
+
+/* 内容区域样式 */
+.content-box {
+  background: var(--bg-primary);
+  min-height: 100vh;
+  padding: 20px;
+}
+
+/* 卡片样式增强 */
+.n-card {
+  background: var(--gradient-card) !important;
+  border: 1px solid var(--border-color) !important;
+  box-shadow: var(--shadow-lg) !important;
+  transition: all 0.3s ease !important;
+}
+
+.n-card:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: var(--shadow-xl) !important;
+}
+
+/* 按钮样式增强 */
+.n-button--primary-type {
+  background: var(--gradient-primary) !important;
+  border: none !important;
+  box-shadow: var(--shadow-md) !important;
+  transition: all 0.3s ease !important;
+}
+
+.n-button--primary-type:hover {
+  transform: translateY(-1px) !important;
+  box-shadow: var(--shadow-lg) !important;
+}
+
+/* 输入框样式增强 */
+.n-input {
+  background: var(--bg-tertiary) !important;
+  border: 1px solid var(--border-color) !important;
+  transition: all 0.3s ease !important;
+}
+
+.n-input:focus-within {
+  border-color: var(--primary-color) !important;
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2) !important;
+}
+
+/* 表格样式增强 */
+.n-data-table {
+  background: transparent !important;
+}
+
+.n-data-table .n-data-table-th {
+  background: var(--bg-tertiary) !important;
+  color: var(--text-primary) !important;
+  font-weight: 600 !important;
+  border-bottom: 2px solid var(--primary-color) !important;
+}
+
+.n-data-table .n-data-table-td {
+  background: var(--bg-secondary) !important;
+  color: var(--text-secondary) !important;
+  border-bottom: 1px solid var(--border-color) !important;
+  transition: all 0.3s ease !important;
+}
+
+.n-data-table .n-data-table-tr:hover .n-data-table-td {
+  background: var(--bg-quaternary) !important;
+  color: var(--text-primary) !important;
+}
+
+/* 标签样式增强 */
+.n-tag {
+  border-radius: 6px !important;
+  font-weight: 500 !important;
+  padding: 4px 8px !important;
+}
+
+/* 进度条样式增强 */
+.n-progress {
+  background: var(--bg-tertiary) !important;
+}
+
+.n-progress .n-progress-graph-line-fill {
+  background: var(--gradient-primary) !important;
+}
+
+/* 模态框样式增强 */
+.n-modal {
+  backdrop-filter: blur(10px) !important;
+}
+
+.n-modal .n-card {
+  background: var(--gradient-card) !important;
+  border: 1px solid var(--border-color) !important;
+}
+
+/* 消息提示样式增强 */
+.n-message {
+  backdrop-filter: blur(10px) !important;
+  border-radius: 8px !important;
+  box-shadow: var(--shadow-lg) !important;
+}
+
+/* 锁屏页面样式 */
+.login-bg {
+  background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 50%, #2a2a2a 100%) !important;
+  position: relative;
+  overflow: hidden;
+}
+
+.login-bg::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: 
+    radial-gradient(circle at 20% 80%, rgba(255, 255, 255, 0.05) 0%, transparent 50%),
+    radial-gradient(circle at 80% 20%, rgba(255, 255, 255, 0.03) 0%, transparent 50%),
+    radial-gradient(circle at 40% 40%, rgba(255, 255, 255, 0.02) 0%, transparent 50%);
+  pointer-events: none;
+}
+
+.login-container {
+  background: var(--gradient-card) !important;
+  border: 1px solid var(--border-color) !important;
+  box-shadow: var(--shadow-xl) !important;
+  backdrop-filter: blur(20px) !important;
+  border-radius: 16px !important;
+}
+
+.login-title {
+  background: var(--gradient-primary) !important;
+  -webkit-background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+  background-clip: text !important;
+  font-weight: 700 !important;
+  font-size: 28px !important;
+}
+
+/* 欢迎页面样式增强 */
+.welcome-container {
+  background: var(--bg-primary);
+}
+
+.welcome-container .n-card {
+  background: var(--gradient-card) !important;
+  border: 1px solid var(--border-color) !important;
+  transition: all 0.3s ease !important;
+}
+
+.welcome-container .n-card:hover {
+  transform: translateY(-4px) !important;
+  box-shadow: var(--shadow-xl) !important;
+}
+
+/* 终端样式增强 */
+.terminal-pre {
+  background: var(--bg-primary) !important;
+  border: 1px solid var(--border-color) !important;
+  color: var(--text-secondary) !important;
+  font-family: 'Fira Code', monospace !important;
+  border-radius: 8px !important;
+}
+
+.sql-content {
+  background: var(--bg-primary) !important;
+  border: 1px solid var(--border-color) !important;
+  color: var(--text-secondary) !important;
+  font-family: 'Fira Code', monospace !important;
+  border-radius: 6px !important;
+}
+
+/* 动画效果 */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.8;
+  }
+}
+
+.fade-in-up {
+  animation: fadeInUp 0.6s ease-out;
+}
+
+.pulse {
+  animation: pulse 2s infinite;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .content-box {
+    padding: 10px;
+  }
+  
+  .header .web-title {
+    font-size: 16px;
+  }
+  
+  .login-container {
+    margin: 20px;
+    border-radius: 12px !important;
+  }
+}
+
+/* 高对比度模式支持 */
+@media (prefers-contrast: high) {
+  :root {
+    --border-color: #4a5568;
+    --text-secondary: #f7fafc;
+  }
+}
+
+/* 减少动画模式支持 */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

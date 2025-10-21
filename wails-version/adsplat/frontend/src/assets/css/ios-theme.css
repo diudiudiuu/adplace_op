@@ -1,0 +1,124 @@
+/* 简洁白底黑字主题 */
+:root {
+  /* 主色调 - 简洁灰色系 */
+  --primary-color: #2c3e50;
+  --primary-light: #34495e;
+  --primary-lighter: #7f8c8d;
+  --primary-dark: #1a252f;
+  
+  /* 辅助色彩 */
+  --secondary-color: #3498db;
+  --secondary-light: #5dade2;
+  --accent-color: #f39c12;
+  --success-color: #27ae60;
+  --success-light: #58d68d;
+  --warning-color: #f39c12;
+  --error-color: #e74c3c;
+  
+  /* 文字颜色 */
+  --text-primary: #2c3e50;
+  --text-secondary: #34495e;
+  --text-tertiary: #7f8c8d;
+  --text-light: #bdc3c7;
+  
+  /* 背景色 */
+  --bg-primary: #f8f9fa;
+  --bg-card: #ffffff;
+  --bg-card-hover: #f8f9fa;
+  
+  /* 边框和阴影 */
+  --border-color: #e9ecef;
+  --border-hover: #dee2e6;
+  --shadow-light: 0 2px 8px rgba(0, 0, 0, 0.1);
+  --shadow-medium: 0 4px 16px rgba(0, 0, 0, 0.1);
+  --shadow-heavy: 0 8px 32px rgba(0, 0, 0, 0.15);
+  
+  /* 圆角 */
+  --radius-small: 12px;
+  --radius-medium: 16px;
+  --radius-large: 20px;
+  --radius-xl: 24px;
+  
+  /* 动画 */
+  --transition-fast: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-normal: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-slow: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* 全局样式覆盖 */
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Naive UI 组件样式覆盖 */
+.n-button--primary-type {
+  background: var(--primary-color) !important;
+  border: none !important;
+  box-shadow: var(--shadow-light) !important;
+  transition: var(--transition-normal) !important;
+}
+
+.n-button--primary-type:hover {
+  background: var(--primary-light) !important;
+  transform: translateY(-1px) !important;
+  box-shadow: var(--shadow-medium) !important;
+}
+
+.n-card {
+  background: var(--bg-card) !important;
+  border: 1px solid var(--border-color) !important;
+  border-radius: var(--radius-medium) !important;
+  box-shadow: var(--shadow-light) !important;
+  transition: var(--transition-normal) !important;
+}
+
+.n-card:hover {
+  border-color: var(--border-hover) !important;
+  box-shadow: var(--shadow-medium) !important;
+}
+
+.n-input {
+  border-radius: var(--radius-small) !important;
+  border: 1px solid var(--border-color) !important;
+  background: var(--bg-card) !important;
+  transition: var(--transition-normal) !important;
+}
+
+.n-input:focus-within {
+  border-color: var(--primary-color) !important;
+  box-shadow: 0 0 0 2px rgba(44, 62, 80, 0.1) !important;
+}
+
+/* 滚动条样式 */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-primary);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--text-tertiary);
+  border-radius: 3px;
+  transition: var(--transition-normal);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-secondary);
+}
+
+/* 选中文本样式 */
+::selection {
+  background: rgba(44, 62, 80, 0.1);
+  color: var(--text-primary);
+}
+
+::-moz-selection {
+  background: rgba(44, 62, 80, 0.1);
+  color: var(--text-primary);
+}

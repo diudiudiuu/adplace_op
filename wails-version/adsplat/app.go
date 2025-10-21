@@ -46,7 +46,7 @@ type ApiResponse struct {
 }
 
 // List 获取服务器列表 (对应 Rust 的 list 函数)
-func (a *App) List(authorization string) string {
+func (a *App) List(authorization, clientJson string) string {
 	log.Printf("List called with authorization: %s", authorization)
 
 	// 检查授权
@@ -57,7 +57,7 @@ func (a *App) List(authorization string) string {
 		return string(result)
 	}
 
-	servers, kvResponse, err := a.jsonService.LoadJsonFileWithResponse(authorization)
+	servers, kvResponse, err := a.jsonService.LoadJsonFileWithResponse(authorization, clientJson)
 	if err != nil {
 		log.Printf("Failed to load JSON file: %v", err)
 		response := ApiResponse{Code: 500, Msg: "Internal server error"}
@@ -87,7 +87,7 @@ func (a *App) List(authorization string) string {
 }
 
 // ServerInfo 获取服务器信息 (对应 Rust 的 server_info 函数)
-func (a *App) ServerInfo(serverID, authorization string) string {
+func (a *App) ServerInfo(serverID, authorization, clientJson string) string {
 	log.Printf("ServerInfo called with serverID: %s, authorization: %s", serverID, authorization)
 
 	// 检查授权
@@ -97,7 +97,7 @@ func (a *App) ServerInfo(serverID, authorization string) string {
 		return string(result)
 	}
 
-	server, err := a.jsonService.GetServerByID(serverID, authorization)
+	server, err := a.jsonService.GetServerByID(serverID, authorization, clientJson)
 	if err != nil {
 		log.Printf("Failed to get server info: %v", err)
 		response := ApiResponse{Code: 500, Msg: "Internal server error"}
@@ -123,7 +123,7 @@ func (a *App) ServerInfo(serverID, authorization string) string {
 }
 
 // ProjectInfo 获取项目信息 (对应 Rust 的 project_info 函数)
-func (a *App) ProjectInfo(projectID, authorization string) string {
+func (a *App) ProjectInfo(projectID, authorization, clientJson string) string {
 	log.Printf("ProjectInfo called with projectID: %s, authorization: %s", projectID, authorization)
 
 	// 检查授权
@@ -133,7 +133,7 @@ func (a *App) ProjectInfo(projectID, authorization string) string {
 		return string(result)
 	}
 
-	project, err := a.jsonService.GetProjectByID(projectID, authorization)
+	project, err := a.jsonService.GetProjectByID(projectID, authorization, clientJson)
 	if err != nil {
 		log.Printf("Failed to get project info: %v", err)
 		response := ApiResponse{Code: 500, Msg: "Internal server error"}
@@ -159,7 +159,7 @@ func (a *App) ProjectInfo(projectID, authorization string) string {
 }
 
 // ProjectForm 创建或更新项目 (对应 Rust 的 project_form 函数)
-func (a *App) ProjectForm(serverID, projectInfo, authorization string) string {
+func (a *App) ProjectForm(serverID, projectInfo, authorization, clientJson string) string {
 	log.Printf("ProjectForm called with serverID: %s, projectInfo: %s, authorization: %s",
 		serverID, projectInfo, authorization)
 
@@ -178,7 +178,7 @@ func (a *App) ProjectForm(serverID, projectInfo, authorization string) string {
 		return string(result)
 	}
 
-	err := a.jsonService.AddOrUpdateProject(serverID, project, authorization)
+	err := a.jsonService.AddOrUpdateProject(serverID, project, authorization, clientJson)
 	if err != nil {
 		log.Printf("Failed to add/update project: %v", err)
 		response := ApiResponse{Code: 500, Msg: err.Error()}
@@ -192,7 +192,7 @@ func (a *App) ProjectForm(serverID, projectInfo, authorization string) string {
 }
 
 // ProjectDelete 删除项目 (对应 Rust 的 project_delete 函数)
-func (a *App) ProjectDelete(serverID, projectID, authorization string) string {
+func (a *App) ProjectDelete(serverID, projectID, authorization, clientJson string) string {
 	log.Printf("ProjectDelete called with serverID: %s, projectID: %s, authorization: %s",
 		serverID, projectID, authorization)
 
@@ -203,7 +203,7 @@ func (a *App) ProjectDelete(serverID, projectID, authorization string) string {
 		return string(result)
 	}
 
-	err := a.jsonService.DeleteProject(serverID, projectID, authorization)
+	err := a.jsonService.DeleteProject(serverID, projectID, authorization, clientJson)
 	if err != nil {
 		log.Printf("Failed to delete project: %v", err)
 		response := ApiResponse{Code: 500, Msg: "Failed to delete project"}
@@ -217,12 +217,12 @@ func (a *App) ProjectDelete(serverID, projectID, authorization string) string {
 }
 
 // Exec 执行SQL (对应 Rust 的 exec 函数)
-func (a *App) Exec(projectID, sql, sqlType, authorization string) string {
+func (a *App) Exec(projectID, sql, sqlType, authorization, clientJson string) string {
 	log.Printf("Exec called with projectID: %s, sql: %s, sqlType: %s, authorization: %s",
 		projectID, sql, sqlType, authorization)
 
 	// 获取项目信息
-	project, err := a.jsonService.GetProjectByID(projectID, authorization)
+	project, err := a.jsonService.GetProjectByID(projectID, authorization, clientJson)
 	if err != nil {
 		log.Printf("Failed to get project info: %v", err)
 		return `{"code": 500, "msg": "Failed to get project info"}`
@@ -286,7 +286,7 @@ func (a *App) Greet(name string) string {
 }
 
 // ServerAdd 添加新服务器
-func (a *App) ServerAdd(serverID, serverName, serverIP, serverPort, serverUser, serverPassword, authorization string) string {
+func (a *App) ServerAdd(serverID, serverName, serverIP, serverPort, serverUser, serverPassword, authorization, clientJson string) string {
 	log.Printf("ServerAdd called with serverID: %s, serverName: %s, authorization: %s", serverID, serverName, authorization)
 
 	// 检查授权
@@ -307,7 +307,7 @@ func (a *App) ServerAdd(serverID, serverName, serverIP, serverPort, serverUser, 
 		ProjectList:    []services.ProjectData{},
 	}
 
-	err := a.jsonService.AddServer(newServer, authorization)
+	err := a.jsonService.AddServer(newServer, authorization, clientJson)
 	if err != nil {
 		log.Printf("Failed to add server: %v", err)
 		response := ApiResponse{Code: 500, Msg: err.Error()}
@@ -321,7 +321,7 @@ func (a *App) ServerAdd(serverID, serverName, serverIP, serverPort, serverUser, 
 }
 
 // ServerUpdate 更新服务器信息
-func (a *App) ServerUpdate(oldServerID, newServerID, serverName, serverIP, serverPort, serverUser, serverPassword, authorization string) string {
+func (a *App) ServerUpdate(oldServerID, newServerID, serverName, serverIP, serverPort, serverUser, serverPassword, authorization, clientJson string) string {
 	log.Printf("ServerUpdate called with oldServerID: %s, newServerID: %s, serverName: %s, authorization: %s", oldServerID, newServerID, serverName, authorization)
 
 	// 检查授权
@@ -341,7 +341,7 @@ func (a *App) ServerUpdate(oldServerID, newServerID, serverName, serverIP, serve
 		ServerPassword: serverPassword,
 	}
 
-	err := a.jsonService.UpdateServerWithNewID(oldServerID, updatedServer, authorization)
+	err := a.jsonService.UpdateServerWithNewID(oldServerID, updatedServer, authorization, clientJson)
 	if err != nil {
 		log.Printf("Failed to update server: %v", err)
 		response := ApiResponse{Code: 500, Msg: err.Error()}
@@ -355,7 +355,7 @@ func (a *App) ServerUpdate(oldServerID, newServerID, serverName, serverIP, serve
 }
 
 // ServerDelete 删除服务器
-func (a *App) ServerDelete(serverID, authorization string) string {
+func (a *App) ServerDelete(serverID, authorization, clientJson string) string {
 	log.Printf("ServerDelete called with serverID: %s, authorization: %s", serverID, authorization)
 
 	// 检查授权
@@ -365,7 +365,7 @@ func (a *App) ServerDelete(serverID, authorization string) string {
 		return string(result)
 	}
 
-	err := a.jsonService.DeleteServer(serverID, authorization)
+	err := a.jsonService.DeleteServer(serverID, authorization, clientJson)
 	if err != nil {
 		log.Printf("Failed to delete server: %v", err)
 		response := ApiResponse{Code: 500, Msg: "Failed to delete server"}
@@ -379,7 +379,7 @@ func (a *App) ServerDelete(serverID, authorization string) string {
 }
 
 // TestStoredServerSSH 测试已存储服务器的SSH连接
-func (a *App) TestStoredServerSSH(serverID, authorization string) string {
+func (a *App) TestStoredServerSSH(serverID, authorization, clientJson string) string {
 	log.Printf("TestStoredServerSSH called with serverID: %s", serverID)
 
 	// 检查授权
@@ -390,7 +390,7 @@ func (a *App) TestStoredServerSSH(serverID, authorization string) string {
 	}
 
 	// 获取服务器信息
-	server, err := a.jsonService.GetServerByID(serverID, authorization)
+	server, err := a.jsonService.GetServerByID(serverID, authorization, clientJson)
 	if err != nil {
 		log.Printf("Failed to get server info: %v", err)
 		response := ApiResponse{Code: 500, Msg: "获取服务器信息失败"}
@@ -408,7 +408,7 @@ func (a *App) TestStoredServerSSH(serverID, authorization string) string {
 	testResult := a.performSSHTest(server.ServerIP, server.ServerPort, server.ServerUser, server.ServerPassword)
 
 	// 更新服务器的连接状态
-	err = a.jsonService.UpdateServerConnectionStatus(serverID, testResult, authorization)
+	err = a.jsonService.UpdateServerConnectionStatus(serverID, testResult, authorization, clientJson)
 	if err != nil {
 		log.Printf("Failed to update server connection status: %v", err)
 	}

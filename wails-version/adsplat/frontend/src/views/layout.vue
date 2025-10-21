@@ -1,64 +1,56 @@
 <template>
-    <n-message-provider>
-        <n-layout has-sider style="height: 100vh;">
-            <n-layout-sider bordered collapse-mode="width" :collapsed-width="64" :width="200"
-                :collapsed="sidebar.collapse" :show-trigger="false" class="custom-sider">
-                <div class="sidebar-container">
-                    <div class="sidebar-header">
-                        <div class="toggle-container-center">
-                            <n-button quaternary circle size="small" @click="sidebar.handleCollapse"
-                                class="custom-toggle-btn">
-                                <template #icon>
-                                    <n-icon size="18">
-                                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                            <path v-if="!sidebar.collapse" d="M15 18L9 12L15 6" stroke="currentColor"
-                                                stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-                                            <path v-else d="M9 18L15 12L9 6" stroke="currentColor" stroke-width="2"
-                                                stroke-linecap="round" stroke-linejoin="round" />
-                                        </svg>
-                                    </n-icon>
-                                </template>
-                            </n-button>
-                        </div>
-                    </div>
+    <div>
+        <n-message-provider>
+            <n-layout has-sider style="height: 100vh;">
+                <n-layout-sider bordered collapse-mode="width" :collapsed-width="64" :width="200"
+                    :collapsed="sidebar.collapse" :show-trigger="false" class="custom-sider">
+                    <div class="sidebar-container">
 
-                    <div class="menu-container">
-                        <n-menu v-if="showMenu" :value="onRoutes" :collapsed="sidebar.collapse" :collapsed-width="64"
-                            :options="menuOptions" @update:value="handleMenuSelect" :indent="20" />
-                    </div>
 
-                    <div class="sidebar-footer">
-                        <n-tooltip placement="right">
-                            <template #trigger>
-                                <n-button quaternary circle size="large" @click="handleLogout" class="logout-btn">
+                        <div class="menu-container">
+                            <n-menu v-if="showMenu" :value="onRoutes" :collapsed="sidebar.collapse" :collapsed-width="64"
+                                :options="menuOptions" @update:value="handleMenuSelect" :indent="20" />
+                            
+                            <!-- 折叠按钮 -->
+                            <div class="collapse-button-container">
+                                <n-button quaternary circle size="small" @click="sidebar.handleCollapse"
+                                    class="collapse-toggle-btn">
                                     <template #icon>
-                                        <n-icon size="20">
-                                            <LogOutOutline />
+                                        <n-icon size="18">
+                                            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                                <path v-if="!sidebar.collapse" d="M15 18L9 12L15 6" stroke="white"
+                                                    stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
+                                                <path v-else d="M9 18L15 12L9 6" stroke="white" stroke-width="3"
+                                                    stroke-linecap="round" stroke-linejoin="round" />
+                                            </svg>
                                         </n-icon>
                                     </template>
                                 </n-button>
-                            </template>
-                            退出登录
-                        </n-tooltip>
-                    </div>
-                </div>
-            </n-layout-sider>
+                            </div>
+                        </div>
 
-            <n-layout class="main-layout">
-                <n-layout-content content-style="padding: 8px;" class="main-content">
-                    <div class="content-wrapper">
-                        <router-view v-slot="{ Component }" :key="$route.fullPath">
-                            <transition name="fade" mode="out-in">
-                                <keep-alive>
-                                    <component :is="Component" />
-                                </keep-alive>
-                            </transition>
-                        </router-view>
+
                     </div>
-                </n-layout-content>
+                </n-layout-sider>
+
+                <n-layout class="main-layout">
+                    <n-layout-content content-style="padding: 8px;" class="main-content">
+                        <div class="content-wrapper">
+                            <router-view v-slot="{ Component }" :key="$route.fullPath">
+                                <transition name="fade" mode="out-in">
+                                    <keep-alive>
+                                        <component :is="Component" />
+                                    </keep-alive>
+                                </transition>
+                            </router-view>
+                        </div>
+                    </n-layout-content>
+                </n-layout>
             </n-layout>
-        </n-layout>
-    </n-message-provider>
+        </n-message-provider>
+
+
+    </div>
 </template>
 
 <script setup lang="ts">
@@ -72,8 +64,7 @@ import { setGlobalInstances, handleUnauthorized } from '@/api'
 import {
     GridOutline,
     ServerOutline,
-    AddCircleOutline,
-    LogOutOutline
+    AddCircleOutline
 } from '@vicons/ionicons5'
 
 const route = useRoute()
@@ -89,7 +80,7 @@ const dialog = useDialog()
 
 // 设置全局实例
 onMounted(() => {
-    // 创建简单的 loading 实例
+    // 创建Naive UI loading实例
     const createLoading = () => {
         return {
             create: (options: any) => {
@@ -114,8 +105,7 @@ const showMenu = ref(true)
 const iconMap: Record<string, any> = {
     'Grid': GridOutline,
     'Platform': ServerOutline,
-    'Add': AddCircleOutline,
-    'Logout': LogOutOutline
+    'Add': AddCircleOutline
 }
 
 // 渲染图标
@@ -167,19 +157,7 @@ const handleMenuSelect = (key: string) => {
     router.push(key)
 }
 
-// 处理退出登录
-const handleLogout = () => {
-    dialog.warning({
-        title: '确认退出',
-        content: '确定要退出登录吗？',
-        positiveText: '确定',
-        negativeText: '取消',
-        onPositiveClick: () => {
-            message.success('已退出登录')
-            handleUnauthorized()
-        }
-    })
-}
+
 
 // 初始加载菜单
 loadMenuData()
@@ -207,98 +185,89 @@ watch(boolroute, (newVal) => {
     background: linear-gradient(180deg, #F8FAFC 0%, #F1F5F9 50%, #E2E8F0 100%);
 }
 
-.sidebar-header {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 12px;
-    min-height: 56px;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-    position: relative;
-}
-
-.sidebar-header::after {
-    content: '';
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    height: 1px;
-    background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.3) 50%, transparent 100%);
-}
-
-.toggle-container-center {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 100%;
-}
-
-.custom-toggle-btn {
-    width: 32px !important;
-    height: 32px !important;
-    background: rgba(255, 255, 255, 0.2) !important;
-    border: 1px solid rgba(255, 255, 255, 0.3) !important;
-    color: #FFFFFF !important;
-    backdrop-filter: blur(10px);
-    transition: all 0.3s ease;
-}
-
-.custom-toggle-btn:hover {
-    background: rgba(255, 255, 255, 0.3) !important;
-    transform: scale(1.1);
-}
-
-
 
 .menu-container {
     flex: 1;
     padding: 16px 0;
     overflow-y: auto;
-}
-
-.sidebar-footer {
-    padding: 16px;
-    display: flex;
-    justify-content: center;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    border-top: 1px solid rgba(255, 255, 255, 0.1);
     position: relative;
 }
 
-.sidebar-footer::before {
+.collapse-button-container {
+    position: absolute;
+    right: -12px;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 10;
+    width: 24px;
+    height: 36px;
+}
+
+.collapse-toggle-btn {
+    width: 24px !important;
+    height: 36px !important;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+    border: none !important;
+    border-radius: 12px !important;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+    padding: 0 !important;
+    margin: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+}
+
+.collapse-toggle-btn .n-button__content {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 100% !important;
+    height: 100% !important;
+    color: white !important;
+}
+
+.collapse-toggle-btn .n-icon {
+    color: white !important;
+}
+
+.collapse-toggle-btn svg {
+    color: white !important;
+}
+
+.collapse-toggle-btn svg path {
+    stroke: white !important;
+}
+
+.collapse-toggle-btn::before {
     content: '';
     position: absolute;
+    left: -12px;
     top: 0;
-    left: 0;
-    right: 0;
-    height: 1px;
-    background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.3) 50%, transparent 100%);
+    width: 12px;
+    height: 100%;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 0 12px 12px 0;
 }
 
-.logout-btn {
-    width: 40px;
-    height: 40px;
-    border-radius: 10px;
-    transition: all 0.3s ease;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: rgba(255, 255, 255, 0.2) !important;
-    border: 1px solid rgba(255, 255, 255, 0.3) !important;
-    color: #FFFFFF !important;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-    backdrop-filter: blur(10px);
+.collapse-toggle-btn:hover {
+    transform: translateX(2px);
+    background: linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%) !important;
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
 }
 
-.logout-btn:hover {
-    transform: translateY(-1px);
-    background: rgba(220, 38, 38, 0.8) !important;
-    border-color: rgba(220, 38, 38, 0.9) !important;
-    color: #FFFFFF !important;
-    box-shadow: 0 4px 16px rgba(220, 38, 38, 0.3);
+.collapse-toggle-btn:hover::before {
+    background: linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%);
 }
+
+.collapse-toggle-btn:active {
+    transform: translateX(1px);
+}
+
+
 
 /* 主内容区域样式 */
 .main-layout {
@@ -543,4 +512,6 @@ watch(boolroute, (newVal) => {
     margin: 4px 0;
     line-height: 1.3;
 }
+
+
 </style>

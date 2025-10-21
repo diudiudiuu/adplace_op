@@ -53,18 +53,18 @@ const handleUnauthorized = () => {
 
 // 简化的 API 调用映射
 const apiMap: Record<string, (data: any) => Promise<string>> = {
-    'list': (data: any) => window.go!.main!.App!.List(data.authorization),
-    'server_list': (data: any) => window.go!.main!.App!.List(data.authorization),
-    'server_info': (data: any) => window.go!.main!.App!.ServerInfo(data.serverId, data.authorization),
-    'server_add': (data: any) => window.go!.main!.App!.ServerAdd(data.server_id, data.server_name, data.server_ip, data.server_port, data.server_user, data.server_password, data.authorization),
-    'server_update': (data: any) => window.go!.main!.App!.ServerUpdate(data.old_server_id || data.server_id, data.server_id, data.server_name, data.server_ip, data.server_port, data.server_user, data.server_password, data.authorization),
-    'server_delete': (data: any) => window.go!.main!.App!.ServerDelete(data.server_id, data.authorization),
+    'list': (data: any) => window.go!.main!.App!.List(data.authorization, data.client_json),
+    'server_list': (data: any) => window.go!.main!.App!.List(data.authorization, data.client_json),
+    'server_info': (data: any) => window.go!.main!.App!.ServerInfo(data.serverId, data.authorization, data.client_json),
+    'server_add': (data: any) => window.go!.main!.App!.ServerAdd(data.server_id, data.server_name, data.server_ip, data.server_port, data.server_user, data.server_password, data.authorization, data.client_json),
+    'server_update': (data: any) => window.go!.main!.App!.ServerUpdate(data.old_server_id || data.server_id, data.server_id, data.server_name, data.server_ip, data.server_port, data.server_user, data.server_password, data.authorization, data.client_json),
+    'server_delete': (data: any) => window.go!.main!.App!.ServerDelete(data.server_id, data.authorization, data.client_json),
     'test_ssh': (data: any) => window.go!.main!.App!.TestSSHConnection(data.server_ip, data.server_port, data.server_user, data.server_password),
-    'test_stored_ssh': (data: any) => window.go!.main!.App!.TestStoredServerSSH(data.server_id, data.authorization),
-    'project_info': (data: any) => window.go!.main!.App!.ProjectInfo(data.projectId, data.authorization),
-    'project_form': (data: any) => window.go!.main!.App!.ProjectForm(data.serverId, data.projectInfo, data.authorization),
-    'project_delete': (data: any) => window.go!.main!.App!.ProjectDelete(data.serverId, data.projectId, data.authorization),
-    'exec': (data: any) => window.go!.main!.App!.Exec(data.projectId, data.sql, data.sqlType, data.authorization),
+    'test_stored_ssh': (data: any) => window.go!.main!.App!.TestStoredServerSSH(data.server_id, data.authorization, data.client_json),
+    'project_info': (data: any) => window.go!.main!.App!.ProjectInfo(data.projectId, data.authorization, data.client_json),
+    'project_form': (data: any) => window.go!.main!.App!.ProjectForm(data.serverId, data.projectInfo, data.authorization, data.client_json),
+    'project_delete': (data: any) => window.go!.main!.App!.ProjectDelete(data.serverId, data.projectId, data.authorization, data.client_json),
+    'exec': (data: any) => window.go!.main!.App!.Exec(data.projectId, data.sql, data.sqlType, data.authorization, data.client_json),
     'test_401': () => window.go!.main!.App!.TestUnauthorized(),
 };
 
@@ -96,7 +96,11 @@ const api = async (uri: string, data: any, showLoading: boolean = true) => {
         }
 
         // 准备请求数据
-        const requestData = { ...data, authorization: getAuthorization() };
+        const requestData = { 
+            ...data, 
+            authorization: getAuthorization(),
+            client_json: 'client_json' // 固定的KV key
+        };
 
         const apiFunction = apiMap[uri];
         if (!apiFunction) return uri === 'list' ? [] : {};

@@ -79,15 +79,11 @@ class MenuManager {
                 title: '主页',
                 index: '/welcome',
                 icon: 'Grid',
-            },
-            {
-                id: 'server-management',
-                title: '服务器管理',
-                index: '/server-management',
-                icon: 'Platform',
             }
         ];
     }
+
+
 
     // 构建服务器菜单项
     private buildServerMenu(serverData: any): Menus {
@@ -173,7 +169,8 @@ class MenuManager {
                 .map(server => this.buildServerMenu(server));
 
             // 合并菜单
-            this.menus = [...this.getBaseMenu(), ...serverMenus];
+            const baseMenus = this.getBaseMenu();
+            this.menus = [...baseMenus, ...serverMenus];
 
             // 添加动态路由
             if (serverMenus.length > 0) {

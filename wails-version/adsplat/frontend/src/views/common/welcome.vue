@@ -49,6 +49,16 @@
                     <h3>项目配置</h3>
                     <p>统一管理所有项目设置</p>
                 </div>
+
+                <div class="feature-card clickable logout-card" @click="handleLogout">
+                    <div class="feature-icon logout-icon">
+                        <n-icon size="28">
+                            <LogOutOutline />
+                        </n-icon>
+                    </div>
+                    <h3>退出登录</h3>
+                    <p>安全退出当前账户</p>
+                </div>
             </div>
 
             <!-- 温馨提示 -->
@@ -66,19 +76,39 @@
 
 <script setup lang="ts">
 import { useRouter } from 'vue-router'
+import { useMessage, useDialog } from 'naive-ui'
+import { handleUnauthorized } from '@/api'
 import {
     ServerOutline,
     FolderOutline,
     TerminalOutline,
     HeartOutline,
     SunnyOutline,
-    BulbOutline
+    BulbOutline,
+    LogOutOutline,
+    RefreshOutline
 } from '@vicons/ionicons5'
 
 const router = useRouter()
+const message = useMessage()
+const dialog = useDialog()
 
 const navigateToServerManagement = () => {
     router.push('/server-management')
+}
+
+
+const handleLogout = () => {
+    dialog.warning({
+        title: '确认退出',
+        content: '确定要退出登录吗？',
+        positiveText: '确定',
+        negativeText: '取消',
+        onPositiveClick: () => {
+            message.success('已退出登录')
+            handleUnauthorized()
+        }
+    })
 }
 </script>
 
@@ -240,6 +270,20 @@ const navigateToServerManagement = () => {
     border-color: rgba(108, 92, 231, 0.4);
 }
 
+.feature-card:nth-child(3):hover {
+    transform: translateY(-12px) scale(1.03);
+    box-shadow: 0 25px 60px rgba(0, 206, 201, 0.3);
+    border-color: rgba(0, 206, 201, 0.4);
+}
+
+
+
+.feature-card.logout-card:hover {
+    transform: translateY(-12px) scale(1.03);
+    box-shadow: 0 25px 60px rgba(225, 112, 85, 0.3);
+    border-color: rgba(225, 112, 85, 0.4);
+}
+
 .feature-icon {
     width: 64px;
     height: 64px;
@@ -267,6 +311,22 @@ const navigateToServerManagement = () => {
     background: linear-gradient(135deg, #00b894, #55efc4);
     color: white;
     box-shadow: 0 8px 25px rgba(0, 184, 148, 0.4);
+}
+
+.test-icon {
+    background: linear-gradient(135deg, #00cec9, #55efc4);
+    color: white;
+    box-shadow: 0 8px 25px rgba(0, 206, 201, 0.4);
+}
+
+
+
+
+
+.logout-icon {
+    background: linear-gradient(135deg, #e17055, #fab1a0);
+    color: white;
+    box-shadow: 0 8px 25px rgba(225, 112, 85, 0.4);
 }
 
 .feature-card:hover .feature-icon {

@@ -28,7 +28,7 @@ type ProjectData struct {
 	ProjectAPIURL    string `json:"project_api_url"`
 }
 
-const KV_KEY = "client_json"
+// 移除固定的KV_KEY，改为使用传入的参数
 
 // JsonService JSON数据管理服务
 type JsonService struct {
@@ -43,16 +43,16 @@ func NewJsonService() *JsonService {
 }
 
 // LoadJsonFile 加载JSON数据
-func (s *JsonService) LoadJsonFile(authorization string) ([]ServerData, error) {
-	servers, _, err := s.LoadJsonFileWithResponse(authorization)
+func (s *JsonService) LoadJsonFile(authorization, clientJson string) ([]ServerData, error) {
+	servers, _, err := s.LoadJsonFileWithResponse(authorization, clientJson)
 	return servers, err
 }
 
 // LoadJsonFileWithResponse 加载JSON数据并返回KV响应
-func (s *JsonService) LoadJsonFileWithResponse(authorization string) ([]ServerData, *KvResponse, error) {
-	log.Printf("LoadJsonFileWithResponse called with authorization: %s", authorization)
+func (s *JsonService) LoadJsonFileWithResponse(authorization, clientJson string) ([]ServerData, *KvResponse, error) {
+	log.Printf("LoadJsonFileWithResponse called with authorization: %s, clientJson: %s", authorization, clientJson)
 
-	resp, err := s.kvService.GetKey(KV_KEY, authorization)
+	resp, err := s.kvService.GetKey(clientJson, authorization)
 	if err != nil {
 		log.Printf("Failed to get KV data: %v", err)
 		return []ServerData{}, nil, err
@@ -80,24 +80,24 @@ func (s *JsonService) LoadJsonFileWithResponse(authorization string) ([]ServerDa
 	// 如果没有数据，创建空数据
 	log.Printf("No data found, creating empty data")
 	emptyData := []ServerData{}
-	s.SaveJsonFile(emptyData, authorization)
+	s.SaveJsonFile(emptyData, authorization, clientJson)
 	return emptyData, resp, nil
 }
 
 // SaveJsonFile 保存JSON数据
-func (s *JsonService) SaveJsonFile(data []ServerData, authorization string) error {
+func (s *JsonService) SaveJsonFile(data []ServerData, authorization, clientJson string) error {
 	jsonData, err := json.Marshal(data)
 	if err != nil {
 		return err
 	}
 
-	_, err = s.kvService.UpdateKey(KV_KEY, string(jsonData), authorization)
+	_, err = s.kvService.UpdateKey(clientJson, string(jsonData), authorization)
 	return err
 }
 
 // GetServerByID 根据ID获取服务器信息
-func (s *JsonService) GetServerByID(serverID, authorization string) (*ServerData, error) {
-	servers, err := s.LoadJsonFile(authorization)
+func (s *JsonService) GetServerByID(serverID, authorization, clientJson string) (*ServerData, error) {
+	servers, err := s.LoadJsonFile(authorization, clientJson)
 	if err != nil {
 		return nil, err
 	}
@@ -112,8 +112,8 @@ func (s *JsonService) GetServerByID(serverID, authorization string) (*ServerData
 }
 
 // GetProjectByID 根据ID获取项目信息
-func (s *JsonService) GetProjectByID(projectID, authorization string) (*ProjectData, error) {
-	servers, err := s.LoadJsonFile(authorization)
+func (s *JsonService) GetProjectByID(projectID, authorization, clientJson string) (*ProjectData, error) {
+	servers, err := s.LoadJsonFile(authorization, clientJson)
 	if err != nil {
 		return nil, err
 	}
@@ -130,8 +130,8 @@ func (s *JsonService) GetProjectByID(projectID, authorization string) (*ProjectD
 }
 
 // AddOrUpdateProject 添加或更新项目
-func (s *JsonService) AddOrUpdateProject(serverID string, projectInfo ProjectData, authorization string) error {
-	servers, err := s.LoadJsonFile(authorization)
+func (s *JsonService) AddOrUpdateProject(serverID string, projectInfo ProjectData, authorization, clientJson string) error {
+	servers, err := s.LoadJsonFile(authorization, clientJson)
 	if err != nil {
 		return err
 	}
@@ -155,7 +155,7 @@ func (s *JsonService) AddOrUpdateProject(serverID string, projectInfo ProjectDat
 				servers[i].ProjectList = append(servers[i].ProjectList, projectInfo)
 			}
 
-			return s.SaveJsonFile(servers, authorization)
+			return s.SaveJsonFile(servers, authorization, clientJson)
 		}
 	}
 
@@ -163,8 +163,8 @@ func (s *JsonService) AddOrUpdateProject(serverID string, projectInfo ProjectDat
 }
 
 // UpdateServerConnectionStatus 更新服务器连接状态
-func (s *JsonService) UpdateServerConnectionStatus(serverID, testResult, authorization string) error {
-	servers, err := s.LoadJsonFile(authorization)
+func (s *JsonService) UpdateServerConnectionStatus(serverID, testResult, authorization, clientJson string) error {
+	servers, err := s.LoadJsonFile(authorization, clientJson)
 	if err != nil {
 		return err
 	}
@@ -197,7 +197,7 @@ func (s *JsonService) UpdateServerConnectionStatus(serverID, testResult, authori
 				servers[i].LastTestResult = msg
 			}
 
-			return s.SaveJsonFile(servers, authorization)
+			return s.SaveJsonFile(servers, authorization, clientJson)
 		}
 	}
 
@@ -205,8 +205,8 @@ func (s *JsonService) UpdateServerConnectionStatus(serverID, testResult, authori
 }
 
 // DeleteProject 删除项目
-func (s *JsonService) DeleteProject(serverID, projectID, authorization string) error {
-	servers, err := s.LoadJsonFile(authorization)
+func (s *JsonService) DeleteProject(serverID, projectID, authorization, clientJson string) error {
+	servers, err := s.LoadJsonFile(authorization, clientJson)
 	if err != nil {
 		return err
 	}
@@ -222,7 +222,7 @@ func (s *JsonService) DeleteProject(serverID, projectID, authorization string) e
 						servers[i].ProjectList[:j],
 						servers[i].ProjectList[j+1:]...,
 					)
-					return s.SaveJsonFile(servers, authorization)
+					return s.SaveJsonFile(servers, authorization, clientJson)
 				}
 			}
 		}
@@ -232,8 +232,8 @@ func (s *JsonService) DeleteProject(serverID, projectID, authorization string) e
 }
 
 // AddServer 添加新服务器
-func (s *JsonService) AddServer(serverData ServerData, authorization string) error {
-	servers, err := s.LoadJsonFile(authorization)
+func (s *JsonService) AddServer(serverData ServerData, authorization, clientJson string) error {
+	servers, err := s.LoadJsonFile(authorization, clientJson)
 	if err != nil {
 		return err
 	}
@@ -248,12 +248,12 @@ func (s *JsonService) AddServer(serverData ServerData, authorization string) err
 	// 添加新服务器
 	servers = append(servers, serverData)
 
-	return s.SaveJsonFile(servers, authorization)
+	return s.SaveJsonFile(servers, authorization, clientJson)
 }
 
 // UpdateServer 更新服务器信息
-func (s *JsonService) UpdateServer(serverID string, updatedServer ServerData, authorization string) error {
-	servers, err := s.LoadJsonFile(authorization)
+func (s *JsonService) UpdateServer(serverID string, updatedServer ServerData, authorization, clientJson string) error {
+	servers, err := s.LoadJsonFile(authorization, clientJson)
 	if err != nil {
 		return err
 	}
@@ -264,7 +264,7 @@ func (s *JsonService) UpdateServer(serverID string, updatedServer ServerData, au
 			// 保留原有的项目列表
 			updatedServer.ProjectList = server.ProjectList
 			servers[i] = updatedServer
-			return s.SaveJsonFile(servers, authorization)
+			return s.SaveJsonFile(servers, authorization, clientJson)
 		}
 	}
 
@@ -272,8 +272,8 @@ func (s *JsonService) UpdateServer(serverID string, updatedServer ServerData, au
 }
 
 // UpdateServerWithNewID 更新服务器信息（支持更改服务器ID）
-func (s *JsonService) UpdateServerWithNewID(oldServerID string, updatedServer ServerData, authorization string) error {
-	servers, err := s.LoadJsonFile(authorization)
+func (s *JsonService) UpdateServerWithNewID(oldServerID string, updatedServer ServerData, authorization, clientJson string) error {
+	servers, err := s.LoadJsonFile(authorization, clientJson)
 	if err != nil {
 		return err
 	}
@@ -293,7 +293,7 @@ func (s *JsonService) UpdateServerWithNewID(oldServerID string, updatedServer Se
 			// 保留原有的项目列表
 			updatedServer.ProjectList = server.ProjectList
 			servers[i] = updatedServer
-			return s.SaveJsonFile(servers, authorization)
+			return s.SaveJsonFile(servers, authorization, clientJson)
 		}
 	}
 
@@ -301,8 +301,8 @@ func (s *JsonService) UpdateServerWithNewID(oldServerID string, updatedServer Se
 }
 
 // DeleteServer 删除服务器
-func (s *JsonService) DeleteServer(serverID string, authorization string) error {
-	servers, err := s.LoadJsonFile(authorization)
+func (s *JsonService) DeleteServer(serverID, authorization, clientJson string) error {
+	servers, err := s.LoadJsonFile(authorization, clientJson)
 	if err != nil {
 		return err
 	}
@@ -311,7 +311,7 @@ func (s *JsonService) DeleteServer(serverID string, authorization string) error 
 	for i, server := range servers {
 		if server.ServerID == serverID {
 			servers = append(servers[:i], servers[i+1:]...)
-			return s.SaveJsonFile(servers, authorization)
+			return s.SaveJsonFile(servers, authorization, clientJson)
 		}
 	}
 

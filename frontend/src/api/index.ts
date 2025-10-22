@@ -74,8 +74,11 @@ const apiMap: Record<string, (data: any) => Promise<string>> = {
     'cloudflare_pages_get_domains': (data: any) => window.go!.main!.App!.CloudflarePagesGetDomains(data.api_token, data.zone_id, data.project_name),
     'cloudflare_pages_delete_domain': (data: any) => window.go!.main!.App!.CloudflarePagesDeleteDomain(data.api_token, data.zone_id, data.project_name, data.domain),
     'generate_project_config': (data: any) => window.go!.main!.App!.GenerateProjectConfig(data.server_id, data.authorization, data.client_json),
+    'upload_project_config': (data: any) => window.go!.main!.App!.GenerateProjectConfigForSingleProject(data.server_data_json, data.project_config_json, '', data.authorization),
     'project_init': (data: any) => window.go!.main!.App!.ProjectInit(data.server_id, data.project_id, data.authorization, data.client_json),
+    'project_init_with_data': (data: any) => window.go!.main!.App!.ProjectInitWithData(data.server_id, data.project_id, data.server_data_json, data.authorization),
     'project_update': (data: any) => window.go!.main!.App!.ProjectUpdate(data.server_id, data.project_id, data.authorization, data.client_json),
+    'project_update_with_data': (data: any) => window.go!.main!.App!.ProjectUpdateWithData(data.server_id, data.project_id, data.server_data_json, data.authorization),
 };
 
 // 简化的 API 调用函数

@@ -38,6 +38,10 @@ export function GenerateProjectConfig(arg1, arg2, arg3) {
   return window['go']['main']['App']['GenerateProjectConfig'](arg1, arg2, arg3);
 }
 
+export function GenerateProjectConfigForSingleProject(arg1, arg2, arg3, arg4) {
+  return window['go']['main']['App']['GenerateProjectConfigForSingleProject'](arg1, arg2, arg3, arg4);
+}
+
 export function Greet(arg1) {
   return window['go']['main']['App']['Greet'](arg1);
 }
@@ -62,12 +66,20 @@ export function ProjectInit(arg1, arg2, arg3, arg4) {
   return window['go']['main']['App']['ProjectInit'](arg1, arg2, arg3, arg4);
 }
 
+export function ProjectInitWithData(arg1, arg2, arg3, arg4) {
+  return window['go']['main']['App']['ProjectInitWithData'](arg1, arg2, arg3, arg4);
+}
+
 export function ProjectPortUpdate(arg1, arg2, arg3, arg4, arg5) {
   return window['go']['main']['App']['ProjectPortUpdate'](arg1, arg2, arg3, arg4, arg5);
 }
 
 export function ProjectUpdate(arg1, arg2, arg3, arg4) {
   return window['go']['main']['App']['ProjectUpdate'](arg1, arg2, arg3, arg4);
+}
+
+export function ProjectUpdateWithData(arg1, arg2, arg3, arg4) {
+  return window['go']['main']['App']['ProjectUpdateWithData'](arg1, arg2, arg3, arg4);
 }
 
 export function ServerAdd(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9) {
@@ -100,4 +112,8 @@ export function TestStoredServerSSH(arg1, arg2, arg3) {
 
 export function TestUnauthorized() {
   return window['go']['main']['App']['TestUnauthorized']();
+}
+
+export function UploadProjectConfig(arg1, arg2, arg3) {
+  return window['go']['main']['App']['UploadProjectConfig'](arg1, arg2, arg3);
 }

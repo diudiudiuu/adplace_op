@@ -102,11 +102,13 @@ import {
     CloseOutline, 
     CheckmarkOutline,
     ServerOutline,
-    LinkOutline
+    LinkOutline,
+    CloudUploadOutline
 } from '@vicons/ionicons5'
 import { useSidebarStore } from '@/store/sidebar'
 import { reloadMenus } from '@/components/menu'
 import api from '@/api'
+import { getAuthorization } from '@/utils/auth'
 
 interface Project {
     project_id: string
@@ -146,6 +148,7 @@ const isEditMode = ref(false)
 const serverFormRef = ref()
 
 const testingServers = ref(new Set<string>())
+const updatingServers = ref(new Set<string>())
 
 // 分页配置
 const pagination = {
@@ -160,7 +163,7 @@ const serverColumns = computed(() => [
     {
         title: '操作',
         key: 'actions',
-        width: 160,
+        width: 200,
         render: (row: Server) => {
             return h(NSpace, { size: 'small' }, {
                 default: () => [
@@ -186,6 +189,19 @@ const serverColumns = computed(() => [
                             icon: () => h(NIcon, { size: 16 }, { default: () => h(LinkOutline) })
                         }),
                         default: () => '测试'
+                    }),
+                    h(NTooltip, { trigger: 'hover' }, {
+                        trigger: () => h(NButton, {
+                            size: 'small',
+                            type: 'warning',
+                            class: 'special-table-btn',
+                            onClick: () => updateAllProjects(row),
+                            loading: updatingServers.value.has(row.server_id),
+                            disabled: !row.project_list || row.project_list.length === 0
+                        }, {
+                            icon: () => h(NIcon, { size: 16 }, { default: () => h(CloudUploadOutline) })
+                        }),
+                        default: () => '全部更新'
                     }),
                     h(NTooltip, { trigger: 'hover' }, {
                         trigger: () => h(NButton, {
@@ -425,6 +441,136 @@ const testStoredServerSSH = async (serverId: string) => {
         message.error(`服务器 ${serverId} SSH连接测试异常`)
     } finally {
         testingServers.value.delete(serverId)
+    }
+}
+
+// 全部更新项目
+const updateAllProjects = async (server: Server) => {
+    if (!server.project_list || server.project_list.length === 0) {
+        message.warning('该服务器下没有项目')
+        return
+    }
+
+    const projectCount = server.project_list.length
+    
+    // 确认对话框
+    dialog.warning({
+        title: '确认全部更新',
+        content: `即将更新服务器 "${server.server_name}" 下的 ${projectCount} 个项目。此操作将：
+
+1. 生成所有项目的配置文件
+2. 逐个执行项目更新操作
+3. 可能需要较长时间完成
+
+是否继续？`,
+        positiveText: '确认更新',
+        negativeText: '取消',
+        onPositiveClick: async () => {
+            await executeUpdateAllProjects(server)
+        }
+    })
+}
+
+// 执行全部更新项目
+const executeUpdateAllProjects = async (server: Server) => {
+    updatingServers.value.add(server.server_id)
+    
+    try {
+        message.loading(`正在更新服务器 "${server.server_name}" 下的所有项目...`, { duration: 0 })
+        
+        // 1. 生成所有项目的配置JSON
+        const extractDomain = (url: string): string => {
+            if (!url) return ''
+            try {
+                const urlObj = new URL(url.startsWith('http') ? url : `https://${url}`)
+                return urlObj.hostname
+            } catch {
+                return url.replace(/^https?:\/\//, '').split('/')[0]
+            }
+        }
+
+        // 生成所有项目的配置
+        const allProjectsConfig: Record<string, any> = {}
+        server.project_list.forEach(project => {
+            allProjectsConfig[project.project_id] = {
+                api_port: project.api_port || '9000',
+                web_port: project.front_port || '3000',
+                api_domain: extractDomain(project.project_api_url)
+            }
+        })
+
+        const configJson = JSON.stringify(allProjectsConfig, null, 2)
+        
+        console.log('生成的所有项目配置:', {
+            serverId: server.server_id,
+            projectCount: server.project_list.length,
+            config: allProjectsConfig
+        })
+
+        // 2. 上传配置文件
+        const configResult = await api('upload_project_config', {
+            server_data_json: JSON.stringify(server),
+            project_config_json: configJson,
+            authorization: getAuthorization()
+        })
+
+        if (configResult.code !== 200) {
+            throw new Error(`配置文件上传失败: ${configResult.msg}`)
+        }
+
+        message.success('配置文件上传成功，开始更新项目...')
+
+        // 3. 循环更新每个项目
+        let successCount = 0
+        let failCount = 0
+        const results: Array<{project: any, success: boolean, error?: string}> = []
+
+        for (const project of server.project_list) {
+            try {
+                console.log(`正在更新项目: ${project.project_name} (${project.project_id})`)
+                
+                const updateResult = await api('project_update_with_data', {
+                    server_id: server.server_id,
+                    project_id: project.project_id,
+                    server_data_json: JSON.stringify(server)
+                })
+
+                if (updateResult.code === 200) {
+                    successCount++
+                    results.push({ project, success: true })
+                    console.log(`项目 ${project.project_id} 更新成功`)
+                } else {
+                    failCount++
+                    results.push({ project, success: false, error: updateResult.msg })
+                    console.error(`项目 ${project.project_id} 更新失败:`, updateResult.msg)
+                }
+            } catch (error) {
+                failCount++
+                results.push({ project, success: false, error: (error as Error).message })
+                console.error(`项目 ${project.project_id} 更新异常:`, error)
+            }
+        }
+
+        message.destroyAll()
+
+        // 4. 显示结果
+        if (failCount === 0) {
+            message.success(`全部更新完成！成功更新 ${successCount} 个项目`)
+        } else if (successCount === 0) {
+            message.error(`全部更新失败！${failCount} 个项目更新失败`)
+        } else {
+            message.warning(`部分更新完成：成功 ${successCount} 个，失败 ${failCount} 个`)
+        }
+
+        // 显示详细结果
+        console.log('更新结果详情:', results)
+
+    } catch (error) {
+        console.error('Update all projects error:', error)
+        message.destroyAll()
+        message.error(`全部更新失败：${(error as Error).message}`)
+    } finally {
+        updatingServers.value.delete(server.server_id)
     }
 }
 

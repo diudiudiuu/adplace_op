@@ -874,7 +874,7 @@ func (a *App) CloudflarePagesDeleteDomain(apiToken, zoneID, projectName, domain 
 	return string(result)
 }
 
-// GenerateProjectConfig 生成项目配置文件并上传到服务器
+// GenerateProjectConfig 生成项目配置文件并上传到服务器（从数据库获取最新数据）
 func (a *App) GenerateProjectConfig(serverID, authorization, clientJson string) string {
 	log.Printf("GenerateProjectConfig called with serverID: %s", serverID)
 
@@ -900,24 +900,20 @@ func (a *App) GenerateProjectConfig(serverID, authorization, clientJson string) 
 		return string(result)
 	}
 
-	// 生成项目配置
+	// 生成项目配置 - 使用当前项目配置逻辑
 	projectConfig := make(map[string]map[string]string)
-
 	for _, project := range server.ProjectList {
-		// 提取域名（去掉协议和路径）
 		apiDomain := extractDomainFromURL(project.ProjectAPIURL)
-
 		projectConfig[project.ProjectID] = map[string]string{
 			"api_port":   getPortOrDefault(project.APIPort, "9000"),
 			"web_port":   getPortOrDefault(project.FrontPort, "3000"),
 			"api_domain": apiDomain,
 		}
 	}
-
-	// 转换为JSON
+	
 	configJSON, err := json.MarshalIndent(projectConfig, "", "  ")
 	if err != nil {
-		log.Printf("Failed to marshal project config: %v", err)
+		log.Printf("Failed to generate project config: %v", err)
 		response := ApiResponse{Code: 500, Msg: "生成配置文件失败"}
 		result, _ := json.Marshal(response)
 		return string(result)
@@ -942,6 +938,203 @@ func (a *App) GenerateProjectConfig(serverID, authorization, clientJson string) 
 	}
 	result, _ := json.Marshal(response)
 	return string(result)
+}
+
+// UploadProjectConfig 直接上传前端生成的项目配置JSON到服务器
+func (a *App) UploadProjectConfig(serverDataJson, projectConfigJson, authorization string) string {
+	log.Printf("UploadProjectConfig called")
+
+	// 检查授权
+	if authorization == "" || strings.TrimSpace(authorization) == "" {
+		response := ApiResponse{Code: 401, Msg: "Authorization required"}
+		result, _ := json.Marshal(response)
+		return string(result)
+	}
+
+	// 解析前端传入的服务器数据（只需要服务器连接信息）
+	var server services.ServerData
+	if err := json.Unmarshal([]byte(serverDataJson), &server); err != nil {
+		log.Printf("Failed to unmarshal server data: %v", err)
+		response := ApiResponse{Code: 400, Msg: "服务器数据格式错误"}
+		result, _ := json.Marshal(response)
+		return string(result)
+	}
+
+	log.Printf("Uploading frontend-generated config JSON: %s", projectConfigJson)
+
+	// 直接使用前端传入的JSON配置，处理 release.zip 并上传配置文件
+	err := a.processReleaseAndUploadConfig(&server, "project_config.json", projectConfigJson)
+	if err != nil {
+		log.Printf("Failed to process release and upload config: %v", err)
+		response := ApiResponse{Code: 500, Msg: fmt.Sprintf("处理发布包和上传配置文件失败: %v", err)}
+		result, _ := json.Marshal(response)
+		return string(result)
+	}
+
+	// 解析配置JSON以返回给前端预览
+	var configMap map[string]interface{}
+	json.Unmarshal([]byte(projectConfigJson), &configMap)
+
+	response := ApiResponse{
+		Code: 200,
+		Msg:  "项目配置文件上传成功",
+		Data: map[string]interface{}{
+			"config":      configMap,
+			"path":        fmt.Sprintf("%s/project_config.json", server.DefaultPath),
+			"data_source": "frontend",
+		},
+	}
+	result, _ := json.Marshal(response)
+	return string(result)
+}
+
+// GenerateProjectConfigForSingleProject 上传前端生成的项目配置（兼容绑定文件）
+// 注意：由于绑定文件的限制，参数名可能显示为serverID, projectID等，但实际用途如下：
+// 第1个参数：服务器数据JSON
+// 第2个参数：项目配置JSON  
+// 第3个参数：未使用
+// 第4个参数：授权token
+func (a *App) GenerateProjectConfigForSingleProject(serverDataJson, projectConfigJson, unused, authorization string) string {
+	log.Printf("GenerateProjectConfigForSingleProject called - uploading frontend config")
+	log.Printf("Received parameters:")
+	log.Printf("  serverDataJson length: %d", len(serverDataJson))
+	log.Printf("  serverDataJson first 100 chars: %s", func() string {
+		if len(serverDataJson) > 100 {
+			return serverDataJson[:100] + "..."
+		}
+		return serverDataJson
+	}())
+	log.Printf("  projectConfigJson length: %d", len(projectConfigJson))
+	log.Printf("  projectConfigJson: %s", projectConfigJson)
+	log.Printf("  unused: %s", unused)
+	log.Printf("  authorization length: %d", len(authorization))
+	
+	// 检查授权
+	if authorization == "" || strings.TrimSpace(authorization) == "" {
+		log.Printf("Authorization is empty or whitespace")
+		response := ApiResponse{Code: 401, Msg: "Authorization required"}
+		result, _ := json.Marshal(response)
+		return string(result)
+	}
+
+	log.Printf("Attempting to parse server data JSON...")
+	log.Printf("Server data JSON (first 200 chars): %s", func() string {
+		if len(serverDataJson) > 200 {
+			return serverDataJson[:200] + "..."
+		}
+		return serverDataJson
+	}())
+
+	// 先尝试解析为通用map，然后提取需要的字段
+	var rawData map[string]interface{}
+	if err := json.Unmarshal([]byte(serverDataJson), &rawData); err != nil {
+		log.Printf("Failed to unmarshal as map: %v", err)
+		log.Printf("Raw server data length: %d", len(serverDataJson))
+		log.Printf("Raw server data (first 500 chars): %s", func() string {
+			if len(serverDataJson) > 500 {
+				return serverDataJson[:500] + "..."
+			}
+			return serverDataJson
+		}())
+		response := ApiResponse{Code: 400, Msg: fmt.Sprintf("服务器数据格式错误: %v", err)}
+		result, _ := json.Marshal(response)
+		return string(result)
+	}
+
+	// 手动构建ServerData结构
+	server := services.ServerData{
+		ServerID:       getStringFromMap(rawData, "server_id"),
+		ServerName:     getStringFromMap(rawData, "server_name"),
+		ServerIP:       getStringFromMap(rawData, "server_ip"),
+		ServerPort:     getStringFromMap(rawData, "server_port"),
+		ServerUser:     getStringFromMap(rawData, "server_user"),
+		ServerPassword: getStringFromMap(rawData, "server_password"),
+		DefaultPath:    getStringFromMap(rawData, "default_path"),
+	}
+
+	// 如果关键字段为空，设置默认值
+	if server.DefaultPath == "" {
+		server.DefaultPath = "/adplace"
+	}
+	if server.ServerPort == "" {
+		server.ServerPort = "22"
+	}
+
+	log.Printf("Successfully parsed server data: ServerID=%s, IP=%s, DefaultPath=%s", 
+		server.ServerID, server.ServerIP, server.DefaultPath)
+
+	log.Printf("Uploading frontend-generated config to server: %s", server.ServerID)
+
+	// 直接使用前端传入的JSON配置，处理 release.zip 并上传配置文件
+	err := a.processReleaseAndUploadConfig(&server, "project_config.json", projectConfigJson)
+	if err != nil {
+		log.Printf("Failed to process release and upload config: %v", err)
+		response := ApiResponse{Code: 500, Msg: fmt.Sprintf("处理发布包和上传配置文件失败: %v", err)}
+		result, _ := json.Marshal(response)
+		return string(result)
+	}
+
+	// 解析配置JSON以返回给前端预览
+	var configMap map[string]interface{}
+	json.Unmarshal([]byte(projectConfigJson), &configMap)
+
+	response := ApiResponse{
+		Code: 200,
+		Msg:  "项目配置文件上传成功（前端生成）",
+		Data: map[string]interface{}{
+			"config":      configMap,
+			"path":        fmt.Sprintf("%s/project_config.json", server.DefaultPath),
+			"data_source": "frontend",
+		},
+	}
+	result, _ := json.Marshal(response)
+	return string(result)
+}
+
+// generateCurrentProjectConfigJSON 生成当前项目的配置JSON
+func (a *App) generateCurrentProjectConfigJSON(server *services.ServerData, projectID string) (map[string]map[string]string, string, error) {
+	projectConfig := make(map[string]map[string]string)
+
+	log.Printf("Generating config for current project: %s", projectID)
+	
+	// 查找当前项目
+	var currentProject *services.ProjectData
+	for _, project := range server.ProjectList {
+		if project.ProjectID == projectID {
+			currentProject = &project
+			break
+		}
+	}
+
+	if currentProject == nil {
+		return nil, "", fmt.Errorf("project %s not found in server %s", projectID, server.ServerID)
+	}
+
+	// 提取API域名
+	apiDomain := extractDomainFromURL(currentProject.ProjectAPIURL)
+
+	log.Printf("Processing current project %s: API=%s, APIPort=%s, FrontPort=%s", 
+		currentProject.ProjectID, apiDomain, currentProject.APIPort, currentProject.FrontPort)
+
+	// 只包含您指定的三个字段
+	projectConfig[currentProject.ProjectID] = map[string]string{
+		"api_port":   getPortOrDefault(currentProject.APIPort, "9000"),
+		"web_port":   getPortOrDefault(currentProject.FrontPort, "3000"),
+		"api_domain": apiDomain,
+	}
+
+	// 转换为JSON
+	configJSON, err := json.MarshalIndent(projectConfig, "", "  ")
+	if err != nil {
+		return nil, "", fmt.Errorf("failed to marshal project config: %v", err)
+	}
+
+	log.Printf("Generated current project config JSON: %s", string(configJSON))
+	log.Printf("Config contains %d projects", len(projectConfig))
+	for id := range projectConfig {
+		log.Printf("Config project ID: %s", id)
+	}
+	return projectConfig, string(configJSON), nil
 }
 
 // ProjectInit SSH执行项目初始化
@@ -992,7 +1185,7 @@ func (a *App) ProjectInit(serverID, projectID, authorization, clientJson string)
 	return string(result)
 }
 
-// ProjectUpdate SSH执行项目更新
+// ProjectUpdate SSH执行项目更新（从数据库获取最新数据）
 func (a *App) ProjectUpdate(serverID, projectID, authorization, clientJson string) string {
 	log.Printf("ProjectUpdate called with serverID: %s, projectID: %s", serverID, projectID)
 
@@ -1040,6 +1233,146 @@ func (a *App) ProjectUpdate(serverID, projectID, authorization, clientJson strin
 	return string(result)
 }
 
+// ProjectInitWithData 使用前端传入的服务器数据执行项目初始化
+func (a *App) ProjectInitWithData(serverID, projectID, serverDataJson, authorization string) string {
+	log.Printf("ProjectInitWithData called with serverID: %s, projectID: %s", serverID, projectID)
+
+	// 检查授权
+	if authorization == "" || strings.TrimSpace(authorization) == "" {
+		response := ApiResponse{Code: 401, Msg: "Authorization required"}
+		result, _ := json.Marshal(response)
+		return string(result)
+	}
+
+	// 解析前端传入的服务器数据
+	var server services.ServerData
+	if err := json.Unmarshal([]byte(serverDataJson), &server); err != nil {
+		log.Printf("Failed to unmarshal server data: %v", err)
+		response := ApiResponse{Code: 400, Msg: "服务器数据格式错误"}
+		result, _ := json.Marshal(response)
+		return string(result)
+	}
+
+	// 验证服务器ID是否匹配
+	if server.ServerID != serverID {
+		log.Printf("Server ID mismatch: expected %s, got %s", serverID, server.ServerID)
+		response := ApiResponse{Code: 400, Msg: "服务器ID不匹配"}
+		result, _ := json.Marshal(response)
+		return string(result)
+	}
+
+	// 验证项目是否存在
+	var targetProject *services.ProjectData
+	for _, project := range server.ProjectList {
+		if project.ProjectID == projectID {
+			targetProject = &project
+			break
+		}
+	}
+
+	if targetProject == nil {
+		log.Printf("Project %s not found in server %s", projectID, serverID)
+		response := ApiResponse{Code: 404, Msg: "项目不存在"}
+		result, _ := json.Marshal(response)
+		return string(result)
+	}
+
+	log.Printf("Using frontend data to init project: %s (%s)", targetProject.ProjectName, projectID)
+
+	// 执行SSH命令
+	command := fmt.Sprintf("cd %s && ./codedeploy.sh init %s", server.DefaultPath, projectID)
+	output, err := a.executeSSHCommand(&server, command)
+	if err != nil {
+		log.Printf("Failed to execute init command: %v", err)
+		response := ApiResponse{Code: 500, Msg: fmt.Sprintf("执行初始化命令失败: %v", err)}
+		result, _ := json.Marshal(response)
+		return string(result)
+	}
+
+	response := ApiResponse{
+		Code: 200,
+		Msg:  "项目初始化成功（使用前端数据）",
+		Data: map[string]interface{}{
+			"command":     command,
+			"output":      output,
+			"project":     targetProject,
+			"data_source": "frontend",
+		},
+	}
+	result, _ := json.Marshal(response)
+	return string(result)
+}
+
+// ProjectUpdateWithData 使用前端传入的服务器数据执行项目更新
+func (a *App) ProjectUpdateWithData(serverID, projectID, serverDataJson, authorization string) string {
+	log.Printf("ProjectUpdateWithData called with serverID: %s, projectID: %s", serverID, projectID)
+
+	// 检查授权
+	if authorization == "" || strings.TrimSpace(authorization) == "" {
+		response := ApiResponse{Code: 401, Msg: "Authorization required"}
+		result, _ := json.Marshal(response)
+		return string(result)
+	}
+
+	// 解析前端传入的服务器数据
+	var server services.ServerData
+	if err := json.Unmarshal([]byte(serverDataJson), &server); err != nil {
+		log.Printf("Failed to unmarshal server data: %v", err)
+		response := ApiResponse{Code: 400, Msg: "服务器数据格式错误"}
+		result, _ := json.Marshal(response)
+		return string(result)
+	}
+
+	// 验证服务器ID是否匹配
+	if server.ServerID != serverID {
+		log.Printf("Server ID mismatch: expected %s, got %s", serverID, server.ServerID)
+		response := ApiResponse{Code: 400, Msg: "服务器ID不匹配"}
+		result, _ := json.Marshal(response)
+		return string(result)
+	}
+
+	// 验证项目是否存在
+	var targetProject *services.ProjectData
+	for _, project := range server.ProjectList {
+		if project.ProjectID == projectID {
+			targetProject = &project
+			break
+		}
+	}
+
+	if targetProject == nil {
+		log.Printf("Project %s not found in server %s", projectID, serverID)
+		response := ApiResponse{Code: 404, Msg: "项目不存在"}
+		result, _ := json.Marshal(response)
+		return string(result)
+	}
+
+	log.Printf("Using frontend data to update project: %s (%s)", targetProject.ProjectName, projectID)
+
+	// 执行SSH命令
+	command := fmt.Sprintf("cd %s && ./codedeploy.sh update %s", server.DefaultPath, projectID)
+	output, err := a.executeSSHCommand(&server, command)
+	if err != nil {
+		log.Printf("Failed to execute update command: %v", err)
+		response := ApiResponse{Code: 500, Msg: fmt.Sprintf("执行更新命令失败: %v", err)}
+		result, _ := json.Marshal(response)
+		return string(result)
+	}
+
+	response := ApiResponse{
+		Code: 200,
+		Msg:  "项目更新成功（使用前端数据）",
+		Data: map[string]interface{}{
+			"command":     command,
+			"output":      output,
+			"project":     targetProject,
+			"data_source": "frontend",
+		},
+	}
+	result, _ := json.Marshal(response)
+	return string(result)
+}
+
 // 辅助函数：从URL中提取域名
 func extractDomainFromURL(urlStr string) string {
 	if urlStr == "" {
@@ -1070,6 +1403,16 @@ func getPortOrDefault(port, defaultPort string) string {
 		return defaultPort
 	}
 	return port
+}
+
+// 辅助函数：从map中安全获取字符串值
+func getStringFromMap(data map[string]interface{}, key string) string {
+	if val, ok := data[key]; ok {
+		if str, ok := val.(string); ok {
+			return str
+		}
+	}
+	return ""
 }
 
 // 辅助函数：通过SSH上传文件

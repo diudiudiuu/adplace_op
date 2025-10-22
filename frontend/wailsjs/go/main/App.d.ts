@@ -19,6 +19,8 @@ export function Exec(arg1:string,arg2:string,arg3:string,arg4:string,arg5:string
 
 export function GenerateProjectConfig(arg1:string,arg2:string,arg3:string):Promise<string>;
 
+export function GenerateProjectConfigForSingleProject(arg1:string,arg2:string,arg3:string,arg4:string):Promise<string>;
+
 export function Greet(arg1:string):Promise<string>;
 
 export function List(arg1:string,arg2:string):Promise<string>;
@@ -31,9 +33,13 @@ export function ProjectInfo(arg1:string,arg2:string,arg3:string):Promise<string>
 
 export function ProjectInit(arg1:string,arg2:string,arg3:string,arg4:string):Promise<string>;
 
+export function ProjectInitWithData(arg1:string,arg2:string,arg3:string,arg4:string):Promise<string>;
+
 export function ProjectPortUpdate(arg1:string,arg2:string,arg3:string,arg4:string,arg5:string):Promise<string>;
 
 export function ProjectUpdate(arg1:string,arg2:string,arg3:string,arg4:string):Promise<string>;
+
+export function ProjectUpdateWithData(arg1:string,arg2:string,arg3:string,arg4:string):Promise<string>;
 
 export function ServerAdd(arg1:string,arg2:string,arg3:string,arg4:string,arg5:string,arg6:string,arg7:string,arg8:string,arg9:string):Promise<string>;
 
@@ -50,3 +56,5 @@ export function TestSSHConnection(arg1:string,arg2:string,arg3:string,arg4:strin
 export function TestStoredServerSSH(arg1:string,arg2:string,arg3:string):Promise<string>;
 
 export function TestUnauthorized():Promise<string>;
+
+export function UploadProjectConfig(arg1:string,arg2:string,arg3:string):Promise<string>;

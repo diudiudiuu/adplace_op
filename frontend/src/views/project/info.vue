@@ -154,7 +154,8 @@
                             <span>部署操作说明</span>
                         </n-space>
                     </template>
-                    以下三个操作相互独立，可根据需要单独执行，无需按顺序操作
+                    以下三个操作相互独立，可根据需要单独执行，无需按顺序操作。
+                    <br><strong>重要：</strong>所有部署操作都使用当前界面显示的项目数据，确保部署配置与界面一致。
                 </n-alert>
 
                 <!-- 独立操作功能卡片 -->
@@ -170,7 +171,7 @@
                                         </n-icon>
                                         <span style="font-weight: 600;">生成配置</span>
                                     </n-space>
-                                    <n-button size="small" type="success" @click="generateProjectConfig"
+                                    <n-button size="small" type="success" @click="generateCurrentProjectConfig"
                                         :loading="configLoading">
                                         执行
                                     </n-button>
@@ -178,8 +179,8 @@
                             </template>
                             <n-text depth="2" style="font-size: 13px; line-height: 1.5;">
                                 • 检查并处理 release.zip 发布包<br>
-                                • 生成项目配置文件<br>
-                                • 自动上传到服务器
+                                • 使用当前项目数据生成配置文件<br>
+                                • 只包含 api_port, web_port, api_domain 字段
                             </n-text>
                         </n-card>
                     </n-grid-item>
@@ -194,14 +195,15 @@
                                         </n-icon>
                                         <span style="font-weight: 600;">初始化项目</span>
                                     </n-space>
-                                    <n-button size="small" type="primary" @click="showInitProjectModal = true">
-                                        选择项目
+                                    <n-button size="small" type="primary" @click="executeInitCurrentProject"
+                                        :loading="initLoading">
+                                        执行
                                     </n-button>
                                 </n-space>
                             </template>
                             <n-text depth="2" style="font-size: 13px; line-height: 1.5;">
-                                • 选择要初始化的项目<br>
-                                • 首次部署项目到服务器<br>
+                                • 初始化当前项目<br>
+                                • 使用当前项目数据首次部署到服务器<br>
                                 • 执行初始化脚本
                             </n-text>
                         </n-card>
@@ -217,14 +219,15 @@
                                         </n-icon>
                                         <span style="font-weight: 600;">更新项目</span>
                                     </n-space>
-                                    <n-button size="small" type="warning" @click="showUpdateProjectModal = true">
-                                        选择项目
+                                    <n-button size="small" type="warning" @click="executeUpdateCurrentProject"
+                                        :loading="updateLoading">
+                                        执行
                                     </n-button>
                                 </n-space>
                             </template>
                             <n-text depth="2" style="font-size: 13px; line-height: 1.5;">
-                                • 选择要更新的项目<br>
-                                • 更新已部署的项目<br>
+                                • 更新当前项目<br>
+                                • 使用当前项目数据更新已部署的项目<br>
                                 • 应用最新代码和配置
                             </n-text>
                         </n-card>
@@ -313,6 +316,7 @@ import dataManager from '@/utils/dataManager'
 import { CreateOutline, CloseOutline, TrashOutline, CloudOutline, InformationCircleOutline, PlayOutline, RefreshOutline, TrashBinOutline, SettingsOutline, DocumentOutline, RocketOutline, CheckmarkCircleOutline, AlertCircleOutline, TimeOutline } from '@vicons/ionicons5'
 import Dform from './form.vue'
 import api from '@/api'
+import { getAuthorization } from '@/utils/auth'
 
 const sidebar = useSidebarStore()
 const route = useRouter()
@@ -361,7 +365,7 @@ const deploymentStatus = ref<{
     icon: any
 } | null>(null)
 
-// 项目选择相关状态
+// 项目选择相关状态（保留以防其他地方使用）
 const selectedInitProjectId = ref('')
 const selectedUpdateProjectId = ref('')
 const serverProjects = ref<any[]>([])
@@ -1042,48 +1046,100 @@ const handleDelete = () => {
     })
 }
 
-// 生成项目配置文件
-const generateProjectConfig = async () => {
+// 生成当前项目配置文件 - 前端生成JSON，后端只负责上传
+const generateCurrentProjectConfig = async () => {
     configLoading.value = true
     deploymentStatus.value = null
 
     try {
-        message.loading('正在处理发布包并生成项目配置文件...', { duration: 0 })
+        message.loading('正在生成当前项目配置并上传到服务器...', { duration: 0 })
 
-        const result = await api('generate_project_config', {
-            server_id: props.serverId
+        // 获取当前服务器的完整数据
+        const serverData = await dataManager.getServerById(props.serverId)
+        if (!serverData) {
+            throw new Error('无法获取服务器数据')
+        }
+
+        // 验证当前项目是否存在
+        const currentProject = serverData.project_list?.find(p => p.project_id === props.projectId)
+        if (!currentProject) {
+            throw new Error('当前项目不存在于服务器数据中')
+        }
+
+        // 提取API域名
+        const extractDomain = (url: string): string => {
+            if (!url) return ''
+            try {
+                const urlObj = new URL(url.startsWith('http') ? url : `https://${url}`)
+                return urlObj.hostname
+            } catch {
+                return url.replace(/^https?:\/\//, '').split('/')[0]
+            }
+        }
+
+        // 前端生成JSON配置 - 只包含当前项目和指定字段
+        const projectConfig = {
+            [props.projectId]: {
+                api_port: currentProject.api_port || '9000',
+                web_port: currentProject.front_port || '3000',
+                api_domain: extractDomain(currentProject.project_api_url)
+            }
+        }
+
+        const projectConfigJson = JSON.stringify(projectConfig, null, 2)
+
+        console.log('前端生成的项目配置:', {
+            projectId: props.projectId,
+            config: projectConfig,
+            json: projectConfigJson
+        })
+
+        console.log('服务器数据结构:', {
+            serverData: serverData,
+            serverDataJson: JSON.stringify(serverData),
+            keys: Object.keys(serverData)
+        })
+
+        // 调用后端API，只负责上传配置文件
+        const result = await api('upload_project_config', {
+            server_data_json: JSON.stringify(serverData),
+            project_config_json: projectConfigJson,
+            authorization: getAuthorization()
         })
 
         message.destroyAll()
 
         if (result.code === 200) {
-            projectConfigPreview.value = JSON.stringify(result.data.config, null, 2)
+            projectConfigPreview.value = projectConfigJson
+            
             deploymentStatus.value = {
                 type: 'success',
-                title: '配置生成成功',
-                message: `项目配置文件已生成并上传到服务器，包含 ${Object.keys(result.data.config).length} 个项目配置`,
+                title: '当前项目配置上传成功',
+                message: `已生成并上传当前项目 ${currentProject.project_name} (${props.projectId}) 的配置文件。只包含 api_port, web_port, api_domain 三个字段。`,
                 icon: CheckmarkCircleOutline
             }
-            message.success('配置文件生成成功')
+            message.success(`当前项目配置文件上传成功`)
+            
+            console.log('配置上传成功:', result.data)
         } else {
             deploymentStatus.value = {
                 type: 'error',
-                title: '配置生成失败',
-                message: result.msg || '处理发布包和生成配置文件失败',
+                title: '配置上传失败',
+                message: result.msg || '上传配置文件失败',
                 icon: AlertCircleOutline
             }
-            message.error(result.msg || '生成配置文件失败')
+            message.error(result.msg || '上传配置文件失败')
         }
     } catch (error) {
-        console.error('Generate config error:', error)
+        console.error('Upload project config error:', error)
         message.destroyAll()
         deploymentStatus.value = {
             type: 'error',
-            title: '配置生成异常',
-            message: '生成配置文件时发生异常，请检查网络连接和服务器状态',
+            title: '配置上传异常',
+            message: '上传配置文件时发生异常，请检查网络连接和服务器状态',
             icon: AlertCircleOutline
         }
-        message.error('生成配置文件失败：' + (error as Error).message)
+        message.error('上传配置文件失败：' + (error as Error).message)
     } finally {
         configLoading.value = false
     }
@@ -1146,7 +1202,149 @@ const initProject = async () => {
     }
 }
 
-// 执行初始化项目
+// 执行初始化当前项目 - 使用前端当前数据
+const executeInitCurrentProject = async () => {
+    initLoading.value = true
+
+    deploymentStatus.value = {
+        type: 'info',
+        title: '正在初始化项目',
+        message: `正在为当前项目 ${projectInfo.value.project_name} (${props.projectId}) 执行初始化操作...`,
+        icon: TimeOutline
+    }
+
+    try {
+        message.loading(`正在初始化当前项目 ${projectInfo.value.project_name}...`, { duration: 0 })
+
+        // 获取当前服务器的完整数据
+        const serverData = await dataManager.getServerById(props.serverId)
+        if (!serverData) {
+            throw new Error('无法获取服务器数据')
+        }
+
+        console.log('使用前端数据初始化当前项目:', {
+            serverId: serverData.server_id,
+            projectId: props.projectId,
+            projectName: projectInfo.value.project_name,
+            serverIP: serverData.server_ip,
+            defaultPath: serverData.default_path
+        })
+
+        // 使用新的API，传入序列化的服务器数据
+        const result = await api('project_init_with_data', {
+            server_id: props.serverId,
+            project_id: props.projectId,
+            server_data_json: JSON.stringify(serverData)
+        })
+
+        message.destroyAll()
+
+        if (result.code === 200) {
+            deploymentStatus.value = {
+                type: 'success',
+                title: '项目初始化成功',
+                message: `当前项目 ${projectInfo.value.project_name} (${props.projectId}) 已成功初始化。使用当前界面数据，确保配置一致。`,
+                icon: CheckmarkCircleOutline
+            }
+            message.success('当前项目初始化成功')
+            
+            console.log('初始化成功:', result.data)
+        } else {
+            deploymentStatus.value = {
+                type: 'error',
+                title: '项目初始化失败',
+                message: result.msg || '初始化过程中发生错误，请检查服务器配置',
+                icon: AlertCircleOutline
+            }
+            message.error(result.msg || '项目初始化失败')
+        }
+    } catch (error) {
+        console.error('Project init error:', error)
+        message.destroyAll()
+        deploymentStatus.value = {
+            type: 'error',
+            title: '初始化异常',
+            message: '初始化过程中发生异常，请检查网络连接和服务器状态',
+            icon: AlertCircleOutline
+        }
+        message.error('项目初始化失败：' + (error as Error).message)
+    } finally {
+        initLoading.value = false
+    }
+}
+
+// 执行更新当前项目 - 使用前端当前数据
+const executeUpdateCurrentProject = async () => {
+    updateLoading.value = true
+
+    deploymentStatus.value = {
+        type: 'info',
+        title: '正在更新项目',
+        message: `正在为当前项目 ${projectInfo.value.project_name} (${props.projectId}) 执行更新操作...`,
+        icon: TimeOutline
+    }
+
+    try {
+        message.loading(`正在更新当前项目 ${projectInfo.value.project_name}...`, { duration: 0 })
+
+        // 获取当前服务器的完整数据
+        const serverData = await dataManager.getServerById(props.serverId)
+        if (!serverData) {
+            throw new Error('无法获取服务器数据')
+        }
+
+        console.log('使用前端数据更新当前项目:', {
+            serverId: serverData.server_id,
+            projectId: props.projectId,
+            projectName: projectInfo.value.project_name,
+            serverIP: serverData.server_ip,
+            defaultPath: serverData.default_path
+        })
+
+        // 使用新的API，传入序列化的服务器数据
+        const result = await api('project_update_with_data', {
+            server_id: props.serverId,
+            project_id: props.projectId,
+            server_data_json: JSON.stringify(serverData)
+        })
+
+        message.destroyAll()
+
+        if (result.code === 200) {
+            deploymentStatus.value = {
+                type: 'success',
+                title: '项目更新成功',
+                message: `当前项目 ${projectInfo.value.project_name} (${props.projectId}) 已成功更新到最新版本。使用当前界面数据，确保配置一致。`,
+                icon: CheckmarkCircleOutline
+            }
+            message.success('当前项目更新成功')
+            
+            console.log('更新成功:', result.data)
+        } else {
+            deploymentStatus.value = {
+                type: 'error',
+                title: '项目更新失败',
+                message: result.msg || '更新过程中发生错误，请检查服务器配置',
+                icon: AlertCircleOutline
+            }
+            message.error(result.msg || '项目更新失败')
+        }
+    } catch (error) {
+        console.error('Project update error:', error)
+        message.destroyAll()
+        deploymentStatus.value = {
+            type: 'error',
+            title: '更新异常',
+            message: '更新过程中发生异常，请检查网络连接和服务器状态',
+            icon: AlertCircleOutline
+        }
+        message.error('项目更新失败：' + (error as Error).message)
+    } finally {
+        updateLoading.value = false
+    }
+}
+
+// 执行初始化项目 - 使用前端当前数据（保留原方法以防其他地方调用）
 const executeInitProject = async () => {
     if (!selectedInitProjectId.value) {
         message.error('请选择要初始化的项目')
@@ -1169,9 +1367,25 @@ const executeInitProject = async () => {
     try {
         message.loading(`正在初始化项目 ${projectName}...`, { duration: 0 })
 
-        const result = await api('project_init', {
+        // 获取当前服务器的完整数据
+        const serverData = await dataManager.getServerById(props.serverId)
+        if (!serverData) {
+            throw new Error('无法获取服务器数据')
+        }
+
+        console.log('使用前端数据初始化项目:', {
+            serverId: serverData.server_id,
+            projectId: selectedInitProjectId.value,
+            projectName: projectName,
+            serverIP: serverData.server_ip,
+            defaultPath: serverData.default_path
+        })
+
+        // 使用新的API，传入序列化的服务器数据
+        const result = await api('project_init_with_data', {
             server_id: props.serverId,
-            project_id: selectedInitProjectId.value
+            project_id: selectedInitProjectId.value,
+            server_data_json: JSON.stringify(serverData)
         })
 
         message.destroyAll()
@@ -1180,10 +1394,12 @@ const executeInitProject = async () => {
             deploymentStatus.value = {
                 type: 'success',
                 title: '项目初始化成功',
-                message: `项目 ${projectName} (${selectedInitProjectId.value}) 已成功初始化，可以开始使用了`,
+                message: `项目 ${projectName} (${selectedInitProjectId.value}) 已成功初始化。使用当前界面数据，确保配置一致。`,
                 icon: CheckmarkCircleOutline
             }
             message.success('项目初始化成功')
+            
+            console.log('初始化成功:', result.data)
         } else {
             deploymentStatus.value = {
                 type: 'error',
@@ -1266,7 +1482,7 @@ const updateProject = async () => {
     }
 }
 
-// 执行更新项目
+// 执行更新项目 - 使用前端当前数据
 const executeUpdateProject = async () => {
     if (!selectedUpdateProjectId.value) {
         message.error('请选择要更新的项目')
@@ -1289,9 +1505,25 @@ const executeUpdateProject = async () => {
     try {
         message.loading(`正在更新项目 ${projectName}...`, { duration: 0 })
 
-        const result = await api('project_update', {
+        // 获取当前服务器的完整数据
+        const serverData = await dataManager.getServerById(props.serverId)
+        if (!serverData) {
+            throw new Error('无法获取服务器数据')
+        }
+
+        console.log('使用前端数据更新项目:', {
+            serverId: serverData.server_id,
+            projectId: selectedUpdateProjectId.value,
+            projectName: projectName,
+            serverIP: serverData.server_ip,
+            defaultPath: serverData.default_path
+        })
+
+        // 使用新的API，传入序列化的服务器数据
+        const result = await api('project_update_with_data', {
             server_id: props.serverId,
-            project_id: selectedUpdateProjectId.value
+            project_id: selectedUpdateProjectId.value,
+            server_data_json: JSON.stringify(serverData)
         })
 
         message.destroyAll()
@@ -1300,10 +1532,12 @@ const executeUpdateProject = async () => {
             deploymentStatus.value = {
                 type: 'success',
                 title: '项目更新成功',
-                message: `项目 ${projectName} (${selectedUpdateProjectId.value}) 已成功更新到最新版本`,
+                message: `项目 ${projectName} (${selectedUpdateProjectId.value}) 已成功更新到最新版本。使用当前界面数据，确保配置一致。`,
                 icon: CheckmarkCircleOutline
             }
             message.success('项目更新成功')
+            
+            console.log('更新成功:', result.data)
         } else {
             deploymentStatus.value = {
                 type: 'error',

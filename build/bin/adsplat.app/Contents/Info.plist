@@ -4,17 +4,17 @@
         <key>CFBundlePackageType</key>
         <string>APPL</string>
         <key>CFBundleName</key>
-        <string>adsplat</string>
+        <string>AdSplat</string>
         <key>CFBundleExecutable</key>
         <string>adsplat</string>
         <key>CFBundleIdentifier</key>
         <string>com.wails.adsplat</string>
         <key>CFBundleVersion</key>
-        <string>2.9.1</string>
+        <string>2.9.2</string>
         <key>CFBundleGetInfoString</key>
-        <string>AD Manage - 广告投放管理面板</string>
+        <string>Adswds Platform Opeator - 广告投放管理面板</string>
         <key>CFBundleShortVersionString</key>
-        <string>2.9.1</string>
+        <string>2.9.2</string>
         <key>CFBundleIconFile</key>
         <string>iconfile</string>
         <key>LSMinimumSystemVersion</key>
@@ -22,8 +22,13 @@
         <key>NSHighResolutionCapable</key>
         <string>true</string>
         <key>NSHumanReadableCopyright</key>
-        <string>Copyright © 2024 adiudiuu</string>
+        <string>Copyright © 2025 adiudiuu</string>
         
         
+        <key>NSAppTransportSecurity</key>
+        <dict>
+            <key>NSAllowsLocalNetworking</key>
+            <true/>
+        </dict>
     </dict>
 </plist>

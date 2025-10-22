@@ -66,6 +66,13 @@ const apiMap: Record<string, (data: any) => Promise<string>> = {
     'project_delete': (data: any) => window.go!.main!.App!.ProjectDelete(data.serverId, data.projectId, data.authorization, data.client_json),
     'exec': (data: any) => window.go!.main!.App!.Exec(data.projectId, data.sql, data.sqlType, data.authorization, data.client_json),
     'test_401': () => window.go!.main!.App!.TestUnauthorized(),
+    'cloudflare_get_dns': (data: any) => window.go!.main!.App!.CloudflareGetDNSRecords(data.api_token, data.zone_id, data.name || '', data.type || ''),
+    'cloudflare_configure_dns': (data: any) => window.go!.main!.App!.CloudflareConfigureDNSRecord(data.api_token, data.zone_id, data.name, data.type, data.content, data.proxied || true),
+    'cloudflare_delete_dns': (data: any) => window.go!.main!.App!.CloudflareDeleteDNSRecord(data.api_token, data.zone_id, data.record_id),
+    'cloudflare_batch_configure': (data: any) => window.go!.main!.App!.CloudflareBatchConfigureDNS(data.api_token, data.zone_id, data.records_json),
+    'cloudflare_pages_add_domain': (data: any) => window.go!.main!.App!.CloudflarePagesAddDomain(data.api_token, data.project_name, data.domain),
+    'cloudflare_pages_get_domains': (data: any) => window.go!.main!.App!.CloudflarePagesGetDomains(data.api_token, data.project_name),
+    'cloudflare_pages_delete_domain': (data: any) => window.go!.main!.App!.CloudflarePagesDeleteDomain(data.api_token, data.project_name, data.domain),
 };
 
 // 简化的 API 调用函数
@@ -96,8 +103,8 @@ const api = async (uri: string, data: any, showLoading: boolean = true) => {
         }
 
         // 准备请求数据
-        const requestData = { 
-            ...data, 
+        const requestData = {
+            ...data,
             authorization: getAuthorization(),
             client_json: 'client_json' // 固定的KV key
         };
@@ -147,7 +154,7 @@ const api = async (uri: string, data: any, showLoading: boolean = true) => {
         return parsedData || {};
     } catch (error) {
         console.error(`API ${uri} error:`, error);
-        
+
         if (globalMessage) {
             globalMessage.error(`请求失败: ${error}`);
         }

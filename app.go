@@ -17,18 +17,20 @@ import (
 
 // App struct
 type App struct {
-	ctx         context.Context
-	jsonService *services.JsonService
-	aesService  *services.AesService
-	kvService   *services.KvService
+	ctx               context.Context
+	jsonService       *services.JsonService
+	aesService        *services.AesService
+	kvService         *services.KvService
+	cloudflareService *services.CloudflareService
 }
 
 // NewApp creates a new App application struct
 func NewApp() *App {
 	return &App{
-		jsonService: services.NewJsonService(),
-		aesService:  services.NewAesService(),
-		kvService:   services.NewKvService(),
+		jsonService:       services.NewJsonService(),
+		aesService:        services.NewAesService(),
+		kvService:         services.NewKvService(),
+		cloudflareService: services.NewCloudflareService(),
 	}
 }
 
@@ -534,6 +536,128 @@ func (a *App) TestUnauthorized() string {
 	return string(result)
 }
 
+// CloudflareGetDNSRecords 获取 Cloudflare DNS 记录
+func (a *App) CloudflareGetDNSRecords(apiToken, zoneID, name, recordType string) string {
+	log.Printf("CloudflareGetDNSRecords called with name: %s, type: %s", name, recordType)
+
+	config := services.CloudflareConfig{
+		APIToken: apiToken,
+		ZoneID:   zoneID,
+	}
+
+	records, err := a.cloudflareService.GetDNSRecords(config, name, recordType)
+	if err != nil {
+		log.Printf("Failed to get DNS records: %v", err)
+		response := ApiResponse{Code: 500, Msg: fmt.Sprintf("获取 DNS 记录失败: %v", err)}
+		result, _ := json.Marshal(response)
+		return string(result)
+	}
+
+	response := ApiResponse{Code: 200, Msg: "Success", Data: records}
+	result, _ := json.Marshal(response)
+	return string(result)
+}
+
+// CloudflareConfigureDNSRecord 配置 Cloudflare DNS 记录
+func (a *App) CloudflareConfigureDNSRecord(apiToken, zoneID, name, recordType, content string, proxied bool) string {
+	log.Printf("CloudflareConfigureDNSRecord called with name: %s, type: %s, content: %s, proxied: %t",
+		name, recordType, content, proxied)
+
+	config := services.CloudflareConfig{
+		APIToken: apiToken,
+		ZoneID:   zoneID,
+	}
+
+	record := services.DNSRecord{
+		Type:    recordType,
+		Name:    name,
+		Content: content,
+		Proxied: proxied,
+	}
+
+	result, action, err := a.cloudflareService.ConfigureDNSRecord(config, record)
+	if err != nil {
+		log.Printf("Failed to configure DNS record: %v", err)
+		response := ApiResponse{Code: 500, Msg: fmt.Sprintf("配置 DNS 记录失败: %v", err)}
+		responseResult, _ := json.Marshal(response)
+		return string(responseResult)
+	}
+
+	responseData := map[string]interface{}{
+		"record": result,
+		"action": action,
+	}
+
+	response := ApiResponse{Code: 200, Msg: fmt.Sprintf("DNS 记录%s成功",
+		map[string]string{"created": "创建", "updated": "更新"}[action]), Data: responseData}
+	responseResult, _ := json.Marshal(response)
+	return string(responseResult)
+}
+
+// CloudflareDeleteDNSRecord 删除 Cloudflare DNS 记录
+func (a *App) CloudflareDeleteDNSRecord(apiToken, zoneID, recordID string) string {
+	log.Printf("CloudflareDeleteDNSRecord called with recordID: %s", recordID)
+
+	config := services.CloudflareConfig{
+		APIToken: apiToken,
+		ZoneID:   zoneID,
+	}
+
+	err := a.cloudflareService.DeleteDNSRecord(config, recordID)
+	if err != nil {
+		log.Printf("Failed to delete DNS record: %v", err)
+		response := ApiResponse{Code: 500, Msg: fmt.Sprintf("删除 DNS 记录失败: %v", err)}
+		result, _ := json.Marshal(response)
+		return string(result)
+	}
+
+	response := ApiResponse{Code: 200, Msg: "DNS 记录删除成功"}
+	result, _ := json.Marshal(response)
+	return string(result)
+}
+
+// CloudflareBatchConfigureDNS 批量配置 DNS 记录
+func (a *App) CloudflareBatchConfigureDNS(apiToken, zoneID, recordsJson string) string {
+	log.Printf("CloudflareBatchConfigureDNS called with records: %s", recordsJson)
+
+	config := services.CloudflareConfig{
+		APIToken: apiToken,
+		ZoneID:   zoneID,
+	}
+
+	var records []services.DNSRecord
+	if err := json.Unmarshal([]byte(recordsJson), &records); err != nil {
+		log.Printf("Failed to unmarshal records: %v", err)
+		response := ApiResponse{Code: 400, Msg: "记录数据格式错误"}
+		result, _ := json.Marshal(response)
+		return string(result)
+	}
+
+	results := make([]map[string]interface{}, 0, len(records))
+
+	for _, record := range records {
+		result, action, err := a.cloudflareService.ConfigureDNSRecord(config, record)
+		if err != nil {
+			log.Printf("Failed to configure DNS record %s: %v", record.Name, err)
+			results = append(results, map[string]interface{}{
+				"name":   record.Name,
+				"type":   record.Type,
+				"error":  err.Error(),
+				"action": "failed",
+			})
+		} else {
+			results = append(results, map[string]interface{}{
+				"record": result,
+				"action": action,
+			})
+		}
+	}
+
+	response := ApiResponse{Code: 200, Msg: "批量配置完成", Data: results}
+	responseResult, _ := json.Marshal(response)
+	return string(responseResult)
+}
+
 // ProjectPortUpdate 更新项目端口信息
 func (a *App) ProjectPortUpdate(projectID, apiPort, frontPort, authorization, clientJson string) string {
 	log.Printf("ProjectPortUpdate called with projectID: %s, apiPort: %s, frontPort: %s, authorization: %s",
@@ -597,6 +721,128 @@ func (a *App) ProjectPortUpdate(projectID, apiPort, frontPort, authorization, cl
 	}
 
 	response := ApiResponse{Code: 404, Msg: "Project not found in any server"}
+	result, _ := json.Marshal(response)
+	return string(result)
+}
+
+// CloudflarePagesAddDomain 为 Cloudflare Pages 项目添加自定义域名
+func (a *App) CloudflarePagesAddDomain(apiToken, projectName, domain string) string {
+	log.Printf("CloudflarePagesAddDomain called with projectName: %s, domain: %s", projectName, domain)
+
+	config := services.CloudflareConfig{
+		APIToken: apiToken,
+	}
+
+	// 获取账户ID
+	accountID, err := a.cloudflareService.GetAccountID(config)
+	if err != nil {
+		log.Printf("Failed to get account ID: %v", err)
+		response := ApiResponse{Code: 500, Msg: fmt.Sprintf("获取账户ID失败: %v", err)}
+		result, _ := json.Marshal(response)
+		return string(result)
+	}
+
+	// 检查域名是否已存在
+	existingDomains, err := a.cloudflareService.GetPagesCustomDomains(config, accountID, projectName)
+	if err != nil {
+		log.Printf("Failed to get existing domains: %v", err)
+		// 不阻断流程，继续尝试添加
+	} else {
+		// 检查域名是否已存在
+		for _, existingDomain := range existingDomains {
+			if existingDomain.Name == domain {
+				log.Printf("Domain %s already exists for project %s", domain, projectName)
+				response := ApiResponse{
+					Code: 200,
+					Msg:  "域名已存在",
+					Data: map[string]interface{}{
+						"domain": existingDomain,
+						"action": "exists",
+					},
+				}
+				result, _ := json.Marshal(response)
+				return string(result)
+			}
+		}
+	}
+
+	// 添加自定义域名
+	customDomain, err := a.cloudflareService.AddPagesCustomDomain(config, accountID, projectName, domain)
+	if err != nil {
+		log.Printf("Failed to add custom domain: %v", err)
+		response := ApiResponse{Code: 500, Msg: fmt.Sprintf("添加自定义域名失败: %v", err)}
+		result, _ := json.Marshal(response)
+		return string(result)
+	}
+
+	responseData := map[string]interface{}{
+		"domain": customDomain,
+		"action": "created",
+	}
+
+	response := ApiResponse{Code: 200, Msg: "自定义域名添加成功", Data: responseData}
+	result, _ := json.Marshal(response)
+	return string(result)
+}
+
+// CloudflarePagesGetDomains 获取 Cloudflare Pages 项目的自定义域名列表
+func (a *App) CloudflarePagesGetDomains(apiToken, projectName string) string {
+	log.Printf("CloudflarePagesGetDomains called with projectName: %s", projectName)
+
+	config := services.CloudflareConfig{
+		APIToken: apiToken,
+	}
+
+	// 获取账户ID
+	accountID, err := a.cloudflareService.GetAccountID(config)
+	if err != nil {
+		log.Printf("Failed to get account ID: %v", err)
+		response := ApiResponse{Code: 500, Msg: fmt.Sprintf("获取账户ID失败: %v", err)}
+		result, _ := json.Marshal(response)
+		return string(result)
+	}
+
+	// 获取自定义域名列表
+	domains, err := a.cloudflareService.GetPagesCustomDomains(config, accountID, projectName)
+	if err != nil {
+		log.Printf("Failed to get custom domains: %v", err)
+		response := ApiResponse{Code: 500, Msg: fmt.Sprintf("获取自定义域名失败: %v", err)}
+		result, _ := json.Marshal(response)
+		return string(result)
+	}
+
+	response := ApiResponse{Code: 200, Msg: "Success", Data: domains}
+	result, _ := json.Marshal(response)
+	return string(result)
+}
+
+// CloudflarePagesDeleteDomain 删除 Cloudflare Pages 项目的自定义域名
+func (a *App) CloudflarePagesDeleteDomain(apiToken, projectName, domain string) string {
+	log.Printf("CloudflarePagesDeleteDomain called with projectName: %s, domain: %s", projectName, domain)
+
+	config := services.CloudflareConfig{
+		APIToken: apiToken,
+	}
+
+	// 获取账户ID
+	accountID, err := a.cloudflareService.GetAccountID(config)
+	if err != nil {
+		log.Printf("Failed to get account ID: %v", err)
+		response := ApiResponse{Code: 500, Msg: fmt.Sprintf("获取账户ID失败: %v", err)}
+		result, _ := json.Marshal(response)
+		return string(result)
+	}
+
+	// 删除自定义域名
+	err = a.cloudflareService.DeletePagesCustomDomain(config, accountID, projectName, domain)
+	if err != nil {
+		log.Printf("Failed to delete custom domain: %v", err)
+		response := ApiResponse{Code: 500, Msg: fmt.Sprintf("删除自定义域名失败: %v", err)}
+		result, _ := json.Marshal(response)
+		return string(result)
+	}
+
+	response := ApiResponse{Code: 200, Msg: "自定义域名删除成功"}
 	result, _ := json.Marshal(response)
 	return string(result)
 }

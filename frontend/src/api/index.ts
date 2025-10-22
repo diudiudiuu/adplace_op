@@ -73,6 +73,9 @@ const apiMap: Record<string, (data: any) => Promise<string>> = {
     'cloudflare_pages_add_domain': (data: any) => window.go!.main!.App!.CloudflarePagesAddDomain(data.api_token, data.zone_id, data.project_name, data.domain),
     'cloudflare_pages_get_domains': (data: any) => window.go!.main!.App!.CloudflarePagesGetDomains(data.api_token, data.zone_id, data.project_name),
     'cloudflare_pages_delete_domain': (data: any) => window.go!.main!.App!.CloudflarePagesDeleteDomain(data.api_token, data.zone_id, data.project_name, data.domain),
+    'generate_project_config': (data: any) => window.go!.main!.App!.GenerateProjectConfig(data.server_id, data.authorization, data.client_json),
+    'project_init': (data: any) => window.go!.main!.App!.ProjectInit(data.server_id, data.project_id, data.authorization, data.client_json),
+    'project_update': (data: any) => window.go!.main!.App!.ProjectUpdate(data.server_id, data.project_id, data.authorization, data.client_json),
 };
 
 // 简化的 API 调用函数

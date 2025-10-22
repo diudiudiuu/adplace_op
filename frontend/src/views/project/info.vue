@@ -143,6 +143,73 @@
                 </n-space>
             </template>
         </n-modal>
+
+        <!-- 项目管理卡片 - 只在非编辑状态下显示 -->
+        <n-card v-if="!eidtmode" title="项目管理" style="margin-top: 16px;">
+            <template #header-extra>
+                <n-space>
+                    <n-tooltip>
+                        <template #trigger>
+                            <n-button type="success" @click="generateProjectConfig" :loading="configLoading">
+                                <template #icon>
+                                    <n-icon><DocumentOutline /></n-icon>
+                                </template>
+                                生成配置
+                            </n-button>
+                        </template>
+                        生成项目配置文件并上传到服务器
+                    </n-tooltip>
+                    <n-tooltip>
+                        <template #trigger>
+                            <n-button type="primary" @click="initProject" :loading="initLoading">
+                                <template #icon>
+                                    <n-icon><RocketOutline /></n-icon>
+                                </template>
+                                初始化
+                            </n-button>
+                        </template>
+                        执行项目初始化
+                    </n-tooltip>
+                    <n-tooltip>
+                        <template #trigger>
+                            <n-button type="warning" @click="updateProject" :loading="updateLoading">
+                                <template #icon>
+                                    <n-icon><RefreshOutline /></n-icon>
+                                </template>
+                                更新项目
+                            </n-button>
+                        </template>
+                        执行项目更新
+                    </n-tooltip>
+                </n-space>
+            </template>
+
+            <n-space vertical>
+                <n-alert type="info" :show-icon="false">
+                    <template #header>
+                        <n-icon><InformationCircleOutline /></n-icon>
+                        项目管理说明
+                    </template>
+                    <ul style="margin: 8px 0; padding-left: 20px;">
+                        <li><strong>生成配置：</strong>检查并处理 release.zip（如存在则解压覆盖并删除），然后生成 project_config.json 上传到服务器</li>
+                        <li><strong>初始化：</strong>SSH 登录服务器执行 ./codedeploy.sh init {{ projectInfo.project_id }}</li>
+                        <li><strong>更新项目：</strong>SSH 登录服务器执行 ./codedeploy.sh update {{ projectInfo.project_id }}</li>
+                    </ul>
+                </n-alert>
+
+                <!-- 项目配置预览 -->
+                <div v-if="projectConfigPreview">
+                    <n-divider title-placement="left">项目配置预览</n-divider>
+                    <n-code :code="projectConfigPreview" language="json" show-line-numbers />
+                </div>
+
+                <!-- 执行日志 -->
+                <div v-if="executionLog">
+                    <n-divider title-placement="left">执行日志</n-divider>
+                    <n-code :code="executionLog" language="bash" show-line-numbers />
+                </div>
+            </n-space>
+        </n-card>
     </div>
 </template>
 <script lang="ts" setup>
@@ -153,7 +220,7 @@ import { useSidebarStore } from '@/store/sidebar'
 import { reloadMenus } from '@/components/menu'
 import dataManager from '@/utils/dataManager'
 
-import { CreateOutline, CloseOutline, TrashOutline, CloudOutline, InformationCircleOutline, PlayOutline, RefreshOutline, TrashBinOutline, SettingsOutline } from '@vicons/ionicons5'
+import { CreateOutline, CloseOutline, TrashOutline, CloudOutline, InformationCircleOutline, PlayOutline, RefreshOutline, TrashBinOutline, SettingsOutline, DocumentOutline, RocketOutline } from '@vicons/ionicons5'
 import Dform from './form.vue'
 import api from '@/api'
 
@@ -191,6 +258,13 @@ const cloudflareConfig = ref({
     apiToken: localStorage.getItem('cloudflare_api_token') || '',
     zoneId: localStorage.getItem('cloudflare_zone_id') || ''
 })
+
+// 项目管理相关状态
+const configLoading = ref(false)
+const initLoading = ref(false)
+const updateLoading = ref(false)
+const projectConfigPreview = ref('')
+const executionLog = ref('')
 
 const eidtmode = ref(false)
 
@@ -251,9 +325,9 @@ const dnsColumns = computed(() => [
         width: 100,
         render: (row: any) => {
             const statusMap = {
-                active: { type: 'success', text: '✓ 已配置' },
-                pending: { type: 'warning', text: '○ 待配置' },
-                error: { type: 'error', text: '✗ 错误' }
+                active: { type: 'success' as const, text: '✓ 已配置' },
+                pending: { type: 'warning' as const, text: '○ 待配置' },
+                error: { type: 'error' as const, text: '✗ 错误' }
             }
             const status = statusMap[row.status as keyof typeof statusMap] || statusMap.pending
             return h(NTag, {
@@ -771,6 +845,27 @@ const deleteSingleDNS = async (record: any) => {
                 message.destroyAll()
 
                 if (result.code === 200) {
+                    // 如果是 CNAME 记录，同时删除 Pages 自定义域名
+                    if (record.type === 'CNAME') {
+                        try {
+                            console.log(`正在删除 Pages 自定义域名: ${record.name}`)
+                            const pagesDeleteResult = await api('cloudflare_pages_delete_domain', {
+                                api_token: apiToken,
+                                zone_id: zoneId,
+                                project_name: 'adswds',
+                                domain: record.name
+                            })
+                            
+                            if (pagesDeleteResult.code === 200) {
+                                console.log('Pages 自定义域名删除成功')
+                            } else {
+                                console.warn('Pages 自定义域名删除失败:', pagesDeleteResult.msg)
+                            }
+                        } catch (pagesError) {
+                            console.warn('Pages 自定义域名删除出错:', pagesError)
+                        }
+                    }
+
                     // 更新记录状态为待配置
                     Object.assign(record, {
                         status: 'pending',
@@ -779,7 +874,10 @@ const deleteSingleDNS = async (record: any) => {
                         recordId: null
                     })
 
-                    message.success(`${record.name} 的 DNS 记录删除成功！`)
+                    const deleteMessage = record.type === 'CNAME' 
+                        ? `${record.name} 的 DNS 记录和 Pages 自定义域名删除成功！`
+                        : `${record.name} 的 DNS 记录删除成功！`
+                    message.success(deleteMessage)
                 } else {
                     throw new Error(result.msg || '删除失败')
                 }
@@ -826,6 +924,109 @@ const handleDelete = () => {
             }
         }
     })
+}
+
+// 生成项目配置文件
+const generateProjectConfig = async () => {
+    configLoading.value = true
+    executionLog.value = ''
+    
+    try {
+        message.loading('正在处理发布包并生成项目配置文件...', { duration: 0 })
+        
+        const result = await api('generate_project_config', {
+            server_id: props.serverId
+        })
+        
+        message.destroyAll()
+        
+        if (result.code === 200) {
+            projectConfigPreview.value = JSON.stringify(result.data.config, null, 2)
+            message.success(`发布包处理完成，项目配置文件已生成并上传到: ${result.data.path}`)
+        } else {
+            message.error(result.msg || '处理发布包和生成配置文件失败')
+        }
+    } catch (error) {
+        console.error('Generate config error:', error)
+        message.destroyAll()
+        message.error('生成配置文件失败：' + (error as Error).message)
+    } finally {
+        configLoading.value = false
+    }
+}
+
+// 初始化项目
+const initProject = async () => {
+    if (!projectInfo.value.project_id) {
+        message.error('项目ID不能为空')
+        return
+    }
+    
+    initLoading.value = true
+    executionLog.value = ''
+    
+    try {
+        message.loading(`正在初始化项目 ${projectInfo.value.project_id}...`, { duration: 0 })
+        
+        const result = await api('project_init', {
+            server_id: props.serverId,
+            project_id: projectInfo.value.project_id
+        })
+        
+        message.destroyAll()
+        
+        if (result.code === 200) {
+            executionLog.value = `命令: ${result.data.command}\n\n输出:\n${result.data.output}`
+            message.success('项目初始化成功')
+        } else {
+            executionLog.value = `错误: ${result.msg}`
+            message.error(result.msg || '项目初始化失败')
+        }
+    } catch (error) {
+        console.error('Project init error:', error)
+        message.destroyAll()
+        executionLog.value = `错误: ${(error as Error).message}`
+        message.error('项目初始化失败：' + (error as Error).message)
+    } finally {
+        initLoading.value = false
+    }
+}
+
+// 更新项目
+const updateProject = async () => {
+    if (!projectInfo.value.project_id) {
+        message.error('项目ID不能为空')
+        return
+    }
+    
+    updateLoading.value = true
+    executionLog.value = ''
+    
+    try {
+        message.loading(`正在更新项目 ${projectInfo.value.project_id}...`, { duration: 0 })
+        
+        const result = await api('project_update', {
+            server_id: props.serverId,
+            project_id: projectInfo.value.project_id
+        })
+        
+        message.destroyAll()
+        
+        if (result.code === 200) {
+            executionLog.value = `命令: ${result.data.command}\n\n输出:\n${result.data.output}`
+            message.success('项目更新成功')
+        } else {
+            executionLog.value = `错误: ${result.msg}`
+            message.error(result.msg || '项目更新失败')
+        }
+    } catch (error) {
+        console.error('Project update error:', error)
+        message.destroyAll()
+        executionLog.value = `错误: ${(error as Error).message}`
+        message.error('项目更新失败：' + (error as Error).message)
+    } finally {
+        updateLoading.value = false
+    }
 }
 </script>
 

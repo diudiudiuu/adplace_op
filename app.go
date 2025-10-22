@@ -873,3 +873,376 @@ func (a *App) CloudflarePagesDeleteDomain(apiToken, zoneID, projectName, domain 
 	result, _ := json.Marshal(response)
 	return string(result)
 }
+
+// GenerateProjectConfig 生成项目配置文件并上传到服务器
+func (a *App) GenerateProjectConfig(serverID, authorization, clientJson string) string {
+	log.Printf("GenerateProjectConfig called with serverID: %s", serverID)
+
+	// 检查授权
+	if authorization == "" || strings.TrimSpace(authorization) == "" {
+		response := ApiResponse{Code: 401, Msg: "Authorization required"}
+		result, _ := json.Marshal(response)
+		return string(result)
+	}
+
+	// 获取服务器信息
+	server, err := a.jsonService.GetServerByID(serverID, authorization, clientJson)
+	if err != nil {
+		log.Printf("Failed to get server info: %v", err)
+		response := ApiResponse{Code: 500, Msg: "获取服务器信息失败"}
+		result, _ := json.Marshal(response)
+		return string(result)
+	}
+
+	if server == nil {
+		response := ApiResponse{Code: 404, Msg: "服务器不存在"}
+		result, _ := json.Marshal(response)
+		return string(result)
+	}
+
+	// 生成项目配置
+	projectConfig := make(map[string]map[string]string)
+
+	for _, project := range server.ProjectList {
+		// 提取域名（去掉协议和路径）
+		apiDomain := extractDomainFromURL(project.ProjectAPIURL)
+
+		projectConfig[project.ProjectID] = map[string]string{
+			"api_port":   getPortOrDefault(project.APIPort, "8080"),
+			"web_port":   getPortOrDefault(project.FrontPort, "3000"),
+			"api_domain": apiDomain,
+		}
+	}
+
+	// 转换为JSON
+	configJSON, err := json.MarshalIndent(projectConfig, "", "  ")
+	if err != nil {
+		log.Printf("Failed to marshal project config: %v", err)
+		response := ApiResponse{Code: 500, Msg: "生成配置文件失败"}
+		result, _ := json.Marshal(response)
+		return string(result)
+	}
+
+	// 处理 release.zip 并上传配置文件
+	err = a.processReleaseAndUploadConfig(server, "project_config.json", string(configJSON))
+	if err != nil {
+		log.Printf("Failed to process release and upload config: %v", err)
+		response := ApiResponse{Code: 500, Msg: fmt.Sprintf("处理发布包和上传配置文件失败: %v", err)}
+		result, _ := json.Marshal(response)
+		return string(result)
+	}
+
+	response := ApiResponse{
+		Code: 200,
+		Msg:  "项目配置文件生成并上传成功",
+		Data: map[string]interface{}{
+			"config": projectConfig,
+			"path":   fmt.Sprintf("%s/project_config.json", server.DefaultPath),
+		},
+	}
+	result, _ := json.Marshal(response)
+	return string(result)
+}
+
+// ProjectInit SSH执行项目初始化
+func (a *App) ProjectInit(serverID, projectID, authorization, clientJson string) string {
+	log.Printf("ProjectInit called with serverID: %s, projectID: %s", serverID, projectID)
+
+	// 检查授权
+	if authorization == "" || strings.TrimSpace(authorization) == "" {
+		response := ApiResponse{Code: 401, Msg: "Authorization required"}
+		result, _ := json.Marshal(response)
+		return string(result)
+	}
+
+	// 获取服务器信息
+	server, err := a.jsonService.GetServerByID(serverID, authorization, clientJson)
+	if err != nil {
+		log.Printf("Failed to get server info: %v", err)
+		response := ApiResponse{Code: 500, Msg: "获取服务器信息失败"}
+		result, _ := json.Marshal(response)
+		return string(result)
+	}
+
+	if server == nil {
+		response := ApiResponse{Code: 404, Msg: "服务器不存在"}
+		result, _ := json.Marshal(response)
+		return string(result)
+	}
+
+	// 执行SSH命令
+	command := fmt.Sprintf("cd %s && ./codedeploy.sh init %s", server.DefaultPath, projectID)
+	output, err := a.executeSSHCommand(server, command)
+	if err != nil {
+		log.Printf("Failed to execute init command: %v", err)
+		response := ApiResponse{Code: 500, Msg: fmt.Sprintf("执行初始化命令失败: %v", err)}
+		result, _ := json.Marshal(response)
+		return string(result)
+	}
+
+	response := ApiResponse{
+		Code: 200,
+		Msg:  "项目初始化成功",
+		Data: map[string]interface{}{
+			"command": command,
+			"output":  output,
+		},
+	}
+	result, _ := json.Marshal(response)
+	return string(result)
+}
+
+// ProjectUpdate SSH执行项目更新
+func (a *App) ProjectUpdate(serverID, projectID, authorization, clientJson string) string {
+	log.Printf("ProjectUpdate called with serverID: %s, projectID: %s", serverID, projectID)
+
+	// 检查授权
+	if authorization == "" || strings.TrimSpace(authorization) == "" {
+		response := ApiResponse{Code: 401, Msg: "Authorization required"}
+		result, _ := json.Marshal(response)
+		return string(result)
+	}
+
+	// 获取服务器信息
+	server, err := a.jsonService.GetServerByID(serverID, authorization, clientJson)
+	if err != nil {
+		log.Printf("Failed to get server info: %v", err)
+		response := ApiResponse{Code: 500, Msg: "获取服务器信息失败"}
+		result, _ := json.Marshal(response)
+		return string(result)
+	}
+
+	if server == nil {
+		response := ApiResponse{Code: 404, Msg: "服务器不存在"}
+		result, _ := json.Marshal(response)
+		return string(result)
+	}
+
+	// 执行SSH命令
+	command := fmt.Sprintf("cd %s && ./codedeploy.sh update %s", server.DefaultPath, projectID)
+	output, err := a.executeSSHCommand(server, command)
+	if err != nil {
+		log.Printf("Failed to execute update command: %v", err)
+		response := ApiResponse{Code: 500, Msg: fmt.Sprintf("执行更新命令失败: %v", err)}
+		result, _ := json.Marshal(response)
+		return string(result)
+	}
+
+	response := ApiResponse{
+		Code: 200,
+		Msg:  "项目更新成功",
+		Data: map[string]interface{}{
+			"command": command,
+			"output":  output,
+		},
+	}
+	result, _ := json.Marshal(response)
+	return string(result)
+}
+
+// 辅助函数：从URL中提取域名
+func extractDomainFromURL(urlStr string) string {
+	if urlStr == "" {
+		return ""
+	}
+
+	// 如果不包含协议，添加默认协议
+	if !strings.HasPrefix(urlStr, "http://") && !strings.HasPrefix(urlStr, "https://") {
+		urlStr = "https://" + urlStr
+	}
+
+	parsedURL, err := url.Parse(urlStr)
+	if err != nil {
+		// 如果解析失败，尝试简单的字符串处理
+		parts := strings.Split(urlStr, "/")
+		if len(parts) > 0 {
+			return strings.Replace(parts[0], "https://", "", 1)
+		}
+		return urlStr
+	}
+
+	return parsedURL.Hostname()
+}
+
+// 辅助函数：获取端口或默认值
+func getPortOrDefault(port, defaultPort string) string {
+	if port == "" {
+		return defaultPort
+	}
+	return port
+}
+
+// 辅助函数：通过SSH上传文件
+func (a *App) uploadFileViaSSH(server *services.ServerData, filename, content string) error {
+	// 创建SSH配置
+	config := &ssh.ClientConfig{
+		User:            server.ServerUser,
+		Auth:            []ssh.AuthMethod{ssh.Password(server.ServerPassword)},
+		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+		Timeout:         30 * time.Second,
+	}
+
+	// 连接SSH
+	address := fmt.Sprintf("%s:%s", server.ServerIP, server.ServerPort)
+	client, err := ssh.Dial("tcp", address, config)
+	if err != nil {
+		return fmt.Errorf("SSH连接失败: %v", err)
+	}
+	defer client.Close()
+
+	// 创建会话
+	session, err := client.NewSession()
+	if err != nil {
+		return fmt.Errorf("创建SSH会话失败: %v", err)
+	}
+	defer session.Close()
+
+	// 创建目标文件路径
+	targetPath := fmt.Sprintf("%s/%s", server.DefaultPath, filename)
+
+	// 使用cat命令写入文件内容
+	command := fmt.Sprintf("cat > %s", targetPath)
+	session.Stdin = strings.NewReader(content)
+
+	err = session.Run(command)
+	if err != nil {
+		return fmt.Errorf("上传文件失败: %v", err)
+	}
+
+	return nil
+}
+
+// 辅助函数：执行SSH命令
+func (a *App) executeSSHCommand(server *services.ServerData, command string) (string, error) {
+	// 创建SSH配置
+	config := &ssh.ClientConfig{
+		User:            server.ServerUser,
+		Auth:            []ssh.AuthMethod{ssh.Password(server.ServerPassword)},
+		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+		Timeout:         30 * time.Second,
+	}
+
+	// 连接SSH
+	address := fmt.Sprintf("%s:%s", server.ServerIP, server.ServerPort)
+	client, err := ssh.Dial("tcp", address, config)
+	if err != nil {
+		return "", fmt.Errorf("SSH连接失败: %v", err)
+	}
+	defer client.Close()
+
+	// 创建会话
+	session, err := client.NewSession()
+	if err != nil {
+		return "", fmt.Errorf("创建SSH会话失败: %v", err)
+	}
+	defer session.Close()
+
+	// 执行命令
+	output, err := session.CombinedOutput(command)
+	if err != nil {
+		return string(output), fmt.Errorf("命令执行失败: %v", err)
+	}
+
+	return string(output), nil
+}
+
+// processReleaseAndUploadConfig 处理 release.zip 并上传配置文件
+func (a *App) processReleaseAndUploadConfig(server *services.ServerData, filename, content string) error {
+	// 创建SSH配置
+	config := &ssh.ClientConfig{
+		User:            server.ServerUser,
+		Auth:            []ssh.AuthMethod{ssh.Password(server.ServerPassword)},
+		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+		Timeout:         30 * time.Second,
+	}
+
+	// 连接SSH
+	address := fmt.Sprintf("%s:%s", server.ServerIP, server.ServerPort)
+	client, err := ssh.Dial("tcp", address, config)
+	if err != nil {
+		return fmt.Errorf("SSH连接失败: %v", err)
+	}
+	defer client.Close()
+
+	// 1. 检查 release.zip 是否存在
+	log.Printf("Checking for release.zip in %s", server.DefaultPath)
+	checkSession, err := client.NewSession()
+	if err != nil {
+		return fmt.Errorf("创建检查会话失败: %v", err)
+	}
+
+	releaseZipPath := fmt.Sprintf("%s/release.zip", server.DefaultPath)
+	checkCommand := fmt.Sprintf("test -f %s && echo 'exists' || echo 'not_exists'", releaseZipPath)
+	checkOutput, err := checkSession.CombinedOutput(checkCommand)
+	checkSession.Close()
+
+	if err != nil {
+		log.Printf("检查 release.zip 失败: %v", err)
+	}
+
+	// 2. 如果 release.zip 存在，进行解压和删除操作
+	if strings.TrimSpace(string(checkOutput)) == "exists" {
+		log.Printf("Found release.zip, processing...")
+
+		// 解压 release.zip（强制覆盖）
+		unzipSession, err := client.NewSession()
+		if err != nil {
+			return fmt.Errorf("创建解压会话失败: %v", err)
+		}
+
+		unzipCommand := fmt.Sprintf("cd %s && unzip -o release.zip", server.DefaultPath)
+		log.Printf("Executing unzip command: %s", unzipCommand)
+		unzipOutput, err := unzipSession.CombinedOutput(unzipCommand)
+		unzipSession.Close()
+
+		if err != nil {
+			log.Printf("解压 release.zip 失败: %v, output: %s", err, string(unzipOutput))
+			return fmt.Errorf("解压 release.zip 失败: %v", err)
+		}
+
+		log.Printf("Unzip successful, output: %s", string(unzipOutput))
+
+		// 删除 release.zip
+		deleteSession, err := client.NewSession()
+		if err != nil {
+			return fmt.Errorf("创建删除会话失败: %v", err)
+		}
+
+		deleteCommand := fmt.Sprintf("rm -f %s", releaseZipPath)
+		log.Printf("Executing delete command: %s", deleteCommand)
+		deleteOutput, err := deleteSession.CombinedOutput(deleteCommand)
+		deleteSession.Close()
+
+		if err != nil {
+			log.Printf("删除 release.zip 失败: %v, output: %s", err, string(deleteOutput))
+			return fmt.Errorf("删除 release.zip 失败: %v", err)
+		}
+
+		log.Printf("Release.zip deleted successfully")
+	} else {
+		log.Printf("No release.zip found, skipping extraction")
+	}
+
+	// 3. 上传配置文件
+	log.Printf("Uploading config file: %s", filename)
+	uploadSession, err := client.NewSession()
+	if err != nil {
+		return fmt.Errorf("创建上传会话失败: %v", err)
+	}
+	defer uploadSession.Close()
+
+	// 创建目标文件路径
+	targetPath := fmt.Sprintf("%s/%s", server.DefaultPath, filename)
+
+	// 使用cat命令写入文件内容
+	command := fmt.Sprintf("cat > %s", targetPath)
+	uploadSession.Stdin = strings.NewReader(content)
+
+	err = uploadSession.Run(command)
+	if err != nil {
+		return fmt.Errorf("上传配置文件失败: %v", err)
+	}
+
+	log.Printf("Config file uploaded successfully to: %s", targetPath)
+	return nil
+}

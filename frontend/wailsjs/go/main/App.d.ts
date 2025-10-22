@@ -17,6 +17,8 @@ export function CloudflarePagesGetDomains(arg1:string,arg2:string,arg3:string):P
 
 export function Exec(arg1:string,arg2:string,arg3:string,arg4:string,arg5:string):Promise<string>;
 
+export function GenerateProjectConfig(arg1:string,arg2:string,arg3:string):Promise<string>;
+
 export function Greet(arg1:string):Promise<string>;
 
 export function List(arg1:string,arg2:string):Promise<string>;
@@ -27,7 +29,11 @@ export function ProjectForm(arg1:string,arg2:string,arg3:string,arg4:string):Pro
 
 export function ProjectInfo(arg1:string,arg2:string,arg3:string):Promise<string>;
 
+export function ProjectInit(arg1:string,arg2:string,arg3:string,arg4:string):Promise<string>;
+
 export function ProjectPortUpdate(arg1:string,arg2:string,arg3:string,arg4:string,arg5:string):Promise<string>;
+
+export function ProjectUpdate(arg1:string,arg2:string,arg3:string,arg4:string):Promise<string>;
 
 export function ServerAdd(arg1:string,arg2:string,arg3:string,arg4:string,arg5:string,arg6:string,arg7:string,arg8:string,arg9:string):Promise<string>;
 

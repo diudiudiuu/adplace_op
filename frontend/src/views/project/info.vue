@@ -63,6 +63,7 @@ import { useRouter } from 'vue-router'
 import { useMessage, useDialog } from 'naive-ui'
 import { useSidebarStore } from '@/store/sidebar'
 import { reloadMenus } from '@/components/menu'
+import dataManager from '@/utils/dataManager'
 import { CreateOutline, CloseOutline, TrashOutline } from '@vicons/ionicons5'
 import Dform from './form.vue'
 import api from '@/api'
@@ -102,16 +103,25 @@ const handleEdit = () => {
     eidtmode.value = !eidtmode.value
 }
 // 获取项目信息
-const getProjectInfo = () => {
-    api('project_info', {
-        projectId: props.projectId,
-    }).then((res: any) => {
-        console.log('Project info received:', res)
-        projectInfo.value = res
-    }).catch((error: any) => {
+const getProjectInfo = async () => {
+    try {
+        // 优先从数据管理器获取项目信息
+        const project = await dataManager.getProjectById(props.projectId)
+        if (project) {
+            console.log('Project info from cache:', project)
+            projectInfo.value = project
+        } else {
+            // 如果缓存中没有，则调用 API
+            const res = await api('project_info', {
+                projectId: props.projectId,
+            })
+            console.log('Project info from API:', res)
+            projectInfo.value = res
+        }
+    } catch (error) {
         console.error('Failed to get project info:', error)
         message.error('获取项目信息失败')
-    })
+    }
 }
 
 getProjectInfo()
@@ -136,6 +146,9 @@ const handleDelete = () => {
                 
                 if (res && (res.code === 200 || res.success)) {
                     message.success('删除成功')
+                    
+                    // 通知数据管理器数据已变更
+                    await dataManager.onDataChanged()
                     await reloadMenus()
                     sidebar.setboolroute(true)
                     route.push('/welcome')

@@ -90,6 +90,7 @@ import { useMessage } from 'naive-ui'
 import type { FormInst } from 'naive-ui'
 import { useSidebarStore } from '@/store/sidebar'
 import { reloadMenus } from '@/components/menu'
+import dataManager from '@/utils/dataManager'
 import { SaveOutline, RefreshOutline, ReloadOutline } from '@vicons/ionicons5'
 import api from '@/api'
 
@@ -276,6 +277,10 @@ const onSubmit = async () => {
 
         if (res && (res.code === 200 || res.success)) {
             message.success(isEdit ? '更新成功' : '添加成功')
+            
+            // 通知数据管理器数据已变更
+            await dataManager.onDataChanged()
+            
             if (isEdit) {
                 emit('editSuccess') // Notify parent on edit success
             } else {

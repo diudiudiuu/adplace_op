@@ -1,5 +1,5 @@
 import type { Menus } from '@/types/menu';
-import api from '@/api';
+import dataManager from '@/utils/dataManager';
 import { isAuthorized } from '@/utils/auth';
 import { addDynamicRoutes } from '@/router';
 
@@ -154,8 +154,8 @@ class MenuManager {
         console.log('MenuManager: Loading server data...');
 
         try {
-            console.log('MenuManager: Calling list API...');
-            const serverList = await api('list', {});
+            // 使用数据管理器获取服务器数据
+            const serverList = await dataManager.getServerData();
             console.log('MenuManager: Received server list:', serverList);
 
             if (!Array.isArray(serverList) || serverList.length === 0) {
@@ -199,6 +199,8 @@ class MenuManager {
         this.hasLoaded = false;
         this.menus = [];
         this.clearCache(); // 清除缓存
+        // 同时刷新数据管理器的数据
+        await dataManager.refreshData();
         return this.loadMenus();
     }
 
@@ -208,6 +210,8 @@ class MenuManager {
         this.hasLoaded = false;
         this.isLoading = false;
         this.clearCache();
+        // 同时清除数据管理器的数据
+        dataManager.clearAllData();
         console.log('MenuManager: Menus cleared');
     }
 

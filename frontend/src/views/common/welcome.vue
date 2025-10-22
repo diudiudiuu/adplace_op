@@ -39,14 +39,14 @@
                     <p>添加、编辑和管理您的服务器</p>
                 </div>
 
-                <div class="feature-card">
-                    <div class="feature-icon project-icon">
+                <div class="feature-card clickable" @click="refreshData">
+                    <div class="feature-icon refresh-icon">
                         <n-icon size="28">
-                            <FolderOutline />
+                            <RefreshOutline />
                         </n-icon>
                     </div>
-                    <h3>项目配置</h3>
-                    <p>统一管理所有项目设置</p>
+                    <h3>刷新数据</h3>
+                    <p>获取最新的服务器和项目信息</p>
                 </div>
 
                 <div class="feature-card clickable logout-card" @click="handleLogout">
@@ -57,6 +57,16 @@
                     </div>
                     <h3>退出登录</h3>
                     <p>安全退出当前账户</p>
+                </div>
+            </div>
+
+            <!-- 缓存状态信息 -->
+            <div class="cache-info-section" v-if="cacheInfo.hasCache">
+                <div class="cache-info-item">
+                    <n-icon size="20" class="cache-icon">
+                        <RefreshOutline />
+                    </n-icon>
+                    <span>数据缓存：{{ cacheInfo.count }} 个服务器，{{ cacheInfo.age }} 分钟前更新</span>
                 </div>
             </div>
 
@@ -74,9 +84,12 @@
 </template>
 
 <script setup lang="ts">
+import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useMessage, useDialog } from 'naive-ui'
 import { handleUnauthorized } from '@/api'
+import dataManager from '@/utils/dataManager'
+import { reloadMenus } from '@/components/menu'
 import {
     ServerOutline,
     FolderOutline,
@@ -92,8 +105,38 @@ const router = useRouter()
 const message = useMessage()
 const dialog = useDialog()
 
+const isRefreshing = ref(false)
+const cacheInfo = ref(dataManager.getCacheInfo())
+
 const navigateToServerManagement = () => {
     router.push('/server-management')
+}
+
+const refreshData = async () => {
+    if (isRefreshing.value) return
+    
+    isRefreshing.value = true
+    const loadingMessage = message.loading('正在获取最新数据...', { duration: 0 })
+    
+    try {
+        // 刷新数据管理器的数据
+        await dataManager.refreshData()
+        // 重新加载菜单
+        await reloadMenus()
+        
+        loadingMessage.destroy()
+        message.success('数据刷新成功！')
+        
+        // 更新缓存信息显示
+        cacheInfo.value = dataManager.getCacheInfo()
+        console.log('Data refreshed:', cacheInfo.value)
+    } catch (error) {
+        console.error('Failed to refresh data:', error)
+        loadingMessage.destroy()
+        message.error('数据刷新失败，请稍后重试')
+    } finally {
+        isRefreshing.value = false
+    }
 }
 
 
@@ -341,10 +384,10 @@ const handleLogout = () => {
     box-shadow: 0 8px 25px rgba(108, 92, 231, 0.4);
 }
 
-.project-icon {
-    background: linear-gradient(135deg, #fd79a8, #fdcb6e);
+.refresh-icon {
+    background: linear-gradient(135deg, #00b894, #55efc4);
     color: white;
-    box-shadow: 0 8px 25px rgba(253, 121, 168, 0.4);
+    box-shadow: 0 8px 25px rgba(0, 184, 148, 0.4);
 }
 
 .terminal-icon {
@@ -388,9 +431,36 @@ const handleLogout = () => {
     opacity: 0.9;
 }
 
+/* 缓存信息区域 */
+.cache-info-section {
+    margin-top: 24px;
+    margin-bottom: 16px;
+}
+
+.cache-info-item {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 12px 20px;
+    background: linear-gradient(135deg, rgba(108, 92, 231, 0.1), rgba(162, 155, 254, 0.05));
+    backdrop-filter: blur(20px);
+    border-radius: 12px;
+    border: 1px solid rgba(108, 92, 231, 0.2);
+    font-size: 13px;
+    color: #6c5ce7;
+    box-shadow: 0 4px 15px rgba(108, 92, 231, 0.1);
+}
+
+.cache-icon {
+    color: #6c5ce7;
+    flex-shrink: 0;
+    filter: drop-shadow(0 2px 4px rgba(108, 92, 231, 0.3));
+}
+
 /* 温馨提示区域 */
 .tips-section {
-    margin-top: 32px;
+    margin-top: 16px;
 }
 
 .tip-item {

@@ -323,21 +323,32 @@ const handleClick = async (field: string) => {
     const fieldConfig = fieldsType[field]
     if (fieldConfig && fieldConfig['button'] && fieldConfig['button']['action'] === 'generateLicenseKey') {
         console.log('Generating license key via button click, expire_time:', formData.value.expire_time)
+        
         if (formData.value.expire_time) {
             try {
-                // 确保expire_time是字符串格式
-                const expireTimeStr = String(formData.value.expire_time)
-                console.log('Converting expire_time to string:', expireTimeStr)
+                // 统一处理时间格式
+                let expireTimeStr = formData.value.expire_time
+                
+                // 如果是数字（时间戳），转换为日期字符串
+                if (typeof expireTimeStr === 'number' || !isNaN(Number(expireTimeStr))) {
+                    const date = new Date(Number(expireTimeStr))
+                    expireTimeStr = date.toISOString().slice(0, 19).replace('T', ' ')
+                } else if (expireTimeStr instanceof Date) {
+                    // 如果是Date对象，转换为字符串
+                    expireTimeStr = expireTimeStr.toISOString().slice(0, 19).replace('T', ' ')
+                }
+                
+                console.log('Final expire_time format:', expireTimeStr)
                 
                 const license_key = encryptAes(expireTimeStr)
                 formData.value.license_key = license_key
-                console.log('Generated license key via button:', license_key)
+                
+                message.success('License Key生成成功')
             } catch (error) {
                 console.error('Error generating license key:', error)
                 message.error('生成License Key失败: ' + error.message)
             }
         } else {
-            console.warn('No expire_time set, cannot generate license key')
             message.warning('请先设置过期时间')
         }
     }
@@ -353,9 +364,19 @@ const handleChange = async (field: string) => {
                 console.log('Generating license key for field:', field, 'value:', formData.value[field])
                 if (formData.value[field]) {
                     try {
-                        // 确保值是字符串格式
-                        const valueStr = String(formData.value[field])
-                        console.log('Converting field value to string:', valueStr)
+                        // 统一处理时间格式
+                        let valueStr = formData.value[field]
+                        
+                        // 如果是数字（时间戳），转换为日期字符串
+                        if (typeof valueStr === 'number' || !isNaN(Number(valueStr))) {
+                            const date = new Date(Number(valueStr))
+                            valueStr = date.toISOString().slice(0, 19).replace('T', ' ')
+                        } else if (valueStr instanceof Date) {
+                            // 如果是Date对象，转换为字符串
+                            valueStr = valueStr.toISOString().slice(0, 19).replace('T', ' ')
+                        }
+                        
+                        console.log('Final field value format:', valueStr)
                         
                         const license_key = encryptAes(valueStr)
                         formData.value.license_key = license_key

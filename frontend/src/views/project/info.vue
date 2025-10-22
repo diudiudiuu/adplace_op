@@ -47,6 +47,12 @@
                 <n-descriptions-item label="客户API地址">
                     <n-text type="info">{{ projectInfo.project_api_url }}</n-text>
                 </n-descriptions-item>
+                <n-descriptions-item label="API端口">
+                    <n-text type="success">{{ projectInfo.api_port || '8080' }}</n-text>
+                </n-descriptions-item>
+                <n-descriptions-item label="前端端口">
+                    <n-text type="success">{{ projectInfo.front_port || '3000' }}</n-text>
+                </n-descriptions-item>
             </n-descriptions>
         </n-card>
     </div>
@@ -83,6 +89,8 @@ interface ProjectInfo {
     project_name?: string;
     project_manage_url?: string;
     project_api_url?: string;
+    api_port?: string;
+    front_port?: string;
 }
 
 const projectInfo = ref<ProjectInfo>({})

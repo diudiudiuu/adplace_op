@@ -27,6 +27,8 @@ type ProjectData struct {
 	ProjectName      string `json:"project_name"`
 	ProjectManageURL string `json:"project_manage_url"`
 	ProjectAPIURL    string `json:"project_api_url"`
+	APIPort          string `json:"api_port"`
+	FrontPort        string `json:"front_port"`
 }
 
 // 移除固定的KV_KEY，改为使用传入的参数
@@ -82,6 +84,20 @@ func (s *JsonService) LoadJsonFileWithResponse(authorization, clientJson string)
 				servers[i].DefaultPath = "/adplace"
 				needsSave = true
 				log.Printf("Added default path '/adplace' to server: %s", servers[i].ServerID)
+			}
+
+			// 数据迁移：为项目添加默认端口值
+			for j := range servers[i].ProjectList {
+				if servers[i].ProjectList[j].APIPort == "" {
+					servers[i].ProjectList[j].APIPort = "8080"
+					needsSave = true
+					log.Printf("Added default API port '8080' to project: %s", servers[i].ProjectList[j].ProjectID)
+				}
+				if servers[i].ProjectList[j].FrontPort == "" {
+					servers[i].ProjectList[j].FrontPort = "3000"
+					needsSave = true
+					log.Printf("Added default front port '3000' to project: %s", servers[i].ProjectList[j].ProjectID)
+				}
 			}
 		}
 

@@ -22,6 +22,12 @@ const layoutRouter = {
             component: () => import('@/views/project/form.vue'),
         },
         {
+            path: '/project_info/:serverId/:projectId',
+            name: 'project-info',
+            component: () => import('@/views/project/info.vue'),
+            props: true,
+        },
+        {
             path: '/server-management',
             name: 'server-management',
             component: () => import('@/views/server/ServerManagement.vue'),

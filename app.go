@@ -533,3 +533,70 @@ func (a *App) TestUnauthorized() string {
 	result, _ := json.Marshal(response)
 	return string(result)
 }
+
+// ProjectPortUpdate 更新项目端口信息
+func (a *App) ProjectPortUpdate(projectID, apiPort, frontPort, authorization, clientJson string) string {
+	log.Printf("ProjectPortUpdate called with projectID: %s, apiPort: %s, frontPort: %s, authorization: %s",
+		projectID, apiPort, frontPort, authorization)
+
+	// 检查授权
+	if authorization == "" || strings.TrimSpace(authorization) == "" {
+		response := ApiResponse{Code: 401, Msg: "Authorization required"}
+		result, _ := json.Marshal(response)
+		return string(result)
+	}
+
+	// 获取项目信息
+	project, err := a.jsonService.GetProjectByID(projectID, authorization, clientJson)
+	if err != nil {
+		log.Printf("Failed to get project info: %v", err)
+		response := ApiResponse{Code: 500, Msg: "Internal server error"}
+		result, _ := json.Marshal(response)
+		return string(result)
+	}
+
+	if project == nil {
+		response := ApiResponse{Code: 404, Msg: "Project not found"}
+		result, _ := json.Marshal(response)
+		return string(result)
+	}
+
+	// 更新端口信息
+	if apiPort != "" {
+		project.APIPort = apiPort
+	}
+	if frontPort != "" {
+		project.FrontPort = frontPort
+	}
+
+	// 找到项目所属的服务器并更新
+	servers, err := a.jsonService.LoadJsonFile(authorization, clientJson)
+	if err != nil {
+		log.Printf("Failed to load servers: %v", err)
+		response := ApiResponse{Code: 500, Msg: "Internal server error"}
+		result, _ := json.Marshal(response)
+		return string(result)
+	}
+
+	for _, server := range servers {
+		for _, proj := range server.ProjectList {
+			if proj.ProjectID == projectID {
+				err := a.jsonService.AddOrUpdateProject(server.ServerID, *project, authorization, clientJson)
+				if err != nil {
+					log.Printf("Failed to update project: %v", err)
+					response := ApiResponse{Code: 500, Msg: err.Error()}
+					result, _ := json.Marshal(response)
+					return string(result)
+				}
+
+				response := ApiResponse{Code: 200, Msg: "Project ports updated successfully"}
+				result, _ := json.Marshal(response)
+				return string(result)
+			}
+		}
+	}
+
+	response := ApiResponse{Code: 404, Msg: "Project not found in any server"}
+	result, _ := json.Marshal(response)
+	return string(result)
+}

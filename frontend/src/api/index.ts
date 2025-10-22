@@ -70,9 +70,9 @@ const apiMap: Record<string, (data: any) => Promise<string>> = {
     'cloudflare_configure_dns': (data: any) => window.go!.main!.App!.CloudflareConfigureDNSRecord(data.api_token, data.zone_id, data.name, data.type, data.content, data.proxied || true),
     'cloudflare_delete_dns': (data: any) => window.go!.main!.App!.CloudflareDeleteDNSRecord(data.api_token, data.zone_id, data.record_id),
     'cloudflare_batch_configure': (data: any) => window.go!.main!.App!.CloudflareBatchConfigureDNS(data.api_token, data.zone_id, data.records_json),
-    'cloudflare_pages_add_domain': (data: any) => window.go!.main!.App!.CloudflarePagesAddDomain(data.api_token, data.project_name, data.domain),
-    'cloudflare_pages_get_domains': (data: any) => window.go!.main!.App!.CloudflarePagesGetDomains(data.api_token, data.project_name),
-    'cloudflare_pages_delete_domain': (data: any) => window.go!.main!.App!.CloudflarePagesDeleteDomain(data.api_token, data.project_name, data.domain),
+    'cloudflare_pages_add_domain': (data: any) => window.go!.main!.App!.CloudflarePagesAddDomain(data.api_token, data.zone_id, data.project_name, data.domain),
+    'cloudflare_pages_get_domains': (data: any) => window.go!.main!.App!.CloudflarePagesGetDomains(data.api_token, data.zone_id, data.project_name),
+    'cloudflare_pages_delete_domain': (data: any) => window.go!.main!.App!.CloudflarePagesDeleteDomain(data.api_token, data.zone_id, data.project_name, data.domain),
 };
 
 // 简化的 API 调用函数

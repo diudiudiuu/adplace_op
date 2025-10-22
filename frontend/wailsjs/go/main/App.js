@@ -18,16 +18,16 @@ export function CloudflareGetDNSRecords(arg1, arg2, arg3, arg4) {
   return window['go']['main']['App']['CloudflareGetDNSRecords'](arg1, arg2, arg3, arg4);
 }
 
-export function CloudflarePagesAddDomain(arg1, arg2, arg3) {
-  return window['go']['main']['App']['CloudflarePagesAddDomain'](arg1, arg2, arg3);
+export function CloudflarePagesAddDomain(arg1, arg2, arg3, arg4) {
+  return window['go']['main']['App']['CloudflarePagesAddDomain'](arg1, arg2, arg3, arg4);
 }
 
-export function CloudflarePagesDeleteDomain(arg1, arg2, arg3) {
-  return window['go']['main']['App']['CloudflarePagesDeleteDomain'](arg1, arg2, arg3);
+export function CloudflarePagesDeleteDomain(arg1, arg2, arg3, arg4) {
+  return window['go']['main']['App']['CloudflarePagesDeleteDomain'](arg1, arg2, arg3, arg4);
 }
 
-export function CloudflarePagesGetDomains(arg1, arg2) {
-  return window['go']['main']['App']['CloudflarePagesGetDomains'](arg1, arg2);
+export function CloudflarePagesGetDomains(arg1, arg2, arg3) {
+  return window['go']['main']['App']['CloudflarePagesGetDomains'](arg1, arg2, arg3);
 }
 
 export function Exec(arg1, arg2, arg3, arg4, arg5) {

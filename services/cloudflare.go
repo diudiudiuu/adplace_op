@@ -246,32 +246,80 @@ func (s *CloudflareService) ConfigureDNSRecord(config CloudflareConfig, record D
 
 // GetAccountID 获取账户ID（Pages API 需要）
 func (s *CloudflareService) GetAccountID(config CloudflareConfig) (string, error) {
+	fmt.Printf("Requesting account info from Cloudflare API...\n")
 	resp, err := s.request("GET", "/accounts", config, nil)
 	if err != nil {
+		fmt.Printf("Failed to request accounts: %v\n", err)
 		return "", err
 	}
+
+	fmt.Printf("Raw accounts response: %+v\n", resp)
 
 	// 解析结果
 	resultBytes, err := json.Marshal(resp.Result)
 	if err != nil {
+		fmt.Printf("Failed to marshal result: %v\n", err)
 		return "", fmt.Errorf("解析结果失败: %v", err)
 	}
 
+	fmt.Printf("Accounts result bytes: %s\n", string(resultBytes))
+
 	var accounts []map[string]interface{}
 	if err := json.Unmarshal(resultBytes, &accounts); err != nil {
+		fmt.Printf("Failed to unmarshal accounts: %v\n", err)
 		return "", fmt.Errorf("解析账户信息失败: %v", err)
 	}
 
+	fmt.Printf("Parsed accounts: %+v\n", accounts)
+
 	if len(accounts) == 0 {
-		return "", fmt.Errorf("未找到账户信息")
+		return "", fmt.Errorf("未找到账户信息，请检查API Token权限是否包含Account:Read")
 	}
 
 	// 返回第一个账户的ID
 	if accountID, ok := accounts[0]["id"].(string); ok {
+		fmt.Printf("Found account ID: %s\n", accountID)
 		return accountID, nil
 	}
 
-	return "", fmt.Errorf("无法获取账户ID")
+	return "", fmt.Errorf("无法获取账户ID，账户数据格式异常")
+}
+
+// GetAccountIDFromZone 从Zone信息中获取账户ID（备用方案）
+func (s *CloudflareService) GetAccountIDFromZone(config CloudflareConfig) (string, error) {
+	fmt.Printf("Trying to get account ID from zone info...\n")
+	endpoint := fmt.Sprintf("/zones/%s", config.ZoneID)
+
+	resp, err := s.request("GET", endpoint, config, nil)
+	if err != nil {
+		fmt.Printf("Failed to get zone info: %v\n", err)
+		return "", err
+	}
+
+	fmt.Printf("Zone response: %+v\n", resp)
+
+	// 解析结果
+	resultBytes, err := json.Marshal(resp.Result)
+	if err != nil {
+		return "", fmt.Errorf("解析Zone结果失败: %v", err)
+	}
+
+	var zone map[string]interface{}
+	if err := json.Unmarshal(resultBytes, &zone); err != nil {
+		return "", fmt.Errorf("解析Zone信息失败: %v", err)
+	}
+
+	fmt.Printf("Zone data: %+v\n", zone)
+
+	// 从Zone信息中提取账户ID
+	if account, ok := zone["account"].(map[string]interface{}); ok {
+		if accountID, ok := account["id"].(string); ok {
+			fmt.Printf("Found account ID from zone: %s\n", accountID)
+			return accountID, nil
+		}
+	}
+
+	return "", fmt.Errorf("无法从Zone信息中获取账户ID")
 }
 
 // GetPagesProjects 获取 Pages 项目列表
@@ -300,15 +348,19 @@ func (s *CloudflareService) GetPagesProjects(config CloudflareConfig, accountID 
 // AddPagesCustomDomain 为 Pages 项目添加自定义域名
 func (s *CloudflareService) AddPagesCustomDomain(config CloudflareConfig, accountID, projectName, domain string) (*PagesCustomDomain, error) {
 	endpoint := fmt.Sprintf("/accounts/%s/pages/projects/%s/domains", accountID, projectName)
+	fmt.Printf("Pages API endpoint: %s\n", endpoint)
 
 	domainData := map[string]string{
 		"name": domain,
 	}
+	fmt.Printf("Pages API request data: %+v\n", domainData)
 
 	resp, err := s.request("POST", endpoint, config, domainData)
 	if err != nil {
+		fmt.Printf("Pages API request failed: %v\n", err)
 		return nil, err
 	}
+	fmt.Printf("Pages API response: %+v\n", resp)
 
 	// 解析结果
 	resultBytes, err := json.Marshal(resp.Result)

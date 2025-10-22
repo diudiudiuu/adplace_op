@@ -9,11 +9,11 @@ export function CloudflareDeleteDNSRecord(arg1:string,arg2:string,arg3:string):P
 
 export function CloudflareGetDNSRecords(arg1:string,arg2:string,arg3:string,arg4:string):Promise<string>;
 
-export function CloudflarePagesAddDomain(arg1:string,arg2:string,arg3:string):Promise<string>;
+export function CloudflarePagesAddDomain(arg1:string,arg2:string,arg3:string,arg4:string):Promise<string>;
 
-export function CloudflarePagesDeleteDomain(arg1:string,arg2:string,arg3:string):Promise<string>;
+export function CloudflarePagesDeleteDomain(arg1:string,arg2:string,arg3:string,arg4:string):Promise<string>;
 
-export function CloudflarePagesGetDomains(arg1:string,arg2:string):Promise<string>;
+export function CloudflarePagesGetDomains(arg1:string,arg2:string,arg3:string):Promise<string>;
 
 export function Exec(arg1:string,arg2:string,arg3:string,arg4:string,arg5:string):Promise<string>;
 

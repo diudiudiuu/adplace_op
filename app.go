@@ -726,30 +726,43 @@ func (a *App) ProjectPortUpdate(projectID, apiPort, frontPort, authorization, cl
 }
 
 // CloudflarePagesAddDomain 为 Cloudflare Pages 项目添加自定义域名
-func (a *App) CloudflarePagesAddDomain(apiToken, projectName, domain string) string {
+func (a *App) CloudflarePagesAddDomain(apiToken, zoneID, projectName, domain string) string {
 	log.Printf("CloudflarePagesAddDomain called with projectName: %s, domain: %s", projectName, domain)
 
 	config := services.CloudflareConfig{
 		APIToken: apiToken,
+		ZoneID:   zoneID,
 	}
 
 	// 获取账户ID
+	log.Printf("Getting account ID...")
 	accountID, err := a.cloudflareService.GetAccountID(config)
 	if err != nil {
-		log.Printf("Failed to get account ID: %v", err)
-		response := ApiResponse{Code: 500, Msg: fmt.Sprintf("获取账户ID失败: %v", err)}
-		result, _ := json.Marshal(response)
-		return string(result)
+		log.Printf("Failed to get account ID via /accounts API: %v", err)
+		log.Printf("Trying backup method via zone info...")
+
+		// 尝试备用方案：从Zone信息获取账户ID
+		accountID, err = a.cloudflareService.GetAccountIDFromZone(config)
+		if err != nil {
+			log.Printf("Failed to get account ID via zone info: %v", err)
+			response := ApiResponse{Code: 500, Msg: fmt.Sprintf("获取账户ID失败: %v。请确保API Token有Account:Read权限或Zone:Read权限", err)}
+			result, _ := json.Marshal(response)
+			return string(result)
+		}
 	}
+	log.Printf("Got account ID: %s", accountID)
 
 	// 检查域名是否已存在
+	log.Printf("Checking existing domains for project: %s", projectName)
 	existingDomains, err := a.cloudflareService.GetPagesCustomDomains(config, accountID, projectName)
 	if err != nil {
 		log.Printf("Failed to get existing domains: %v", err)
 		// 不阻断流程，继续尝试添加
 	} else {
+		log.Printf("Found %d existing domains", len(existingDomains))
 		// 检查域名是否已存在
 		for _, existingDomain := range existingDomains {
+			log.Printf("Existing domain: %s", existingDomain.Name)
 			if existingDomain.Name == domain {
 				log.Printf("Domain %s already exists for project %s", domain, projectName)
 				response := ApiResponse{
@@ -767,6 +780,7 @@ func (a *App) CloudflarePagesAddDomain(apiToken, projectName, domain string) str
 	}
 
 	// 添加自定义域名
+	log.Printf("Adding custom domain %s to project %s", domain, projectName)
 	customDomain, err := a.cloudflareService.AddPagesCustomDomain(config, accountID, projectName, domain)
 	if err != nil {
 		log.Printf("Failed to add custom domain: %v", err)
@@ -774,6 +788,7 @@ func (a *App) CloudflarePagesAddDomain(apiToken, projectName, domain string) str
 		result, _ := json.Marshal(response)
 		return string(result)
 	}
+	log.Printf("Successfully added custom domain: %+v", customDomain)
 
 	responseData := map[string]interface{}{
 		"domain": customDomain,
@@ -786,20 +801,26 @@ func (a *App) CloudflarePagesAddDomain(apiToken, projectName, domain string) str
 }
 
 // CloudflarePagesGetDomains 获取 Cloudflare Pages 项目的自定义域名列表
-func (a *App) CloudflarePagesGetDomains(apiToken, projectName string) string {
+func (a *App) CloudflarePagesGetDomains(apiToken, zoneID, projectName string) string {
 	log.Printf("CloudflarePagesGetDomains called with projectName: %s", projectName)
 
 	config := services.CloudflareConfig{
 		APIToken: apiToken,
+		ZoneID:   zoneID,
 	}
 
 	// 获取账户ID
 	accountID, err := a.cloudflareService.GetAccountID(config)
 	if err != nil {
-		log.Printf("Failed to get account ID: %v", err)
-		response := ApiResponse{Code: 500, Msg: fmt.Sprintf("获取账户ID失败: %v", err)}
-		result, _ := json.Marshal(response)
-		return string(result)
+		log.Printf("Failed to get account ID via /accounts API: %v", err)
+		// 尝试备用方案
+		accountID, err = a.cloudflareService.GetAccountIDFromZone(config)
+		if err != nil {
+			log.Printf("Failed to get account ID via zone info: %v", err)
+			response := ApiResponse{Code: 500, Msg: fmt.Sprintf("获取账户ID失败: %v", err)}
+			result, _ := json.Marshal(response)
+			return string(result)
+		}
 	}
 
 	// 获取自定义域名列表
@@ -817,20 +838,26 @@ func (a *App) CloudflarePagesGetDomains(apiToken, projectName string) string {
 }
 
 // CloudflarePagesDeleteDomain 删除 Cloudflare Pages 项目的自定义域名
-func (a *App) CloudflarePagesDeleteDomain(apiToken, projectName, domain string) string {
+func (a *App) CloudflarePagesDeleteDomain(apiToken, zoneID, projectName, domain string) string {
 	log.Printf("CloudflarePagesDeleteDomain called with projectName: %s, domain: %s", projectName, domain)
 
 	config := services.CloudflareConfig{
 		APIToken: apiToken,
+		ZoneID:   zoneID,
 	}
 
 	// 获取账户ID
 	accountID, err := a.cloudflareService.GetAccountID(config)
 	if err != nil {
-		log.Printf("Failed to get account ID: %v", err)
-		response := ApiResponse{Code: 500, Msg: fmt.Sprintf("获取账户ID失败: %v", err)}
-		result, _ := json.Marshal(response)
-		return string(result)
+		log.Printf("Failed to get account ID via /accounts API: %v", err)
+		// 尝试备用方案
+		accountID, err = a.cloudflareService.GetAccountIDFromZone(config)
+		if err != nil {
+			log.Printf("Failed to get account ID via zone info: %v", err)
+			response := ApiResponse{Code: 500, Msg: fmt.Sprintf("获取账户ID失败: %v", err)}
+			result, _ := json.Marshal(response)
+			return string(result)
+		}
 	}
 
 	// 删除自定义域名

@@ -385,22 +385,32 @@ const batchConfigureDNS = async () => {
         message.loading('正在批量配置 Cloudflare DNS 记录和 Pages 自定义域名...', { duration: 0 })
 
         // 1. 首先配置 Pages 自定义域名
+        let pagesConfigSuccess = false
         try {
+            console.log(`正在为 Pages 项目 'adswds' 添加自定义域名: ${manageDomain}`)
             const pagesResult = await api('cloudflare_pages_add_domain', {
                 api_token: apiToken,
+                zone_id: zoneId,
                 project_name: 'adswds', // Pages 项目名称
                 domain: manageDomain
             })
             
-            if (pagesResult.code !== 200) {
-                console.warn('Pages 自定义域名配置失败:', pagesResult.msg)
-                // 不阻断流程，继续配置 DNS
+            console.log('Pages API 响应:', pagesResult)
+            
+            if (pagesResult.code === 200) {
+                console.log('Pages 自定义域名配置成功:', pagesResult.data)
+                pagesConfigSuccess = true
             } else {
-                console.log('Pages 自定义域名配置成功')
+                console.error('Pages 自定义域名配置失败:', pagesResult.msg)
+                if (pagesResult.msg && pagesResult.msg.includes('Authentication error')) {
+                    message.warning('Pages 自定义域名配置失败：API Token 缺少 Cloudflare Pages:Edit 权限，请手动在 Pages 控制台添加自定义域名')
+                } else {
+                    message.warning(`Pages 自定义域名配置失败: ${pagesResult.msg}`)
+                }
             }
         } catch (pagesError) {
-            console.warn('Pages 自定义域名配置出错:', pagesError)
-            // 不阻断流程，继续配置 DNS
+            console.error('Pages 自定义域名配置出错:', pagesError)
+            message.warning(`Pages 自定义域名配置出错，将继续配置 DNS 记录`)
         }
 
         // 2. 配置 DNS 记录 - 管理端CNAME到Pages，API端A记录到服务器
@@ -653,17 +663,30 @@ const configureSingleDNS = async (record: any) => {
         // 如果是 CNAME 记录，先配置 Pages 自定义域名
         if (record.type === 'CNAME') {
             try {
+                console.log(`正在为 Pages 项目 'adswds' 添加自定义域名: ${record.name}`)
                 const pagesResult = await api('cloudflare_pages_add_domain', {
                     api_token: apiToken,
+                    zone_id: zoneId,
                     project_name: 'adswds', // Pages 项目名称
                     domain: record.name
                 })
                 
-                if (pagesResult.code !== 200) {
-                    console.warn('Pages 自定义域名配置失败:', pagesResult.msg)
+                console.log('Pages API 响应:', pagesResult)
+                
+                if (pagesResult.code === 200) {
+                    console.log('Pages 自定义域名配置成功:', pagesResult.data)
+                    message.success(`Pages 自定义域名 ${record.name} 配置成功`)
+                } else {
+                    console.error('Pages 自定义域名配置失败:', pagesResult.msg)
+                    if (pagesResult.msg && pagesResult.msg.includes('Authentication error')) {
+                        message.warning('Pages 自定义域名配置失败：API Token 缺少权限，请手动添加')
+                    } else {
+                        message.warning(`Pages 自定义域名配置失败: ${pagesResult.msg}`)
+                    }
                 }
             } catch (pagesError) {
-                console.warn('Pages 自定义域名配置出错:', pagesError)
+                console.error('Pages 自定义域名配置出错:', pagesError)
+                message.warning('Pages 自定义域名配置出错，将继续配置 DNS 记录')
             }
         }
 

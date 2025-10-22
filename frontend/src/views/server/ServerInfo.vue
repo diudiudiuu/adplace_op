@@ -130,6 +130,7 @@ import { useSidebarStore } from '@/store/sidebar'
 import { reloadMenus } from '@/components/menu'
 import { CreateOutline, CloseOutline, TrashOutline, CheckmarkOutline } from '@vicons/ionicons5'
 import api from '@/api'
+import dataManager from '@/utils/dataManager'
 
 const sidebar = useSidebarStore()
 const router = useRouter()
@@ -178,17 +179,25 @@ const handleEdit = () => {
 // 获取服务器信息
 const getServerInfo = async () => {
     try {
-        const res = await api('server_info', {
-            serverId: props.serverId,
-        })
-        console.log('Server info received:', res)
-        // ServerInfo API returns the server data directly
-        if (res && typeof res === 'object' && !res.code) {
-            serverInfo.value = res
-        } else if (res && res.data) {
-            serverInfo.value = res.data
+        // 优先从缓存获取服务器信息
+        const server = await dataManager.getServerById(props.serverId)
+        if (server) {
+            console.log('Server info from cache:', server)
+            serverInfo.value = server
         } else {
-            serverInfo.value = res || {}
+            // 如果缓存中没有，则调用API
+            const res = await api('server_info', {
+                serverId: props.serverId,
+            })
+            console.log('Server info from API:', res)
+            // ServerInfo API returns the server data directly
+            if (res && typeof res === 'object' && !res.code) {
+                serverInfo.value = res
+            } else if (res && res.data) {
+                serverInfo.value = res.data
+            } else {
+                serverInfo.value = res || {}
+            }
         }
     } catch (error) {
         console.error('Failed to get server info:', error)

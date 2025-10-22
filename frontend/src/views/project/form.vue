@@ -157,9 +157,8 @@ watch(
 // 获取服务器下所有项目的端口号
 const getServerPorts = async (): Promise<{ apiPorts: number[], frontPorts: number[] }> => {
     try {
-        const serverInfo = await api('server_info', {
-            serverId: serverId.value,
-        })
+        // 优先从缓存获取服务器信息
+        const serverInfo = await dataManager.getServerById(serverId.value)
 
         const apiPorts: number[] = []
         const frontPorts: number[] = []

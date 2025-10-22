@@ -109,6 +109,7 @@ import { useSidebarStore } from '@/store/sidebar'
 import { reloadMenus } from '@/components/menu'
 import api from '@/api'
 import { getAuthorization } from '@/utils/auth'
+import dataManager from '@/utils/dataManager'
 
 interface Project {
     project_id: string
@@ -287,11 +288,13 @@ const serverColumns = computed(() => [
 ])
 
 // 获取服务器列表
-const fetchServers = async () => {
+const fetchServers = async (forceRefresh = false) => {
     try {
-        const res = await api('server_list', {})
+        // 使用DataManager的缓存机制
+        const res = await dataManager.getServerData(forceRefresh)
         if (res && Array.isArray(res)) {
             serverList.value = res
+            console.log('ServerManagement: Loaded servers from cache/API:', res.length)
         } else {
             message.error('获取服务器列表失败')
         }
@@ -303,7 +306,7 @@ const fetchServers = async () => {
 
 // 刷新服务器列表
 const refreshServers = () => {
-    fetchServers()
+    fetchServers(true) // 强制刷新
 }
 
 

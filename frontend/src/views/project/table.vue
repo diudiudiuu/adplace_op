@@ -43,13 +43,13 @@
                     <template v-else-if="fieldsType[field]['type'] === 'datetime'">
                         <n-date-picker v-model:value="formData[field]" type="datetime" placeholder="选择日期时间"
                             value-format="yyyy-MM-dd HH:mm:ss" format="yyyy-MM-dd HH:mm:ss" style="width: 100%"
-                            @update:value="handleChange(field, formData, fieldsType[field])" />
+                            @update:value="() => handleChange(field)" />
                     </template>
                     <template v-else>
                         <n-input-group v-if="fieldsType[field]['button']">
                             <n-input v-model:value="formData[field]"
                                 :disabled="(isPrimaryKey(field) && isEditMode) || fieldsType[field]['disabled']" />
-                            <n-button type="primary" @click="handleClick(field, formData, fieldsType[field])">
+                            <n-button type="primary" @click="() => handleClick(field)">
                                 {{ fieldsType[field]['button'].text }}
                             </n-button>
                         </n-input-group>
@@ -90,6 +90,7 @@ import { AddCircleOutline, RefreshOutline, CreateOutline, TrashOutline, CloseOut
 import ColorfulButton from '@/components/ColorfulButton.vue'
 import api from '@/api'
 import { encryptAes } from '@/utils'
+import dataManager from '@/utils/dataManager'
 
 const props = defineProps({
     model: { type: Object, required: true },
@@ -244,7 +245,12 @@ const openForm = async (editMode: boolean, row = {}) => {
                 if ((field === 'api_port' || field === 'front_port') && formData.value[field]) {
                     continue
                 }
-                formData.value[field] = fieldsType[field].value
+                // 如果是client_id字段，设置为项目ID
+                if (field === 'client_id' && props.model.constructor.name === 'Client') {
+                    formData.value[field] = props.projectId
+                } else {
+                    formData.value[field] = fieldsType[field].value
+                }
             }
             if (type === 'enum') {
                 formData.value[field] =
@@ -311,23 +317,54 @@ const submitForm = async (action: string) => {
     fetchData()
 }
 
-const handleClick = async (field: string, formData: any, fieldsType: any) => {
-    if (fieldsType['button']['action'] === 'generateLicenseKey') {
-        const license_key = encryptAes(formData.expire_time)
-        formData.license_key = license_key
+const handleClick = async (field: string) => {
+    console.log('handleClick called for field:', field)
+    
+    const fieldConfig = fieldsType[field]
+    if (fieldConfig && fieldConfig['button'] && fieldConfig['button']['action'] === 'generateLicenseKey') {
+        console.log('Generating license key via button click, expire_time:', formData.value.expire_time)
+        if (formData.value.expire_time) {
+            try {
+                // 确保expire_time是字符串格式
+                const expireTimeStr = String(formData.value.expire_time)
+                console.log('Converting expire_time to string:', expireTimeStr)
+                
+                const license_key = encryptAes(expireTimeStr)
+                formData.value.license_key = license_key
+                console.log('Generated license key via button:', license_key)
+            } catch (error) {
+                console.error('Error generating license key:', error)
+                message.error('生成License Key失败: ' + error.message)
+            }
+        } else {
+            console.warn('No expire_time set, cannot generate license key')
+            message.warning('请先设置过期时间')
+        }
     }
 }
 
-const handleChange = async (
-    field: string,
-    formData: any,
-    fieldsType: any
-) => {
-    if (fieldsType['change'] && fieldsType['change'].length) {
-        for (const action of fieldsType['change']) {
+const handleChange = async (field: string) => {
+    console.log('handleChange called for field:', field)
+    
+    const fieldConfig = fieldsType[field]
+    if (fieldConfig && fieldConfig['change'] && fieldConfig['change'].length) {
+        for (const action of fieldConfig['change']) {
             if (action === 'generateLicenseKey') {
-                const license_key = encryptAes(formData[field])
-                formData.license_key = license_key
+                console.log('Generating license key for field:', field, 'value:', formData.value[field])
+                if (formData.value[field]) {
+                    try {
+                        // 确保值是字符串格式
+                        const valueStr = String(formData.value[field])
+                        console.log('Converting field value to string:', valueStr)
+                        
+                        const license_key = encryptAes(valueStr)
+                        formData.value.license_key = license_key
+                        console.log('Generated license key:', license_key)
+                    } catch (error) {
+                        console.error('Error generating license key:', error)
+                        message.error('生成License Key失败: ' + error.message)
+                    }
+                }
             }
         }
     }
@@ -336,9 +373,8 @@ const handleChange = async (
 // 从项目信息设置默认端口
 const setDefaultPortsFromProject = async () => {
     try {
-        const projectInfo = await api('project_info', {
-            projectId: props.projectId,
-        })
+        // 优先从缓存获取项目信息
+        const projectInfo = await dataManager.getProjectById(props.projectId)
         
         // 设置客户ID为项目ID
         formData.value.client_id = props.projectId

@@ -5,6 +5,10 @@ class Base {
         this.fields = fields;
         this.fieldsType = this.setFieldTypes(fieldTypes);
         this.formData = {};
+        
+        // 默认配置：不限制记录数
+        this.maxRecords = null; // null 表示不限制
+        this.maxRecordsMessage = '已达到最大记录数限制';
     }
 
     setFieldTypes(fieldTypes) {

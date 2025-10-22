@@ -65,6 +65,10 @@ class Domain extends Base {
         };
 
         super(tableName, primaryKey, fields, fieldTypes);
+        
+        // 可选：设置域名数量限制（示例）
+        // this.maxRecords = 50;
+        // this.maxRecordsMessage = '每个客户最多只能添加50个域名';
     }
 }
 

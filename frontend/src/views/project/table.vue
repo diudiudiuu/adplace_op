@@ -4,88 +4,58 @@
             <n-space>
                 <n-tooltip>
                     <template #trigger>
-                        <ColorfulButton 
-                            type="add" 
-                            text="添加" 
-                            size="medium"
-                            @click="openForm(false)"
-                        />
+                        <ColorfulButton v-if="!isMaxRecordsReached" type="add" text="添加" size="medium"
+                            @click="openForm(false)" />
+                        <n-button v-else disabled size="medium" quaternary>
+                            <template #icon>
+                                <n-icon>
+                                    <AddCircleOutline />
+                                </n-icon>
+                            </template>
+                            添加
+                        </n-button>
                     </template>
-                    添加
+                    {{ isMaxRecordsReached ? maxRecordsMessage : '添加' }}
                 </n-tooltip>
                 <n-tooltip>
                     <template #trigger>
-                        <ColorfulButton 
-                            type="refresh" 
-                            text="刷新" 
-                            size="medium"
-                            @click="refreshData"
-                        />
+                        <ColorfulButton type="refresh" text="刷新" size="medium" @click="refreshData" />
                     </template>
                     刷新
                 </n-tooltip>
             </n-space>
         </div>
-        
-        <n-data-table
-            :columns="columns"
-            :data="tableData"
-            :pagination="pagination"
-            @update:page="handlePageChange"
-            @update:page-size="handlePageSizeChange"
-            striped
-            class="special-table"
-        />
 
-        <n-modal v-model:show="isFormVisible" preset="dialog" :title="isEditMode ? '编辑' : '添加'" style="width: 600px; max-width: 90vw;">
+        <n-data-table :columns="columns" :data="tableData" :pagination="pagination" @update:page="handlePageChange"
+            @update:page-size="handlePageSizeChange" striped class="special-table" />
+
+        <n-modal v-model:show="isFormVisible" preset="dialog" :title="isEditMode ? '编辑' : '添加'"
+            style="width: 600px; max-width: 90vw;">
             <n-form :model="formData" label-placement="left" label-width="180">
-                <n-form-item
-                    v-for="field in fields"
-                    :key="field"
-                    :label="field"
-                    v-if="shouldShowField(field)"
-                    required
-                >
+                <n-form-item v-for="field in fields" :key="field" :label="field" v-if="shouldShowField(field)" required>
                     <template v-if="fieldsType[field]['type'] === 'enum'">
                         <n-radio-group v-model:value="formData[field]">
-                            <n-radio-button
-                                v-for="item in fieldsType[field]['value']"
-                                :key="item"
-                                :value="item"
-                            >
+                            <n-radio-button v-for="item in fieldsType[field]['value']" :key="item" :value="item">
                                 {{ item }}
                             </n-radio-button>
                         </n-radio-group>
                     </template>
                     <template v-else-if="fieldsType[field]['type'] === 'datetime'">
-                        <n-date-picker
-                            v-model:value="formData[field]"
-                            type="datetime"
-                            placeholder="选择日期时间"
-                            value-format="yyyy-MM-dd HH:mm:ss"
-                            format="yyyy-MM-dd HH:mm:ss"
-                            style="width: 100%"
-                            @update:value="handleChange(field, formData, fieldsType[field])"
-                        />
+                        <n-date-picker v-model:value="formData[field]" type="datetime" placeholder="选择日期时间"
+                            value-format="yyyy-MM-dd HH:mm:ss" format="yyyy-MM-dd HH:mm:ss" style="width: 100%"
+                            @update:value="handleChange(field, formData, fieldsType[field])" />
                     </template>
                     <template v-else>
                         <n-input-group v-if="fieldsType[field]['button']">
-                            <n-input
-                                v-model:value="formData[field]"
-                                :disabled="(isPrimaryKey(field) && isEditMode) || fieldsType[field]['disabled']"
-                            />
-                            <n-button
-                                type="primary"
-                                @click="handleClick(field, formData, fieldsType[field])"
-                            >
+                            <n-input v-model:value="formData[field]"
+                                :disabled="(isPrimaryKey(field) && isEditMode) || fieldsType[field]['disabled']" />
+                            <n-button type="primary" @click="handleClick(field, formData, fieldsType[field])">
                                 {{ fieldsType[field]['button'].text }}
                             </n-button>
                         </n-input-group>
-                        <n-input
-                            v-else
-                            v-model:value="formData[field]"
+                        <n-input v-else v-model:value="formData[field]"
                             :disabled="(isPrimaryKey(field) && isEditMode) || fieldsType[field]['disabled']"
-                        />
+                            :placeholder="getFieldPlaceholder(field)" />
                     </template>
                 </n-form-item>
             </n-form>
@@ -93,16 +63,17 @@
                 <n-space>
                     <n-button @click="isFormVisible = false">
                         <template #icon>
-                            <n-icon><CloseOutline /></n-icon>
+                            <n-icon>
+                                <CloseOutline />
+                            </n-icon>
                         </template>
                         取消
                     </n-button>
-                    <n-button
-                        type="primary"
-                        @click="isEditMode ? submitForm('update') : submitForm('insert')"
-                    >
+                    <n-button type="primary" @click="isEditMode ? submitForm('update') : submitForm('insert')">
                         <template #icon>
-                            <n-icon><CheckmarkOutline /></n-icon>
+                            <n-icon>
+                                <CheckmarkOutline />
+                            </n-icon>
                         </template>
                         {{ isEditMode ? '更新' : '提交' }}
                     </n-button>
@@ -136,6 +107,19 @@ const isEditMode = ref(false)
 const fields = props.model.fields
 const fieldsType = props.model.fieldsType
 const primaryKey = props.model.primaryKey
+
+// 检查是否达到最大记录数限制
+const isMaxRecordsReached = computed(() => {
+    if (props.model.maxRecords === null || props.model.maxRecords === undefined) {
+        return false; // 不限制
+    }
+    return tableData.value.length >= props.model.maxRecords;
+})
+
+// 获取限制提示信息
+const maxRecordsMessage = computed(() => {
+    return props.model.maxRecordsMessage || '已达到最大记录数限制';
+})
 
 // 分页配置
 const pagination = ref({
@@ -179,7 +163,7 @@ const columns = computed(() => {
             })
         }
     }
-    
+
     const fieldColumns = fields.map((field: string) => ({
         title: field,
         key: field,
@@ -187,7 +171,7 @@ const columns = computed(() => {
             tooltip: true
         }
     }))
-    
+
     return [actionColumn, ...fieldColumns]
 })
 
@@ -238,13 +222,28 @@ const isPrimaryKey = (field: any) => field === primaryKey
 // biome-ignore lint/suspicious/noExplicitAny: <explanation>
 const shouldShowField = (field: any) => isEditMode.value || field !== primaryKey
 
-const openForm = (editMode: boolean, row = {}) => {
+const openForm = async (editMode: boolean, row = {}) => {
+    // 如果是添加模式，检查是否达到最大记录数限制
+    if (!editMode && isMaxRecordsReached.value) {
+        message.warning(maxRecordsMessage.value)
+        return
+    }
+
     isEditMode.value = editMode
     formData.value = { ...row }
     if (!editMode) {
+        // 如果是套餐管理且是添加模式，先获取项目信息设置默认端口
+        if (props.model.constructor.name === 'Client') {
+            await setDefaultPortsFromProject()
+        }
+        
         for (const field in fieldsType) {
             const type = fieldsType[field].type
             if (type === 'int' || type === 'string') {
+                // 如果是端口字段且已经设置了默认值，跳过
+                if ((field === 'api_port' || field === 'front_port') && formData.value[field]) {
+                    continue
+                }
                 formData.value[field] = fieldsType[field].value
             }
             if (type === 'enum') {
@@ -255,7 +254,7 @@ const openForm = (editMode: boolean, row = {}) => {
                 // 默认值为当前时间
                 formData.value[field] = new Date(
                     new Date().getTime() -
-                        new Date().getTimezoneOffset() * 60000
+                    new Date().getTimezoneOffset() * 60000
                 )
                     .toISOString()
                     .slice(0, 19)
@@ -332,6 +331,60 @@ const handleChange = async (
             }
         }
     }
+}
+
+// 从项目信息设置默认端口
+const setDefaultPortsFromProject = async () => {
+    try {
+        const projectInfo = await api('project_info', {
+            projectId: props.projectId,
+        })
+        
+        // 设置客户ID为项目ID
+        formData.value.client_id = props.projectId
+        
+        if (projectInfo && projectInfo.api_port && projectInfo.front_port) {
+            formData.value.api_port = projectInfo.api_port
+            formData.value.front_port = projectInfo.front_port
+            console.log('Set default values from project:', {
+                client_id: props.projectId,
+                api_port: projectInfo.api_port,
+                front_port: projectInfo.front_port
+            })
+        } else {
+            // 如果项目没有端口信息，使用默认值
+            formData.value.api_port = '9000'
+            formData.value.front_port = '3000'
+            console.log('Project has no port info, using default values:', {
+                client_id: props.projectId,
+                api_port: '9000',
+                front_port: '3000'
+            })
+        }
+    } catch (error) {
+        console.error('Failed to get project info for default ports:', error)
+        // 出错时使用默认值
+        formData.value.client_id = props.projectId
+        formData.value.api_port = '9000'
+        formData.value.front_port = '3000'
+        message.warning('获取项目端口信息失败，使用默认值')
+    }
+}
+
+// 获取字段占位符
+const getFieldPlaceholder = (field: string) => {
+    if (props.model.constructor.name === 'Client') {
+        if (field === 'client_id') {
+            return isEditMode.value ? '请输入客户ID' : '默认使用项目ID'
+        }
+        if (field === 'api_port') {
+            return isEditMode.value ? '请输入API端口' : '默认使用项目API端口'
+        }
+        if (field === 'front_port') {
+            return isEditMode.value ? '请输入前端端口' : '默认使用项目前端端口'
+        }
+    }
+    return `请输入${field}`
 }
 
 </script>
@@ -432,13 +485,13 @@ const handleChange = async (
         min-width: auto !important;
         margin: 10px !important;
     }
-    
+
     :deep(.n-modal .n-form-item-label) {
         width: 100px !important;
         min-width: 100px !important;
         font-size: 12px !important;
     }
-    
+
     :deep(.n-modal .n-dialog .n-dialog__content) {
         padding: 16px 20px !important;
     }

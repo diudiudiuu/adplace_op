@@ -93,7 +93,15 @@ class Client extends Base {
             }
         };
 
+        // 最大记录数限制配置
+        const maxRecords = 1; // 每个客户只能添加一个套餐
+        const maxRecordsMessage = '每个客户只能添加一个套餐';
+
         super(tableName, primaryKey, fields, fieldTypes);
+        
+        // 添加限制配置
+        this.maxRecords = maxRecords;
+        this.maxRecordsMessage = maxRecordsMessage;
     }
 }
 

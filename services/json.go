@@ -89,9 +89,9 @@ func (s *JsonService) LoadJsonFileWithResponse(authorization, clientJson string)
 			// 数据迁移：为项目添加默认端口值
 			for j := range servers[i].ProjectList {
 				if servers[i].ProjectList[j].APIPort == "" {
-					servers[i].ProjectList[j].APIPort = "8080"
+					servers[i].ProjectList[j].APIPort = "9000"
 					needsSave = true
-					log.Printf("Added default API port '8080' to project: %s", servers[i].ProjectList[j].ProjectID)
+					log.Printf("Added default API port '9000' to project: %s", servers[i].ProjectList[j].ProjectID)
 				}
 				if servers[i].ProjectList[j].FrontPort == "" {
 					servers[i].ProjectList[j].FrontPort = "3000"

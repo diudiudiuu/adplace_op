@@ -908,7 +908,7 @@ func (a *App) GenerateProjectConfig(serverID, authorization, clientJson string) 
 		apiDomain := extractDomainFromURL(project.ProjectAPIURL)
 
 		projectConfig[project.ProjectID] = map[string]string{
-			"api_port":   getPortOrDefault(project.APIPort, "8080"),
+			"api_port":   getPortOrDefault(project.APIPort, "9000"),
 			"web_port":   getPortOrDefault(project.FrontPort, "3000"),
 			"api_domain": apiDomain,
 		}

@@ -1,6 +1,7 @@
 <template>
     <div>
-        <n-card title="项目信息">
+        <!-- 第一块：项目信息 -->
+        <n-card title="📋 项目信息">
             <template #header-extra>
                 <n-space>
                     <n-tooltip>
@@ -21,12 +22,14 @@
                         <template #trigger>
                             <n-button type="error" @click="handleDelete">
                                 <template #icon>
-                                    <n-icon><TrashOutline /></n-icon>
+                                    <n-icon>
+                                        <TrashOutline />
+                                    </n-icon>
                                 </template>
-                                删除
+                                删除项目
                             </n-button>
                         </template>
-                        删除
+                        删除项目
                     </n-tooltip>
                 </n-space>
             </template>
@@ -34,37 +37,39 @@
             <Dform v-if="eidtmode" mode="edit" :serverId="serverId" :initialForm="projectInfo"
                 @editSuccess="updateHandle" />
 
-            <n-descriptions v-if="!eidtmode" :column="1" bordered>
-                <n-descriptions-item label="客户ID">
-                    {{ projectInfo.project_id }}
+            <n-descriptions v-if="!eidtmode" :column="2" bordered>
+                <n-descriptions-item label="项目ID">
+                    <n-tag type="info">{{ projectInfo.project_id }}</n-tag>
                 </n-descriptions-item>
-                <n-descriptions-item label="客户名称">
-                    {{ projectInfo.project_name }}
+                <n-descriptions-item label="项目名称">
+                    <n-text strong>{{ projectInfo.project_name }}</n-text>
                 </n-descriptions-item>
-                <n-descriptions-item label="客户管理地址">
+                <n-descriptions-item label="管理地址">
                     <n-text type="info">{{ projectInfo.project_manage_url }}</n-text>
                 </n-descriptions-item>
-                <n-descriptions-item label="客户API地址">
+                <n-descriptions-item label="API地址">
                     <n-text type="info">{{ projectInfo.project_api_url }}</n-text>
                 </n-descriptions-item>
                 <n-descriptions-item label="API端口">
-                    <n-text type="success">{{ projectInfo.api_port || '8080' }}</n-text>
+                    <n-tag type="success">{{ projectInfo.api_port || '9000' }}</n-tag>
                 </n-descriptions-item>
                 <n-descriptions-item label="前端端口">
-                    <n-text type="success">{{ projectInfo.front_port || '3000' }}</n-text>
+                    <n-tag type="success">{{ projectInfo.front_port || '3000' }}</n-tag>
                 </n-descriptions-item>
             </n-descriptions>
         </n-card>
 
-        <!-- Cloudflare DNS 配置卡片 - 只在非编辑状态下显示 -->
-        <n-card v-if="!eidtmode" title="Cloudflare DNS 配置" style="margin-top: 16px;">
+        <!-- 第二块：DNS 设置 -->
+        <n-card v-if="!eidtmode" title="🌐 DNS 设置" style="margin-top: 16px;">
             <template #header-extra>
                 <n-space>
                     <n-tooltip>
                         <template #trigger>
                             <n-button type="info" @click="showCloudflareConfig" size="small">
                                 <template #icon>
-                                    <n-icon><SettingsOutline /></n-icon>
+                                    <n-icon>
+                                        <SettingsOutline />
+                                    </n-icon>
                                 </template>
                                 配置
                             </n-button>
@@ -75,7 +80,9 @@
                         <template #trigger>
                             <n-button type="primary" @click="batchConfigureDNS" :loading="dnsLoading">
                                 <template #icon>
-                                    <n-icon><CloudOutline /></n-icon>
+                                    <n-icon>
+                                        <CloudOutline />
+                                    </n-icon>
                                 </template>
                                 批量配置
                             </n-button>
@@ -88,7 +95,9 @@
             <n-space vertical>
                 <n-alert type="info" :show-icon="false">
                     <template #header>
-                        <n-icon><InformationCircleOutline /></n-icon>
+                        <n-icon>
+                            <InformationCircleOutline />
+                        </n-icon>
                         DNS 配置说明
                     </template>
                     将为以下域名配置 Cloudflare DNS 记录，所有记录都会开启代理（黄色小云朵）
@@ -98,13 +107,7 @@
 
                 <!-- DNS 记录表格 -->
                 <div v-if="dnsStatus.length > 0">
-                    <n-data-table
-                        :columns="dnsColumns"
-                        :data="dnsStatus"
-                        :pagination="false"
-                        striped
-                        size="small"
-                    />
+                    <n-data-table :columns="dnsColumns" :data="dnsStatus" :pagination="false" striped size="small" />
                 </div>
             </n-space>
         </n-card>
@@ -113,18 +116,11 @@
         <n-modal v-model:show="showConfigModal" preset="dialog" title="Cloudflare 配置" style="width: 500px;">
             <n-form :model="cloudflareConfig" label-placement="left" label-width="120">
                 <n-form-item label="API Token" required>
-                    <n-input 
-                        v-model:value="cloudflareConfig.apiToken" 
-                        type="password" 
-                        placeholder="请输入 Cloudflare API Token"
-                        show-password-on="click"
-                    />
+                    <n-input v-model:value="cloudflareConfig.apiToken" type="password"
+                        placeholder="请输入 Cloudflare API Token" show-password-on="click" />
                 </n-form-item>
                 <n-form-item label="Zone ID" required>
-                    <n-input 
-                        v-model:value="cloudflareConfig.zoneId" 
-                        placeholder="请输入域名的 Zone ID"
-                    />
+                    <n-input v-model:value="cloudflareConfig.zoneId" placeholder="请输入域名的 Zone ID" />
                 </n-form-item>
                 <n-alert type="info" style="margin-top: 16px;">
                     <template #header>配置说明</template>
@@ -144,83 +140,177 @@
             </template>
         </n-modal>
 
-        <!-- 项目管理卡片 - 只在非编辑状态下显示 -->
-        <n-card v-if="!eidtmode" title="项目管理" style="margin-top: 16px;">
-            <template #header-extra>
-                <n-space>
-                    <n-tooltip>
-                        <template #trigger>
-                            <n-button type="success" @click="generateProjectConfig" :loading="configLoading">
-                                <template #icon>
-                                    <n-icon><DocumentOutline /></n-icon>
-                                </template>
-                                生成配置
-                            </n-button>
-                        </template>
-                        生成项目配置文件并上传到服务器
-                    </n-tooltip>
-                    <n-tooltip>
-                        <template #trigger>
-                            <n-button type="primary" @click="initProject" :loading="initLoading">
-                                <template #icon>
-                                    <n-icon><RocketOutline /></n-icon>
-                                </template>
-                                初始化
-                            </n-button>
-                        </template>
-                        执行项目初始化
-                    </n-tooltip>
-                    <n-tooltip>
-                        <template #trigger>
-                            <n-button type="warning" @click="updateProject" :loading="updateLoading">
-                                <template #icon>
-                                    <n-icon><RefreshOutline /></n-icon>
-                                </template>
-                                更新项目
-                            </n-button>
-                        </template>
-                        执行项目更新
-                    </n-tooltip>
-                </n-space>
-            </template>
+        <!-- 第三块：项目部署 -->
+        <n-card v-if="!eidtmode" title="🚀 项目部署" style="margin-top: 16px;">
 
-            <n-space vertical>
+            <n-space vertical size="large">
+                <!-- 操作说明 -->
                 <n-alert type="info" :show-icon="false">
                     <template #header>
-                        <n-icon><InformationCircleOutline /></n-icon>
-                        项目管理说明
+                        <n-space align="center">
+                            <n-icon>
+                                <InformationCircleOutline />
+                            </n-icon>
+                            <span>部署操作说明</span>
+                        </n-space>
                     </template>
-                    <ul style="margin: 8px 0; padding-left: 20px;">
-                        <li><strong>生成配置：</strong>检查并处理 release.zip（如存在则解压覆盖并删除），然后生成 project_config.json 上传到服务器</li>
-                        <li><strong>初始化：</strong>SSH 登录服务器执行 ./codedeploy.sh init {{ projectInfo.project_id }}</li>
-                        <li><strong>更新项目：</strong>SSH 登录服务器执行 ./codedeploy.sh update {{ projectInfo.project_id }}</li>
-                    </ul>
+                    以下三个操作相互独立，可根据需要单独执行，无需按顺序操作
                 </n-alert>
 
-                <!-- 项目配置预览 -->
-                <div v-if="projectConfigPreview">
-                    <n-divider title-placement="left">项目配置预览</n-divider>
-                    <n-code :code="projectConfigPreview" language="json" show-line-numbers />
+                <!-- 独立操作功能卡片 -->
+                <n-grid :cols="3" :x-gap="16" :y-gap="16">
+                    <n-grid-item>
+                        <n-card size="small" hoverable :bordered="false"
+                            style="border: 2px solid #18a058; background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);">
+                            <template #header>
+                                <n-space align="center" justify="space-between">
+                                    <n-space align="center">
+                                        <n-icon size="24" color="#18a058">
+                                            <DocumentOutline />
+                                        </n-icon>
+                                        <span style="font-weight: 600;">生成配置</span>
+                                    </n-space>
+                                    <n-button size="small" type="success" @click="generateProjectConfig"
+                                        :loading="configLoading">
+                                        执行
+                                    </n-button>
+                                </n-space>
+                            </template>
+                            <n-text depth="2" style="font-size: 13px; line-height: 1.5;">
+                                • 检查并处理 release.zip 发布包<br>
+                                • 生成项目配置文件<br>
+                                • 自动上传到服务器
+                            </n-text>
+                        </n-card>
+                    </n-grid-item>
+                    <n-grid-item>
+                        <n-card size="small" hoverable :bordered="false"
+                            style="border: 2px solid #2080f0; background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);">
+                            <template #header>
+                                <n-space align="center" justify="space-between">
+                                    <n-space align="center">
+                                        <n-icon size="24" color="#2080f0">
+                                            <RocketOutline />
+                                        </n-icon>
+                                        <span style="font-weight: 600;">初始化项目</span>
+                                    </n-space>
+                                    <n-button size="small" type="primary" @click="showInitProjectModal = true">
+                                        选择项目
+                                    </n-button>
+                                </n-space>
+                            </template>
+                            <n-text depth="2" style="font-size: 13px; line-height: 1.5;">
+                                • 选择要初始化的项目<br>
+                                • 首次部署项目到服务器<br>
+                                • 执行初始化脚本
+                            </n-text>
+                        </n-card>
+                    </n-grid-item>
+                    <n-grid-item>
+                        <n-card size="small" hoverable :bordered="false"
+                            style="border: 2px solid #f0a020; background: linear-gradient(135deg, #fffbf0 0%, #fef3c7 100%);">
+                            <template #header>
+                                <n-space align="center" justify="space-between">
+                                    <n-space align="center">
+                                        <n-icon size="24" color="#f0a020">
+                                            <RefreshOutline />
+                                        </n-icon>
+                                        <span style="font-weight: 600;">更新项目</span>
+                                    </n-space>
+                                    <n-button size="small" type="warning" @click="showUpdateProjectModal = true">
+                                        选择项目
+                                    </n-button>
+                                </n-space>
+                            </template>
+                            <n-text depth="2" style="font-size: 13px; line-height: 1.5;">
+                                • 选择要更新的项目<br>
+                                • 更新已部署的项目<br>
+                                • 应用最新代码和配置
+                            </n-text>
+                        </n-card>
+                    </n-grid-item>
+                </n-grid>
+
+                <!-- 操作状态显示 -->
+                <div v-if="deploymentStatus">
+                    <n-alert :type="deploymentStatus.type" :title="deploymentStatus.title" closable>
+                        {{ deploymentStatus.message }}
+                        <template #icon>
+                            <n-icon>
+                                <component :is="deploymentStatus.icon" />
+                            </n-icon>
+                        </template>
+                    </n-alert>
                 </div>
 
-                <!-- 执行日志 -->
-                <div v-if="executionLog">
-                    <n-divider title-placement="left">执行日志</n-divider>
-                    <n-code :code="executionLog" language="bash" show-line-numbers />
+                <!-- 项目配置预览（简化显示） -->
+                <div v-if="projectConfigPreview">
+                    <n-card size="small" title="配置文件预览" style="margin-top: 16px;">
+                        <template #header-extra>
+                            <n-tag type="success" size="small">已生成</n-tag>
+                        </template>
+                        <n-scrollbar style="max-height: 200px;">
+                            <pre style="font-size: 12px; line-height: 1.4; margin: 0;">{{ projectConfigPreview }}</pre>
+                        </n-scrollbar>
+                    </n-card>
                 </div>
             </n-space>
         </n-card>
+
+        <!-- 初始化项目选择对话框 -->
+        <n-modal v-model:show="showInitProjectModal" preset="dialog" title="选择要初始化的项目" style="width: 500px;">
+            <n-form label-placement="left" label-width="100">
+                <n-form-item label="选择项目">
+                    <n-select v-model:value="selectedInitProjectId" :options="serverProjects.map(p => ({
+                        label: `${p.project_name} (${p.project_id})`,
+                        value: p.project_id,
+                        disabled: false
+                    }))" placeholder="请选择要初始化的项目" clearable filterable />
+                </n-form-item>
+            </n-form>
+            <template #action>
+                <n-space>
+                    <n-button @click="showInitProjectModal = false">取消</n-button>
+                    <n-button type="primary" @click="executeInitProject" :loading="initLoading"
+                        :disabled="!selectedInitProjectId">
+                        开始初始化
+                    </n-button>
+                </n-space>
+            </template>
+        </n-modal>
+
+        <!-- 更新项目选择对话框 -->
+        <n-modal v-model:show="showUpdateProjectModal" preset="dialog" title="选择要更新的项目" style="width: 500px;">
+            <n-form label-placement="left" label-width="100">
+                <n-form-item label="选择项目">
+                    <n-select v-model:value="selectedUpdateProjectId" :options="serverProjects.map(p => ({
+                        label: `${p.project_name} (${p.project_id})`,
+                        value: p.project_id,
+                        disabled: false
+                    }))" placeholder="请选择要更新的项目" clearable filterable />
+                </n-form-item>
+            </n-form>
+            <template #action>
+                <n-space>
+                    <n-button @click="showUpdateProjectModal = false">取消</n-button>
+                    <n-button type="warning" @click="executeUpdateProject" :loading="updateLoading"
+                        :disabled="!selectedUpdateProjectId">
+                        开始更新
+                    </n-button>
+                </n-space>
+            </template>
+        </n-modal>
     </div>
 </template>
 <script lang="ts" setup>
 import { ref, defineProps, computed, h } from 'vue'
 import { useRouter } from 'vue-router'
-import { useMessage, useDialog, NButton, NIcon, NSpace, NTooltip, NTag, NText } from 'naive-ui'
+import { useMessage, useDialog, NButton, NIcon, NSpace, NTooltip, NTag, NText, NGrid, NGridItem, NScrollbar, NSelect, NModal, NForm, NFormItem } from 'naive-ui'
 import { useSidebarStore } from '@/store/sidebar'
 import { reloadMenus } from '@/components/menu'
 import dataManager from '@/utils/dataManager'
 
-import { CreateOutline, CloseOutline, TrashOutline, CloudOutline, InformationCircleOutline, PlayOutline, RefreshOutline, TrashBinOutline, SettingsOutline, DocumentOutline, RocketOutline } from '@vicons/ionicons5'
+import { CreateOutline, CloseOutline, TrashOutline, CloudOutline, InformationCircleOutline, PlayOutline, RefreshOutline, TrashBinOutline, SettingsOutline, DocumentOutline, RocketOutline, CheckmarkCircleOutline, AlertCircleOutline, TimeOutline } from '@vicons/ionicons5'
 import Dform from './form.vue'
 import api from '@/api'
 
@@ -259,12 +349,24 @@ const cloudflareConfig = ref({
     zoneId: localStorage.getItem('cloudflare_zone_id') || ''
 })
 
-// 项目管理相关状态
+// 项目部署相关状态
 const configLoading = ref(false)
 const initLoading = ref(false)
 const updateLoading = ref(false)
 const projectConfigPreview = ref('')
-const executionLog = ref('')
+const deploymentStatus = ref<{
+    type: 'success' | 'warning' | 'error' | 'info'
+    title: string
+    message: string
+    icon: any
+} | null>(null)
+
+// 项目选择相关状态
+const selectedInitProjectId = ref('')
+const selectedUpdateProjectId = ref('')
+const serverProjects = ref<any[]>([])
+const showInitProjectModal = ref(false)
+const showUpdateProjectModal = ref(false)
 
 const eidtmode = ref(false)
 
@@ -403,7 +505,21 @@ const getProjectInfo = async () => {
 getProjectInfo().then(() => {
     // 项目信息加载完成后检查 DNS 状态
     checkDNSStatus()
+    // 加载服务器项目列表
+    loadServerProjects()
 })
+
+// 获取服务器下的所有项目
+const loadServerProjects = async () => {
+    try {
+        const server = await dataManager.getServerById(props.serverId)
+        if (server && server.ProjectList) {
+            serverProjects.value = server.ProjectList
+        }
+    } catch (error) {
+        console.error('Failed to load server projects:', error)
+    }
+}
 
 const updateHandle = () => {
     eidtmode.value = false
@@ -422,7 +538,7 @@ const batchConfigureDNS = async () => {
     // 检查 Cloudflare 配置
     const apiToken = localStorage.getItem('cloudflare_api_token')
     const zoneId = localStorage.getItem('cloudflare_zone_id')
-    
+
     if (!apiToken || !zoneId) {
         dialog.warning({
             title: 'Cloudflare 配置',
@@ -437,7 +553,7 @@ const batchConfigureDNS = async () => {
     }
 
     dnsLoading.value = true
-    
+
     try {
         // 获取服务器信息以获取IP地址
         const serverInfo = await dataManager.getServerById(props.serverId)
@@ -468,9 +584,9 @@ const batchConfigureDNS = async () => {
                 project_name: 'adswds', // Pages 项目名称
                 domain: manageDomain
             })
-            
+
             console.log('Pages API 响应:', pagesResult)
-            
+
             if (pagesResult.code === 200) {
                 console.log('Pages 自定义域名配置成功:', pagesResult.data)
                 pagesConfigSuccess = true
@@ -514,13 +630,13 @@ const batchConfigureDNS = async () => {
 
         if (result.code === 200) {
             const results = result.data || []
-            
+
             // 更新 DNS 状态
             dnsStatus.value = dnsStatus.value.map((status: any) => {
-                const matchResult = results.find((r: any) => 
+                const matchResult = results.find((r: any) =>
                     r.record?.name === status.name || r.name === status.name
                 )
-                
+
                 if (matchResult) {
                     if (matchResult.error) {
                         return {
@@ -546,7 +662,7 @@ const batchConfigureDNS = async () => {
 
             const successCount = results.filter((r: any) => !r.error).length
             const errorCount = results.filter((r: any) => r.error).length
-            
+
             if (errorCount === 0) {
                 message.success(`Cloudflare DNS 批量配置完成！成功配置 ${successCount} 条记录`)
             } else {
@@ -555,7 +671,7 @@ const batchConfigureDNS = async () => {
         } else {
             message.error(result.msg || 'DNS 配置失败')
         }
-        
+
     } catch (error) {
         console.error('DNS batch configuration error:', error)
         message.destroyAll()
@@ -580,10 +696,10 @@ const saveCloudflareConfig = () => {
     // 保存到本地存储
     localStorage.setItem('cloudflare_api_token', cloudflareConfig.value.apiToken)
     localStorage.setItem('cloudflare_zone_id', cloudflareConfig.value.zoneId)
-    
+
     showConfigModal.value = false
     message.success('Cloudflare 配置已保存')
-    
+
     // 重新检查 DNS 状态
     checkDNSStatus()
 }
@@ -596,10 +712,10 @@ const checkDNSStatus = async () => {
 
     const apiToken = localStorage.getItem('cloudflare_api_token')
     const zoneId = localStorage.getItem('cloudflare_zone_id')
-    
+
     const manageDomain = extractDomain(projectInfo.value.project_manage_url)
     const apiDomain = extractDomain(projectInfo.value.project_api_url)
-    
+
     if (!apiToken || !zoneId) {
         // 如果没有配置，显示待配置状态
         dnsStatus.value = [
@@ -639,9 +755,9 @@ const checkDNSStatus = async () => {
                 type: 'A'
             })
         ])
-        
+
         const status = []
-        
+
         // 检查管理端域名 CNAME 记录
         const manageRecords = manageResult.code === 200 ? manageResult.data : []
         const manageRecord = manageRecords.find((r: any) => r.name === manageDomain && r.type === 'CNAME')
@@ -654,7 +770,7 @@ const checkDNSStatus = async () => {
             recordId: manageRecord?.id || null,
             loading: false
         })
-        
+
         // 检查 API 域名 A 记录
         const apiRecords = apiResult.code === 200 ? apiResult.data : []
         const apiRecord = apiRecords.find((r: any) => r.name === apiDomain && r.type === 'A')
@@ -667,9 +783,9 @@ const checkDNSStatus = async () => {
             recordId: apiRecord?.id || null,
             loading: false
         })
-        
+
         dnsStatus.value = status
-        
+
     } catch (error) {
         console.error('Failed to check DNS status:', error)
         // 出错时显示错误状态
@@ -702,7 +818,7 @@ const checkDNSStatus = async () => {
 const configureSingleDNS = async (record: any) => {
     const apiToken = localStorage.getItem('cloudflare_api_token')
     const zoneId = localStorage.getItem('cloudflare_zone_id')
-    
+
     if (!apiToken || !zoneId) {
         dialog.warning({
             title: 'Cloudflare 配置',
@@ -718,10 +834,10 @@ const configureSingleDNS = async (record: any) => {
 
     // 设置单个记录的加载状态
     record.loading = true
-    
+
     try {
         let content = record.content
-        
+
         // 如果是 A 记录且需要配置，获取服务器 IP
         if (record.type === 'A' && (record.content === '待配置' || record.content === '查询失败')) {
             const serverInfo = await dataManager.getServerById(props.serverId)
@@ -744,9 +860,9 @@ const configureSingleDNS = async (record: any) => {
                     project_name: 'adswds', // Pages 项目名称
                     domain: record.name
                 })
-                
+
                 console.log('Pages API 响应:', pagesResult)
-                
+
                 if (pagesResult.code === 200) {
                     console.log('Pages 自定义域名配置成功:', pagesResult.data)
                     message.success(`Pages 自定义域名 ${record.name} 配置成功`)
@@ -793,12 +909,12 @@ const configureSingleDNS = async (record: any) => {
         } else {
             throw new Error(result.msg || '配置失败')
         }
-        
+
     } catch (error) {
         console.error('Single DNS configuration error:', error)
         message.destroyAll()
         message.error(`配置失败：${(error as Error).message}`)
-        
+
         // 更新记录为错误状态
         Object.assign(record, {
             status: 'error',
@@ -824,14 +940,14 @@ const deleteSingleDNS = async (record: any) => {
         onPositiveClick: async () => {
             const apiToken = localStorage.getItem('cloudflare_api_token')
             const zoneId = localStorage.getItem('cloudflare_zone_id')
-            
+
             if (!apiToken || !zoneId) {
                 message.error('Cloudflare 配置不完整')
                 return
             }
 
             record.loading = true
-            
+
             try {
                 message.loading(`正在删除 ${record.name} 的 ${record.type} 记录...`, { duration: 0 })
 
@@ -855,7 +971,7 @@ const deleteSingleDNS = async (record: any) => {
                                 project_name: 'adswds',
                                 domain: record.name
                             })
-                            
+
                             if (pagesDeleteResult.code === 200) {
                                 console.log('Pages 自定义域名删除成功')
                             } else {
@@ -874,14 +990,14 @@ const deleteSingleDNS = async (record: any) => {
                         recordId: null
                     })
 
-                    const deleteMessage = record.type === 'CNAME' 
+                    const deleteMessage = record.type === 'CNAME'
                         ? `${record.name} 的 DNS 记录和 Pages 自定义域名删除成功！`
                         : `${record.name} 的 DNS 记录删除成功！`
                     message.success(deleteMessage)
                 } else {
                     throw new Error(result.msg || '删除失败')
                 }
-                
+
             } catch (error) {
                 console.error('Single DNS deletion error:', error)
                 message.destroyAll()
@@ -906,10 +1022,10 @@ const handleDelete = () => {
                     serverId: props.serverId,
                     projectId: props.projectId,
                 })
-                
+
                 if (res && (res.code === 200 || res.success)) {
                     message.success('删除成功')
-                    
+
                     // 通知数据管理器数据已变更
                     await dataManager.onDataChanged()
                     await reloadMenus()
@@ -929,26 +1045,44 @@ const handleDelete = () => {
 // 生成项目配置文件
 const generateProjectConfig = async () => {
     configLoading.value = true
-    executionLog.value = ''
-    
+    deploymentStatus.value = null
+
     try {
         message.loading('正在处理发布包并生成项目配置文件...', { duration: 0 })
-        
+
         const result = await api('generate_project_config', {
             server_id: props.serverId
         })
-        
+
         message.destroyAll()
-        
+
         if (result.code === 200) {
             projectConfigPreview.value = JSON.stringify(result.data.config, null, 2)
-            message.success(`发布包处理完成，项目配置文件已生成并上传到: ${result.data.path}`)
+            deploymentStatus.value = {
+                type: 'success',
+                title: '配置生成成功',
+                message: `项目配置文件已生成并上传到服务器，包含 ${Object.keys(result.data.config).length} 个项目配置`,
+                icon: CheckmarkCircleOutline
+            }
+            message.success('配置文件生成成功')
         } else {
-            message.error(result.msg || '处理发布包和生成配置文件失败')
+            deploymentStatus.value = {
+                type: 'error',
+                title: '配置生成失败',
+                message: result.msg || '处理发布包和生成配置文件失败',
+                icon: AlertCircleOutline
+            }
+            message.error(result.msg || '生成配置文件失败')
         }
     } catch (error) {
         console.error('Generate config error:', error)
         message.destroyAll()
+        deploymentStatus.value = {
+            type: 'error',
+            title: '配置生成异常',
+            message: '生成配置文件时发生异常，请检查网络连接和服务器状态',
+            icon: AlertCircleOutline
+        }
         message.error('生成配置文件失败：' + (error as Error).message)
     } finally {
         configLoading.value = false
@@ -961,34 +1095,117 @@ const initProject = async () => {
         message.error('项目ID不能为空')
         return
     }
-    
+
     initLoading.value = true
-    executionLog.value = ''
-    
+    deploymentStatus.value = {
+        type: 'info',
+        title: '正在初始化项目',
+        message: `正在为项目 ${projectInfo.value.project_id} 执行初始化操作...`,
+        icon: TimeOutline
+    }
+
     try {
         message.loading(`正在初始化项目 ${projectInfo.value.project_id}...`, { duration: 0 })
-        
+
         const result = await api('project_init', {
             server_id: props.serverId,
             project_id: projectInfo.value.project_id
         })
-        
+
         message.destroyAll()
-        
+
         if (result.code === 200) {
-            executionLog.value = `命令: ${result.data.command}\n\n输出:\n${result.data.output}`
+            deploymentStatus.value = {
+                type: 'success',
+                title: '项目初始化成功',
+                message: `项目 ${projectInfo.value.project_id} 已成功初始化，可以开始使用了`,
+                icon: CheckmarkCircleOutline
+            }
             message.success('项目初始化成功')
         } else {
-            executionLog.value = `错误: ${result.msg}`
+            deploymentStatus.value = {
+                type: 'error',
+                title: '项目初始化失败',
+                message: result.msg || '初始化过程中发生错误，请检查服务器配置',
+                icon: AlertCircleOutline
+            }
             message.error(result.msg || '项目初始化失败')
         }
     } catch (error) {
         console.error('Project init error:', error)
         message.destroyAll()
-        executionLog.value = `错误: ${(error as Error).message}`
+        deploymentStatus.value = {
+            type: 'error',
+            title: '初始化异常',
+            message: '初始化过程中发生异常，请检查网络连接和服务器状态',
+            icon: AlertCircleOutline
+        }
         message.error('项目初始化失败：' + (error as Error).message)
     } finally {
         initLoading.value = false
+    }
+}
+
+// 执行初始化项目
+const executeInitProject = async () => {
+    if (!selectedInitProjectId.value) {
+        message.error('请选择要初始化的项目')
+        return
+    }
+
+    initLoading.value = true
+    showInitProjectModal.value = false
+
+    const selectedProject = serverProjects.value.find(p => p.project_id === selectedInitProjectId.value)
+    const projectName = selectedProject ? selectedProject.project_name : selectedInitProjectId.value
+
+    deploymentStatus.value = {
+        type: 'info',
+        title: '正在初始化项目',
+        message: `正在为项目 ${projectName} (${selectedInitProjectId.value}) 执行初始化操作...`,
+        icon: TimeOutline
+    }
+
+    try {
+        message.loading(`正在初始化项目 ${projectName}...`, { duration: 0 })
+
+        const result = await api('project_init', {
+            server_id: props.serverId,
+            project_id: selectedInitProjectId.value
+        })
+
+        message.destroyAll()
+
+        if (result.code === 200) {
+            deploymentStatus.value = {
+                type: 'success',
+                title: '项目初始化成功',
+                message: `项目 ${projectName} (${selectedInitProjectId.value}) 已成功初始化，可以开始使用了`,
+                icon: CheckmarkCircleOutline
+            }
+            message.success('项目初始化成功')
+        } else {
+            deploymentStatus.value = {
+                type: 'error',
+                title: '项目初始化失败',
+                message: result.msg || '初始化过程中发生错误，请检查服务器配置',
+                icon: AlertCircleOutline
+            }
+            message.error(result.msg || '项目初始化失败')
+        }
+    } catch (error) {
+        console.error('Project init error:', error)
+        message.destroyAll()
+        deploymentStatus.value = {
+            type: 'error',
+            title: '初始化异常',
+            message: '初始化过程中发生异常，请检查网络连接和服务器状态',
+            icon: AlertCircleOutline
+        }
+        message.error('项目初始化失败：' + (error as Error).message)
+    } finally {
+        initLoading.value = false
+        selectedInitProjectId.value = ''
     }
 }
 
@@ -998,39 +1215,133 @@ const updateProject = async () => {
         message.error('项目ID不能为空')
         return
     }
-    
+
     updateLoading.value = true
-    executionLog.value = ''
-    
+    deploymentStatus.value = {
+        type: 'info',
+        title: '正在更新项目',
+        message: `正在为项目 ${projectInfo.value.project_id} 执行更新操作...`,
+        icon: TimeOutline
+    }
+
     try {
         message.loading(`正在更新项目 ${projectInfo.value.project_id}...`, { duration: 0 })
-        
+
         const result = await api('project_update', {
             server_id: props.serverId,
             project_id: projectInfo.value.project_id
         })
-        
+
         message.destroyAll()
-        
+
         if (result.code === 200) {
-            executionLog.value = `命令: ${result.data.command}\n\n输出:\n${result.data.output}`
+            deploymentStatus.value = {
+                type: 'success',
+                title: '项目更新成功',
+                message: `项目 ${projectInfo.value.project_id} 已成功更新到最新版本`,
+                icon: CheckmarkCircleOutline
+            }
             message.success('项目更新成功')
         } else {
-            executionLog.value = `错误: ${result.msg}`
+            deploymentStatus.value = {
+                type: 'error',
+                title: '项目更新失败',
+                message: result.msg || '更新过程中发生错误，请检查服务器配置',
+                icon: AlertCircleOutline
+            }
             message.error(result.msg || '项目更新失败')
         }
     } catch (error) {
         console.error('Project update error:', error)
         message.destroyAll()
-        executionLog.value = `错误: ${(error as Error).message}`
+        deploymentStatus.value = {
+            type: 'error',
+            title: '更新异常',
+            message: '更新过程中发生异常，请检查网络连接和服务器状态',
+            icon: AlertCircleOutline
+        }
         message.error('项目更新失败：' + (error as Error).message)
     } finally {
         updateLoading.value = false
     }
 }
+
+// 执行更新项目
+const executeUpdateProject = async () => {
+    if (!selectedUpdateProjectId.value) {
+        message.error('请选择要更新的项目')
+        return
+    }
+
+    updateLoading.value = true
+    showUpdateProjectModal.value = false
+
+    const selectedProject = serverProjects.value.find(p => p.project_id === selectedUpdateProjectId.value)
+    const projectName = selectedProject ? selectedProject.project_name : selectedUpdateProjectId.value
+
+    deploymentStatus.value = {
+        type: 'info',
+        title: '正在更新项目',
+        message: `正在为项目 ${projectName} (${selectedUpdateProjectId.value}) 执行更新操作...`,
+        icon: TimeOutline
+    }
+
+    try {
+        message.loading(`正在更新项目 ${projectName}...`, { duration: 0 })
+
+        const result = await api('project_update', {
+            server_id: props.serverId,
+            project_id: selectedUpdateProjectId.value
+        })
+
+        message.destroyAll()
+
+        if (result.code === 200) {
+            deploymentStatus.value = {
+                type: 'success',
+                title: '项目更新成功',
+                message: `项目 ${projectName} (${selectedUpdateProjectId.value}) 已成功更新到最新版本`,
+                icon: CheckmarkCircleOutline
+            }
+            message.success('项目更新成功')
+        } else {
+            deploymentStatus.value = {
+                type: 'error',
+                title: '项目更新失败',
+                message: result.msg || '更新过程中发生错误，请检查服务器配置',
+                icon: AlertCircleOutline
+            }
+            message.error(result.msg || '项目更新失败')
+        }
+    } catch (error) {
+        console.error('Project update error:', error)
+        message.destroyAll()
+        deploymentStatus.value = {
+            type: 'error',
+            title: '更新异常',
+            message: '更新过程中发生异常，请检查网络连接和服务器状态',
+            icon: AlertCircleOutline
+        }
+        message.error('项目更新失败：' + (error as Error).message)
+    } finally {
+        updateLoading.value = false
+        selectedUpdateProjectId.value = ''
+    }
+}
 </script>
 
 <style scoped>
+/* 页面整体样式 */
+.n-card {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    border-radius: 12px;
+}
+
+.n-card:hover {
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+    transition: box-shadow 0.3s ease;
+}
+
 /* DNS 表格样式 */
 :deep(.n-data-table) {
     border-radius: 8px;
@@ -1040,6 +1351,29 @@ const updateProject = async () => {
 :deep(.n-data-table .n-data-table-th) {
     background: rgba(0, 0, 0, 0.02);
     font-weight: 600;
+}
+
+/* 部署卡片样式 */
+:deep(.n-grid-item .n-card .n-card__header) {
+    padding-bottom: 8px;
+}
+
+/* 小卡片悬停效果 */
+:deep(.n-grid-item .n-card) {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+:deep(.n-grid-item .n-card:hover) {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* 配置预览样式 */
+pre {
+    background: #f8f9fa;
+    border-radius: 6px;
+    padding: 12px;
+    border: 1px solid #e9ecef;
 }
 
 :deep(.n-data-table .n-data-table-td) {

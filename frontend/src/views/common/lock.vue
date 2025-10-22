@@ -19,7 +19,7 @@
                             欢迎回来
                         </n-h2>
                         <p style="text-align: center; margin: 0; color: #7f8c8d; font-size: 14px;">
-                            请回答问题以继续您的数字体验
+                            请输入授权密钥和验证码以继续
                         </p>
                     </template>
                     
@@ -28,22 +28,6 @@
                         @submit.prevent="submitForm"
                         :show-label="false"
                     >
-                        <n-form-item>
-                            <n-input 
-                                type="text" 
-                                placeholder="小问题：动物园里生气时谁最安静？" 
-                                v-model:value="param.password" 
-                                size="large"
-                                clearable
-                            >
-                                <template #prefix>
-                                    <n-icon>
-                                        <LockClosedOutline />
-                                    </n-icon>
-                                </template>
-                            </n-input>
-                        </n-form-item>
-                        
                         <n-form-item>
                             <n-input 
                                 type="password" 
@@ -59,6 +43,27 @@
                                     </n-icon>
                                 </template>
                             </n-input>
+                        </n-form-item>
+                        
+                        <n-form-item>
+                            <div class="captcha-row">
+                                <n-input 
+                                    type="text" 
+                                    placeholder="请输入验证码" 
+                                    v-model:value="param.captcha" 
+                                    size="large"
+                                    clearable
+                                    maxlength="4"
+                                    class="captcha-input"
+                                >
+                                    <template #prefix>
+                                        <n-icon>
+                                            <ShieldCheckmarkOutline />
+                                        </n-icon>
+                                    </template>
+                                </n-input>
+                                <Captcha @change="onCaptchaChange" ref="captchaRef" />
+                            </div>
                         </n-form-item>
                         
                         <n-button 
@@ -81,46 +86,63 @@
 import { reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useMessage } from 'naive-ui'
-import { LockClosedOutline } from '@vicons/ionicons5'
+import { LockClosedOutline, ShieldCheckmarkOutline } from '@vicons/ionicons5'
 import { setAuthorization } from '@/utils/auth'
+import Captcha from '@/components/Captcha.vue'
 
 const router = useRouter()
 const message = useMessage()
 const loading = ref(false)
+const captchaRef = ref()
+const correctCaptcha = ref('')
 
 const param = reactive({
-    password: '',
     authorization: '',
+    captcha: '',
 })
 
-const submitForm = async () => {
-    if (param.password === '大猩猩') {
-        if (!param.authorization || param.authorization.trim() === '') {
-            message.error('请输入您的专属密钥')
-            return
-        }
+const onCaptchaChange = (code: string) => {
+    correctCaptcha.value = code
+}
 
-        loading.value = true
-        const loadingMessage = message.loading('正在为您开启美好体验...', { duration: 0 })
+const submitForm = async () => {
+    // 验证授权密钥
+    if (!param.authorization || param.authorization.trim() === '') {
+        message.error('请输入您的专属密钥')
+        return
+    }
+
+    // 验证验证码
+    if (!param.captcha || param.captcha.trim() === '') {
+        message.error('请输入验证码')
+        return
+    }
+
+    if (param.captcha.toUpperCase() !== correctCaptcha.value.toUpperCase()) {
+        message.error('验证码错误，请重新输入')
+        param.captcha = ''
+        captchaRef.value?.refresh()
+        return
+    }
+
+    loading.value = true
+    const loadingMessage = message.loading('正在为您开启美好体验...', { duration: 0 })
+    
+    try {
+        // 模拟验证过程
+        await new Promise(resolve => setTimeout(resolve, 1000))
         
-        try {
-            // 模拟验证过程
-            await new Promise(resolve => setTimeout(resolve, 1000))
-            
-            loadingMessage.destroy()
-            setAuthorization(param.authorization)
-            message.success('欢迎回来！准备开始您的精彩旅程')
-            
-            await new Promise(resolve => setTimeout(resolve, 500))
-            await router.push('/')
-        } catch (error) {
-            loadingMessage.destroy()
-            message.error('验证遇到问题，请稍后再试')
-        } finally {
-            loading.value = false
-        }
-    } else {
-        message.error('答案不太对哦，再想想看')
+        loadingMessage.destroy()
+        setAuthorization(param.authorization)
+        message.success('欢迎回来！准备开始您的精彩旅程')
+        
+        await new Promise(resolve => setTimeout(resolve, 500))
+        await router.push('/')
+    } catch (error) {
+        loadingMessage.destroy()
+        message.error('验证遇到问题，请稍后再试')
+    } finally {
+        loading.value = false
     }
 }
 </script>
@@ -280,6 +302,18 @@ const submitForm = async () => {
     box-shadow: 0 12px 40px rgba(52, 152, 219, 0.4);
 }
 
+/* 验证码行布局 */
+.captcha-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+}
+
+.captcha-input {
+    flex: 1;
+}
+
 /* 响应式设计 */
 @media (max-width: 768px) {
     .login-layout {
@@ -303,6 +337,10 @@ const submitForm = async () => {
     .avatar-image {
         width: 60px;
         height: 60px;
+    }
+    
+    .captcha-row {
+        gap: 8px;
     }
 }
 </style>

@@ -4,23 +4,23 @@
             <n-space>
                 <n-tooltip>
                     <template #trigger>
-                        <n-button type="primary" @click="openForm(false)">
-                            <template #icon>
-                                <n-icon><AddCircleOutline /></n-icon>
-                            </template>
-                            添加
-                        </n-button>
+                        <ColorfulButton 
+                            type="add" 
+                            text="添加" 
+                            size="medium"
+                            @click="openForm(false)"
+                        />
                     </template>
                     添加
                 </n-tooltip>
                 <n-tooltip>
                     <template #trigger>
-                        <n-button type="info" @click="refreshData">
-                            <template #icon>
-                                <n-icon><RefreshOutline /></n-icon>
-                            </template>
-                            刷新
-                        </n-button>
+                        <ColorfulButton 
+                            type="refresh" 
+                            text="刷新" 
+                            size="medium"
+                            @click="refreshData"
+                        />
                     </template>
                     刷新
                 </n-tooltip>
@@ -116,6 +116,7 @@
 import { ref, onMounted, defineProps, computed, h } from 'vue'
 import { useMessage, useDialog, NButton, NIcon, NSpace, NTooltip } from 'naive-ui'
 import { AddCircleOutline, RefreshOutline, CreateOutline, TrashOutline, CloseOutline, CheckmarkOutline } from '@vicons/ionicons5'
+import ColorfulButton from '@/components/ColorfulButton.vue'
 import api from '@/api'
 import { encryptAes } from '@/utils'
 
@@ -157,24 +158,20 @@ const columns = computed(() => {
             return h(NSpace, { size: 'small' }, {
                 default: () => [
                     h(NTooltip, { trigger: 'hover' }, {
-                        trigger: () => h(NButton, {
+                        trigger: () => h(ColorfulButton, {
+                            type: 'edit',
                             size: 'small',
-                            type: 'primary',
-                            class: 'special-table-btn',
+                            iconOnly: true,
                             onClick: () => openForm(true, row)
-                        }, {
-                            icon: () => h(NIcon, { size: 16 }, { default: () => h(CreateOutline) })
                         }),
                         default: () => '编辑'
                     }),
                     h(NTooltip, { trigger: 'hover' }, {
-                        trigger: () => h(NButton, {
+                        trigger: () => h(ColorfulButton, {
+                            type: 'delete',
                             size: 'small',
-                            type: 'error',
-                            class: 'special-table-btn',
+                            iconOnly: true,
                             onClick: () => confirmDelete(row)
-                        }, {
-                            icon: () => h(NIcon, { size: 16 }, { default: () => h(TrashOutline) })
                         }),
                         default: () => '删除'
                     })

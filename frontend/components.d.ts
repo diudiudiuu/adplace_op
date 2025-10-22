@@ -7,6 +7,9 @@ export {}
 /* prettier-ignore */
 declare module 'vue' {
   export interface GlobalComponents {
+    Captcha: typeof import('./src/components/Captcha.vue')['default']
+    ColorfulButton: typeof import('./src/components/ColorfulButton.vue')['default']
+    ColorfulIcons: typeof import('./src/components/ColorfulIcons.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
   }

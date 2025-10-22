@@ -61,11 +61,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { getMenus, reloadMenus } from '@/components/menu'
 import { NIcon, useMessage, useDialog } from 'naive-ui'
 import { setGlobalInstances, handleUnauthorized } from '@/api'
-import {
-    GridOutline,
-    ServerOutline,
-    AddCircleOutline
-} from '@vicons/ionicons5'
+import ColorfulIcons from '@/components/ColorfulIcons.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -101,17 +97,9 @@ const menuData = ref<any[]>([])
 const menuOptions = ref<any[]>([])
 const showMenu = ref(true)
 
-// 图标映射
-const iconMap: Record<string, any> = {
-    'Grid': GridOutline,
-    'Platform': ServerOutline,
-    'Add': AddCircleOutline
-}
-
-// 渲染图标
+// 渲染彩色图标
 const renderIcon = (iconName: string) => {
-    const IconComponent = iconMap[iconName] || GridOutline
-    return () => h(NIcon, null, { default: () => h(IconComponent) })
+    return () => h(ColorfulIcons, { name: iconName, size: 18 })
 }
 
 // 转换菜单数据为 Naive UI 格式

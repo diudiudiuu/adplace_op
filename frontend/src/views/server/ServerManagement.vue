@@ -63,6 +63,12 @@
                         show-password-on="click"
                     />
                 </n-form-item>
+                <n-form-item label="默认路径" path="default_path">
+                    <n-input 
+                        v-model:value="serverFormData.default_path" 
+                        placeholder="请输入默认路径"
+                    />
+                </n-form-item>
 
             </n-form>
             <template #action>
@@ -116,6 +122,7 @@ interface Server {
     server_port: string
     server_user: string
     server_password: string
+    default_path?: string
     project_list: Project[]
 }
 
@@ -130,7 +137,8 @@ const serverFormData = ref({
     server_ip: '',
     server_port: '',
     server_user: '',
-    server_password: ''
+    server_password: '',
+    default_path: '/adplace'
 })
 
 const isServerFormVisible = ref(false)
@@ -224,6 +232,14 @@ const serverColumns = computed(() => [
         width: 100
     },
     {
+        title: '默认路径',
+        key: 'default_path',
+        width: 120,
+        ellipsis: {
+            tooltip: true
+        }
+    },
+    {
         title: '连接状态',
         key: 'connection_status',
         width: 100,
@@ -296,6 +312,7 @@ const submitServerForm = async () => {
 
         
         console.log('Submitting server form:', action, requestData)
+        console.log('Default path value:', requestData.default_path)
         const res = await api(action, requestData)
         console.log('Server form response:', res)
         
@@ -367,7 +384,8 @@ const openServerForm = (editMode: boolean, server?: Server) => {
             server_ip: server.server_ip,
             server_port: server.server_port,
             server_user: server.server_user,
-            server_password: server.server_password
+            server_password: server.server_password,
+            default_path: server.default_path || '/adplace'
         }
     } else {
         serverFormData.value = {
@@ -376,7 +394,8 @@ const openServerForm = (editMode: boolean, server?: Server) => {
             server_ip: '',
             server_port: '',
             server_user: '',
-            server_password: ''
+            server_password: '',
+            default_path: '/adplace'
         }
     }
     isServerFormVisible.value = true

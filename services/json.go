@@ -14,6 +14,7 @@ type ServerData struct {
 	ServerPort       string        `json:"server_port"`
 	ServerUser       string        `json:"server_user"`
 	ServerPassword   string        `json:"server_password"`
+	DefaultPath      string        `json:"default_path"`
 	ProjectList      []ProjectData `json:"project_list"`
 	ConnectionStatus string        `json:"connection_status,omitempty"` // "connected", "disconnected", "unknown"
 	LastTestTime     string        `json:"last_test_time,omitempty"`
@@ -73,6 +74,23 @@ func (s *JsonService) LoadJsonFileWithResponse(authorization, clientJson string)
 			log.Printf("Failed to unmarshal JSON: %v", err)
 			return []ServerData{}, resp, nil
 		}
+
+		// 数据迁移：为缺少 default_path 的服务器添加默认值
+		needsSave := false
+		for i := range servers {
+			if servers[i].DefaultPath == "" {
+				servers[i].DefaultPath = "/adplace"
+				needsSave = true
+				log.Printf("Added default path '/adplace' to server: %s", servers[i].ServerID)
+			}
+		}
+
+		// 如果有数据被修改，保存回去
+		if needsSave {
+			log.Printf("Saving updated server data with default paths")
+			s.SaveJsonFile(servers, authorization, clientJson)
+		}
+
 		log.Printf("Successfully loaded %d servers", len(servers))
 		return servers, resp, nil
 	}
@@ -90,6 +108,9 @@ func (s *JsonService) SaveJsonFile(data []ServerData, authorization, clientJson 
 	if err != nil {
 		return err
 	}
+
+	// 调试：打印要保存的 JSON 数据
+	log.Printf("Saving JSON data: %s", string(jsonData))
 
 	_, err = s.kvService.UpdateKey(clientJson, string(jsonData), authorization)
 	return err
@@ -187,12 +208,12 @@ func (s *JsonService) UpdateServerConnectionStatus(serverID, testResult, authori
 						servers[i].ConnectionStatus = "disconnected"
 					}
 				}
-				
+
 				if testTime, ok := data["test_time"].(string); ok {
 					servers[i].LastTestTime = testTime
 				}
 			}
-			
+
 			if msg, ok := result["msg"].(string); ok {
 				servers[i].LastTestResult = msg
 			}
@@ -290,8 +311,11 @@ func (s *JsonService) UpdateServerWithNewID(oldServerID string, updatedServer Se
 	// 查找并更新服务器
 	for i, server := range servers {
 		if server.ServerID == oldServerID {
-			// 保留原有的项目列表
+			// 保留原有的项目列表和连接状态信息
 			updatedServer.ProjectList = server.ProjectList
+			updatedServer.ConnectionStatus = server.ConnectionStatus
+			updatedServer.LastTestTime = server.LastTestTime
+			updatedServer.LastTestResult = server.LastTestResult
 			servers[i] = updatedServer
 			return s.SaveJsonFile(servers, authorization, clientJson)
 		}

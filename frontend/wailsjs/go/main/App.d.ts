@@ -13,13 +13,13 @@ export function ProjectForm(arg1:string,arg2:string,arg3:string,arg4:string):Pro
 
 export function ProjectInfo(arg1:string,arg2:string,arg3:string):Promise<string>;
 
-export function ServerAdd(arg1:string,arg2:string,arg3:string,arg4:string,arg5:string,arg6:string,arg7:string,arg8:string):Promise<string>;
+export function ServerAdd(arg1:string,arg2:string,arg3:string,arg4:string,arg5:string,arg6:string,arg7:string,arg8:string,arg9:string):Promise<string>;
 
 export function ServerDelete(arg1:string,arg2:string,arg3:string):Promise<string>;
 
 export function ServerInfo(arg1:string,arg2:string,arg3:string):Promise<string>;
 
-export function ServerUpdate(arg1:string,arg2:string,arg3:string,arg4:string,arg5:string,arg6:string,arg7:string,arg8:string,arg9:string):Promise<string>;
+export function ServerUpdate(arg1:string,arg2:string,arg3:string,arg4:string,arg5:string,arg6:string,arg7:string,arg8:string,arg9:string,arg10:string):Promise<string>;
 
 export function ShowMessage(arg1:string,arg2:string):Promise<void>;
 

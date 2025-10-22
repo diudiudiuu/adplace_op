@@ -286,14 +286,19 @@ func (a *App) Greet(name string) string {
 }
 
 // ServerAdd 添加新服务器
-func (a *App) ServerAdd(serverID, serverName, serverIP, serverPort, serverUser, serverPassword, authorization, clientJson string) string {
-	log.Printf("ServerAdd called with serverID: %s, serverName: %s, authorization: %s", serverID, serverName, authorization)
+func (a *App) ServerAdd(serverID, serverName, serverIP, serverPort, serverUser, serverPassword, defaultPath, authorization, clientJson string) string {
+	log.Printf("ServerAdd called with serverID: %s, serverName: %s, defaultPath: %s, authorization: %s", serverID, serverName, defaultPath, authorization)
 
 	// 检查授权
 	if authorization == "" || strings.TrimSpace(authorization) == "" {
 		response := ApiResponse{Code: 401, Msg: "Authorization required"}
 		result, _ := json.Marshal(response)
 		return string(result)
+	}
+
+	// 如果 defaultPath 为空，设置默认值
+	if defaultPath == "" {
+		defaultPath = "/adplace"
 	}
 
 	// 创建新服务器数据
@@ -304,8 +309,11 @@ func (a *App) ServerAdd(serverID, serverName, serverIP, serverPort, serverUser, 
 		ServerPort:     serverPort,
 		ServerUser:     serverUser,
 		ServerPassword: serverPassword,
+		DefaultPath:    defaultPath,
 		ProjectList:    []services.ProjectData{},
 	}
+
+	log.Printf("Created newServer with DefaultPath: %s", newServer.DefaultPath)
 
 	err := a.jsonService.AddServer(newServer, authorization, clientJson)
 	if err != nil {
@@ -321,14 +329,19 @@ func (a *App) ServerAdd(serverID, serverName, serverIP, serverPort, serverUser, 
 }
 
 // ServerUpdate 更新服务器信息
-func (a *App) ServerUpdate(oldServerID, newServerID, serverName, serverIP, serverPort, serverUser, serverPassword, authorization, clientJson string) string {
-	log.Printf("ServerUpdate called with oldServerID: %s, newServerID: %s, serverName: %s, authorization: %s", oldServerID, newServerID, serverName, authorization)
+func (a *App) ServerUpdate(oldServerID, newServerID, serverName, serverIP, serverPort, serverUser, serverPassword, defaultPath, authorization, clientJson string) string {
+	log.Printf("ServerUpdate called with oldServerID: %s, newServerID: %s, serverName: %s, defaultPath: %s, authorization: %s", oldServerID, newServerID, serverName, defaultPath, authorization)
 
 	// 检查授权
 	if authorization == "" || strings.TrimSpace(authorization) == "" {
 		response := ApiResponse{Code: 401, Msg: "Authorization required"}
 		result, _ := json.Marshal(response)
 		return string(result)
+	}
+
+	// 如果 defaultPath 为空，设置默认值
+	if defaultPath == "" {
+		defaultPath = "/adplace"
 	}
 
 	// 创建更新的服务器数据
@@ -339,7 +352,10 @@ func (a *App) ServerUpdate(oldServerID, newServerID, serverName, serverIP, serve
 		ServerPort:     serverPort,
 		ServerUser:     serverUser,
 		ServerPassword: serverPassword,
+		DefaultPath:    defaultPath,
 	}
+
+	log.Printf("Created updatedServer with DefaultPath: %s", updatedServer.DefaultPath)
 
 	err := a.jsonService.UpdateServerWithNewID(oldServerID, updatedServer, authorization, clientJson)
 	if err != nil {
@@ -439,10 +455,10 @@ func (a *App) performSSHTest(serverIP, serverPort, serverUser, serverPassword st
 
 	// 创建SSH配置
 	config := &ssh.ClientConfig{
-		User: serverUser,
-		Auth: []ssh.AuthMethod{},
+		User:            serverUser,
+		Auth:            []ssh.AuthMethod{},
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(), // 注意：生产环境应该验证主机密钥
-		Timeout: 10 * time.Second,
+		Timeout:         10 * time.Second,
 	}
 
 	// 添加密码认证（如果提供了密码）
@@ -456,11 +472,11 @@ func (a *App) performSSHTest(serverIP, serverPort, serverUser, serverPassword st
 	if err != nil {
 		log.Printf("SSH connection failed: %v", err)
 		response := ApiResponse{
-			Code: 500, 
-			Msg: fmt.Sprintf("SSH连接失败: %v", err),
+			Code: 500,
+			Msg:  fmt.Sprintf("SSH连接失败: %v", err),
 			Data: map[string]interface{}{
 				"connected": false,
-				"error": err.Error(),
+				"error":     err.Error(),
 				"test_time": time.Now().Format("2006-01-02 15:04:05"),
 			},
 		}
@@ -475,11 +491,11 @@ func (a *App) performSSHTest(serverIP, serverPort, serverUser, serverPassword st
 		log.Printf("Failed to create SSH session: %v", err)
 		response := ApiResponse{
 			Code: 500,
-			Msg: fmt.Sprintf("创建SSH会话失败: %v", err),
+			Msg:  fmt.Sprintf("创建SSH会话失败: %v", err),
 			Data: map[string]interface{}{
-				"connected": true,
+				"connected":     true,
 				"session_error": err.Error(),
-				"test_time": time.Now().Format("2006-01-02 15:04:05"),
+				"test_time":     time.Now().Format("2006-01-02 15:04:05"),
 			},
 		}
 		result, _ := json.Marshal(response)
@@ -495,10 +511,10 @@ func (a *App) performSSHTest(serverIP, serverPort, serverUser, serverPassword st
 
 	response := ApiResponse{
 		Code: 200,
-		Msg: "SSH连接成功",
+		Msg:  "SSH连接成功",
 		Data: map[string]interface{}{
 			"connected": true,
-			"user": strings.TrimSpace(string(output)),
+			"user":      strings.TrimSpace(string(output)),
 			"test_time": time.Now().Format("2006-01-02 15:04:05"),
 		},
 	}

@@ -6,14 +6,26 @@
   "frontend:build": "npm run build",
   "frontend:dev:watcher": "npm run dev",
   "frontend:dev:serverUrl": "auto",
-  "author": {
-    "name": "adiudiuu",
-    "email": "admin@example.com"
-  },
   "info": {
-    "productName": "adsplat",
-    "productVersion": "2.9.1",
-    "copyright": "Copyright © 2024 adiudiuu",
-    "comments": "AD Manage - 广告投放管理面板"
+    "productName": "AdSplat",
+    "productVersion": "2.9.2",
+    "copyright": "Copyright © 2025 adiudiuu",
+    "comments": "Adswds Platform Opeator - 广告投放管理面板",
+    "companyName": "adiudiuu"
+  },
+  "icon": "build/appicon.png",
+  "windows": {
+    "icon": "build/windows/icon.ico",
+    "wailsjs": {
+      "generateJS": true
+    }
+  },
+  "macos": {
+    "icon": "build/appicon.png",
+    "bundleId": "com.adiudiuu.adsplat",
+    "category": "public.app-category.productivity"
+  },
+  "linux": {
+    "icon": "build/appicon.png"
   }
 }

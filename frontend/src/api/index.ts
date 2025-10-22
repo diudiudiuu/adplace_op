@@ -74,7 +74,7 @@ const apiMap: Record<string, (data: any) => Promise<string>> = {
     'cloudflare_pages_get_domains': (data: any) => window.go!.main!.App!.CloudflarePagesGetDomains(data.api_token, data.zone_id, data.project_name),
     'cloudflare_pages_delete_domain': (data: any) => window.go!.main!.App!.CloudflarePagesDeleteDomain(data.api_token, data.zone_id, data.project_name, data.domain),
     'generate_project_config': (data: any) => window.go!.main!.App!.GenerateProjectConfig(data.server_id, data.authorization, data.client_json),
-    'upload_project_config': (data: any) => window.go!.main!.App!.GenerateProjectConfigForSingleProject(data.server_data_json, data.project_config_json, '', data.authorization),
+    'upload_project_config': (data: any) => window.go!.main!.App!.UploadProjectConfig(data.server_data_json, data.project_config_json, data.authorization),
     'project_init': (data: any) => window.go!.main!.App!.ProjectInit(data.server_id, data.project_id, data.authorization, data.client_json),
     'project_init_with_data': (data: any) => window.go!.main!.App!.ProjectInitWithData(data.server_id, data.project_id, data.server_data_json, data.authorization),
     'project_update': (data: any) => window.go!.main!.App!.ProjectUpdate(data.server_id, data.project_id, data.authorization, data.client_json),
@@ -119,7 +119,43 @@ const api = async (uri: string, data: any, showLoading: boolean = true) => {
         if (!apiFunction) return uri === 'list' ? [] : {};
 
         const res = await apiFunction(requestData);
-        const parsedData = JSON.parse(res);
+
+        // 添加调试信息
+        console.log(`API ${uri} response type:`, typeof res);
+        console.log(`API ${uri} response (first 200 chars):`,
+            typeof res === 'string' ? res.substring(0, 200) : res);
+        console.log(`API ${uri} full response length:`, typeof res === 'string' ? res.length : 'N/A');
+
+        // 检查响应是否为字符串且不为空
+        if (typeof res !== 'string' || !res.trim()) {
+            console.error(`API ${uri}: Invalid response type or empty response`, res);
+            throw new Error(`API ${uri}: 服务器返回了无效的响应`);
+        }
+
+        // 检查响应是否以HTML标签开头
+        if (res.trim().startsWith('<')) {
+            console.error(`API ${uri}: Received HTML instead of JSON`, res.substring(0, 500));
+            throw new Error(`API ${uri}: 服务器返回了HTML页面而不是JSON数据`);
+        }
+
+        let parsedData;
+        try {
+            parsedData = JSON.parse(res);
+        } catch (error) {
+            console.error(`API ${uri}: JSON parse error`, {
+                error: error.message,
+                response: res.substring(0, 500),
+                responseLength: res.length,
+                responseType: typeof res
+            });
+
+            // 显示更友好的错误信息
+            if (globalMessage) {
+                globalMessage.error(`API ${uri} 响应格式错误: ${error.message}`);
+            }
+
+            throw new Error(`API ${uri}: JSON解析失败 - ${error.message}`);
+        }
 
         // 检查是否返回 401 未授权错误
         if (parsedData?.code === 401) {

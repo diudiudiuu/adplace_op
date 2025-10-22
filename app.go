@@ -270,7 +270,37 @@ func (a *App) Exec(projectID, sql, sqlType, authorization, clientJson string) st
 		}
 	}
 
-	return string(body)
+	responseBody := string(body)
+	log.Printf("API response status: %d, body: %s", resp.StatusCode, responseBody)
+
+	// 检查HTTP状态码
+	if resp.StatusCode != 200 {
+		log.Printf("API request failed with status: %d", resp.StatusCode)
+		response := ApiResponse{
+			Code: resp.StatusCode,
+			Msg:  fmt.Sprintf("API请求失败，状态码: %d", resp.StatusCode),
+			Data: responseBody,
+		}
+		result, _ := json.Marshal(response)
+		return string(result)
+	}
+
+	// 尝试验证响应是否为有效JSON
+	var testJson interface{}
+	if err := json.Unmarshal(body, &testJson); err != nil {
+		log.Printf("API response is not valid JSON: %v", err)
+		// 如果不是有效JSON，包装成标准响应格式
+		response := ApiResponse{
+			Code: 200,
+			Msg:  "Success",
+			Data: responseBody,
+		}
+		result, _ := json.Marshal(response)
+		return string(result)
+	}
+
+	// 如果是有效JSON，直接返回
+	return responseBody
 }
 
 // ShowMessage 显示消息对话框
@@ -1163,8 +1193,8 @@ func (a *App) ProjectInit(serverID, projectID, authorization, clientJson string)
 		return string(result)
 	}
 
-	// 执行SSH命令
-	command := fmt.Sprintf("cd %s && ./codedeploy.sh init %s", server.DefaultPath, projectID)
+	// 执行SSH命令 - 先设置可执行权限，然后执行脚本
+	command := fmt.Sprintf("cd %s && chmod +x codedeploy.sh && ./codedeploy.sh init %s", server.DefaultPath, projectID)
 	output, err := a.executeSSHCommand(server, command)
 	if err != nil {
 		log.Printf("Failed to execute init command: %v", err)
@@ -1211,8 +1241,8 @@ func (a *App) ProjectUpdate(serverID, projectID, authorization, clientJson strin
 		return string(result)
 	}
 
-	// 执行SSH命令
-	command := fmt.Sprintf("cd %s && ./codedeploy.sh update %s", server.DefaultPath, projectID)
+	// 执行SSH命令 - 先设置可执行权限，然后执行脚本
+	command := fmt.Sprintf("cd %s && chmod +x codedeploy.sh && ./codedeploy.sh update %s", server.DefaultPath, projectID)
 	output, err := a.executeSSHCommand(server, command)
 	if err != nil {
 		log.Printf("Failed to execute update command: %v", err)
@@ -1279,8 +1309,8 @@ func (a *App) ProjectInitWithData(serverID, projectID, serverDataJson, authoriza
 
 	log.Printf("Using frontend data to init project: %s (%s)", targetProject.ProjectName, projectID)
 
-	// 执行SSH命令
-	command := fmt.Sprintf("cd %s && ./codedeploy.sh init %s", server.DefaultPath, projectID)
+	// 执行SSH命令 - 先设置可执行权限，然后执行脚本
+	command := fmt.Sprintf("cd %s && chmod +x codedeploy.sh && ./codedeploy.sh init %s", server.DefaultPath, projectID)
 	output, err := a.executeSSHCommand(&server, command)
 	if err != nil {
 		log.Printf("Failed to execute init command: %v", err)
@@ -1349,8 +1379,8 @@ func (a *App) ProjectUpdateWithData(serverID, projectID, serverDataJson, authori
 
 	log.Printf("Using frontend data to update project: %s (%s)", targetProject.ProjectName, projectID)
 
-	// 执行SSH命令
-	command := fmt.Sprintf("cd %s && ./codedeploy.sh update %s", server.DefaultPath, projectID)
+	// 执行SSH命令 - 先设置可执行权限，然后执行脚本
+	command := fmt.Sprintf("cd %s && chmod +x codedeploy.sh && ./codedeploy.sh update %s", server.DefaultPath, projectID)
 	output, err := a.executeSSHCommand(&server, command)
 	if err != nil {
 		log.Printf("Failed to execute update command: %v", err)

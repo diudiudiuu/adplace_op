@@ -223,7 +223,7 @@ const options = ref({
 const captureResult = ref<any>(null)
 
 // 调试模式
-const debugMode = ref(false)
+const debugMode = ref(true) // 默认开启调试模式
 
 // URL选项
 const urlOptions = [
@@ -382,14 +382,48 @@ const clearResults = () => {
 // 自动下载ZIP文件
 const autoDownloadZip = async (zipPath: string) => {
     try {
+        if (debugMode.value) {
+            console.log('开始下载ZIP文件:', zipPath)
+        }
+
         // 调用Go后端的文件下载方法
         const response = await api('download_file', {
             filePath: zipPath
         })
 
-        if (response && response.code === 200) {
+        if (debugMode.value) {
+            console.log('下载API响应:', response)
+            console.log('响应数据类型:', typeof response?.data)
+            console.log('响应数据长度:', response?.data?.length)
+        }
+
+        if (response && response.code === 200 && response.data) {
+            // 处理Base64编码的二进制数据
+            let binaryData
+            if (typeof response.data === 'string') {
+                // 后端返回Base64编码的字符串，直接解码
+                try {
+                    const binaryString = atob(response.data)
+                    binaryData = new Uint8Array(binaryString.length)
+                    for (let i = 0; i < binaryString.length; i++) {
+                        binaryData[i] = binaryString.charCodeAt(i)
+                    }
+                    if (debugMode.value) {
+                        console.log('Base64解码成功，数据长度:', binaryData.length)
+                    }
+                } catch (e) {
+                    console.error('Base64解码失败:', e)
+                    throw new Error('Base64解码失败: ' + (e as Error).message)
+                }
+            } else if (Array.isArray(response.data)) {
+                // 兼容旧的数组格式
+                binaryData = new Uint8Array(response.data)
+            } else {
+                throw new Error('不支持的数据格式: ' + typeof response.data)
+            }
+
             // 创建下载链接
-            const blob = new Blob([response.data], { type: 'application/zip' })
+            const blob = new Blob([binaryData], { type: 'application/zip' })
             const url = window.URL.createObjectURL(blob)
             const link = document.createElement('a')
             link.href = url
@@ -407,9 +441,12 @@ const autoDownloadZip = async (zipPath: string) => {
 
             if (debugMode.value) {
                 console.log('ZIP文件已自动下载:', link.download)
+                console.log('文件大小:', blob.size, 'bytes')
             }
+
+            message.success(`ZIP文件已下载: ${link.download}`)
         } else {
-            message.error('下载失败：' + (response?.msg || '未知错误'))
+            message.error('下载失败：' + (response?.msg || '服务器返回数据为空'))
         }
     } catch (error) {
         console.error('Auto download error:', error)

@@ -3,6 +3,7 @@ package main
 import (
 	"adsplat/services"
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -1720,7 +1721,7 @@ func (a *App) CapturePage(targetURL, optionsJson string) string {
 	// 检查内容是否为空或乱码
 	if result.Content == "" {
 		log.Printf("Warning: Captured content is empty")
-		result.Content = "<html><body><h1>页面内容为空</h1></body></html>"
+		// 不设置默认内容，让前端知道内容为空但抓取成功
 	}
 
 	response := ApiResponse{Code: 200, Msg: "页面抓取成功", Data: result}
@@ -1749,8 +1750,11 @@ func (a *App) DownloadFile(filePath string) string {
 
 	log.Printf("File downloaded successfully, size: %d bytes", len(content))
 
-	// 返回成功响应，包含文件内容
-	response := ApiResponse{Code: 200, Msg: "文件下载成功", Data: content}
+	// 使用Base64编码传输二进制数据，确保数据完整性
+	base64Data := base64.StdEncoding.EncodeToString(content)
+
+	// 返回成功响应，包含Base64编码的文件内容
+	response := ApiResponse{Code: 200, Msg: "文件下载成功", Data: base64Data}
 	result, _ := json.Marshal(response)
 	return string(result)
 }

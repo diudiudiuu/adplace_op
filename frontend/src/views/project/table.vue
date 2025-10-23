@@ -41,9 +41,17 @@
                         </n-radio-group>
                     </template>
                     <template v-else-if="fieldsType[field]['type'] === 'datetime'">
-                        <n-date-picker v-model:value="formData[field]" type="datetime" placeholder="选择日期时间"
-                            value-format="yyyy-MM-dd HH:mm:ss" format="yyyy-MM-dd HH:mm:ss" style="width: 100%"
-                            @update:value="() => handleChange(field)" />
+                        <n-date-picker 
+                            v-model:value="formData[field]" 
+                            type="datetime" 
+                            placeholder="选择日期时间"
+                            value-format="yyyy-MM-dd HH:mm:ss" 
+                            format="yyyy-MM-dd HH:mm:ss" 
+                            style="width: 100%"
+                            :is-date-disabled="() => false"
+                            :is-time-disabled="() => false"
+                            @update:value="(value) => handleDateTimeChange(field, value)" 
+                        />
                     </template>
                     <template v-else>
                         <n-input-group v-if="fieldsType[field]['button']">
@@ -99,6 +107,51 @@ const props = defineProps({
 
 const message = useMessage()
 const dialog = useDialog()
+
+// 时间格式化函数
+const formatDateTime = (value: any): string => {
+    if (!value) return ''
+    
+    let date: Date
+    
+    // 处理不同的输入格式
+    if (typeof value === 'number') {
+        // 时间戳
+        date = new Date(value)
+    } else if (typeof value === 'string') {
+        // 字符串格式
+        if (value.includes('T')) {
+            // ISO格式
+            date = new Date(value)
+        } else if (value.includes(' ')) {
+            // 已经是 YYYY-MM-DD HH:mm:ss 格式
+            return value
+        } else {
+            // 其他字符串格式
+            date = new Date(value)
+        }
+    } else if (value instanceof Date) {
+        // Date对象
+        date = value
+    } else {
+        return String(value)
+    }
+    
+    // 检查日期是否有效
+    if (isNaN(date.getTime())) {
+        return String(value)
+    }
+    
+    // 格式化为 YYYY-MM-DD HH:mm:ss
+    const year = date.getFullYear()
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const day = String(date.getDate()).padStart(2, '0')
+    const hours = String(date.getHours()).padStart(2, '0')
+    const minutes = String(date.getMinutes()).padStart(2, '0')
+    const seconds = String(date.getSeconds()).padStart(2, '0')
+    
+    return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`
+}
 
 const tableData = ref([])
 const formData = ref({})
@@ -170,6 +223,14 @@ const columns = computed(() => {
         key: field,
         ellipsis: {
             tooltip: true
+        },
+        render: (row) => {
+            const value = row[field]
+            // 如果是时间字段，格式化显示
+            if (fieldsType[field] && fieldsType[field].type === 'datetime' && value) {
+                return formatDateTime(value)
+            }
+            return value
         }
     }))
 
@@ -231,7 +292,18 @@ const openForm = async (editMode: boolean, row = {}) => {
     }
 
     isEditMode.value = editMode
+    
+    // 复制行数据并格式化时间字段
     formData.value = { ...row }
+    
+    // 如果是编辑模式，确保时间字段格式正确
+    if (editMode) {
+        for (const field in fieldsType) {
+            if (fieldsType[field].type === 'datetime' && formData.value[field]) {
+                formData.value[field] = formatDateTime(formData.value[field])
+            }
+        }
+    }
     if (!editMode) {
         // 如果是套餐管理且是添加模式，先获取项目信息设置默认端口
         if (props.model.constructor.name === 'Client') {
@@ -257,14 +329,9 @@ const openForm = async (editMode: boolean, row = {}) => {
                     fieldsType[field].default || fieldsType[field].value[0]
             }
             if (type === 'datetime') {
-                // 默认值为当前时间
-                formData.value[field] = new Date(
-                    new Date().getTime() -
-                    new Date().getTimezoneOffset() * 60000
-                )
-                    .toISOString()
-                    .slice(0, 19)
-                    .replace('T', ' ')
+                // 默认值为当前时间，格式化为 YYYY-MM-DD HH:mm:ss
+                const now = new Date()
+                formData.value[field] = formatDateTime(now)
             }
         }
     }
@@ -326,17 +393,8 @@ const handleClick = async (field: string) => {
         
         if (formData.value.expire_time) {
             try {
-                // 统一处理时间格式
-                let expireTimeStr = formData.value.expire_time
-                
-                // 如果是数字（时间戳），转换为日期字符串
-                if (typeof expireTimeStr === 'number' || !isNaN(Number(expireTimeStr))) {
-                    const date = new Date(Number(expireTimeStr))
-                    expireTimeStr = date.toISOString().slice(0, 19).replace('T', ' ')
-                } else if (expireTimeStr instanceof Date) {
-                    // 如果是Date对象，转换为字符串
-                    expireTimeStr = expireTimeStr.toISOString().slice(0, 19).replace('T', ' ')
-                }
+                // 使用统一的时间格式化函数
+                const expireTimeStr = formatDateTime(formData.value.expire_time)
                 
                 console.log('Final expire_time format:', expireTimeStr)
                 
@@ -354,6 +412,21 @@ const handleClick = async (field: string) => {
     }
 }
 
+// 处理日期时间变化
+const handleDateTimeChange = async (field: string, value: any) => {
+    console.log('handleDateTimeChange called for field:', field, 'value:', value)
+    
+    // 确保时间格式统一为 YYYY-MM-DD HH:mm:ss
+    if (value) {
+        formData.value[field] = formatDateTime(value)
+    } else {
+        formData.value[field] = ''
+    }
+    
+    // 调用原有的变化处理逻辑
+    await handleChange(field)
+}
+
 const handleChange = async (field: string) => {
     console.log('handleChange called for field:', field)
     
@@ -364,17 +437,8 @@ const handleChange = async (field: string) => {
                 console.log('Generating license key for field:', field, 'value:', formData.value[field])
                 if (formData.value[field]) {
                     try {
-                        // 统一处理时间格式
-                        let valueStr = formData.value[field]
-                        
-                        // 如果是数字（时间戳），转换为日期字符串
-                        if (typeof valueStr === 'number' || !isNaN(Number(valueStr))) {
-                            const date = new Date(Number(valueStr))
-                            valueStr = date.toISOString().slice(0, 19).replace('T', ' ')
-                        } else if (valueStr instanceof Date) {
-                            // 如果是Date对象，转换为字符串
-                            valueStr = valueStr.toISOString().slice(0, 19).replace('T', ' ')
-                        }
+                        // 使用统一的时间格式化函数
+                        const valueStr = formatDateTime(formData.value[field])
                         
                         console.log('Final field value format:', valueStr)
                         

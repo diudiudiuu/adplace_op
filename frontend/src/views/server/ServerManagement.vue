@@ -7,7 +7,9 @@
                         <template #trigger>
                             <n-button type="primary" @click="openServerForm(false)">
                                 <template #icon>
-                                    <n-icon><AddCircleOutline /></n-icon>
+                                    <n-icon>
+                                        <AddCircleOutline />
+                                    </n-icon>
                                 </template>
                                 添加服务器
                             </n-button>
@@ -18,7 +20,9 @@
                         <template #trigger>
                             <n-button type="info" @click="refreshServers">
                                 <template #icon>
-                                    <n-icon><RefreshOutline /></n-icon>
+                                    <n-icon>
+                                        <RefreshOutline />
+                                    </n-icon>
                                 </template>
                                 刷新
                             </n-button>
@@ -28,13 +32,8 @@
                 </n-space>
             </template>
 
-            <n-data-table
-                :columns="serverColumns"
-                :data="serverList"
-                :pagination="pagination"
-                striped
-                class="special-table"
-            />
+            <n-data-table :columns="serverColumns" :data="serverList" :pagination="pagination" striped
+                class="special-table" />
         </n-card>
 
         <!-- 服务器表单弹窗 -->
@@ -56,18 +55,11 @@
                     <n-input v-model:value="serverFormData.server_user" placeholder="请输入用户名" />
                 </n-form-item>
                 <n-form-item label="密码" path="server_password">
-                    <n-input 
-                        v-model:value="serverFormData.server_password" 
-                        type="password" 
-                        placeholder="请输入密码"
-                        show-password-on="click"
-                    />
+                    <n-input v-model:value="serverFormData.server_password" type="password" placeholder="请输入密码"
+                        show-password-on="click" />
                 </n-form-item>
                 <n-form-item label="默认路径" path="default_path">
-                    <n-input 
-                        v-model:value="serverFormData.default_path" 
-                        placeholder="请输入默认路径"
-                    />
+                    <n-input v-model:value="serverFormData.default_path" placeholder="请输入默认路径" />
                 </n-form-item>
 
             </n-form>
@@ -75,13 +67,17 @@
                 <n-space>
                     <n-button @click="isServerFormVisible = false">
                         <template #icon>
-                            <n-icon><CloseOutline /></n-icon>
+                            <n-icon>
+                                <CloseOutline />
+                            </n-icon>
                         </template>
                         取消
                     </n-button>
                     <n-button type="primary" @click="submitServerForm">
                         <template #icon>
-                            <n-icon><CheckmarkOutline /></n-icon>
+                            <n-icon>
+                                <CheckmarkOutline />
+                            </n-icon>
                         </template>
                         {{ isEditMode ? '更新' : '添加' }}
                     </n-button>
@@ -92,14 +88,14 @@
 </template>
 
 <script lang="ts" setup>
-import { ref, onMounted, computed, h } from 'vue'
+import { ref, onMounted, computed, h, inject } from 'vue'
 import { useMessage, useDialog, NButton, NIcon, NSpace, NTooltip, NBadge } from 'naive-ui'
-import { 
-    AddCircleOutline, 
-    RefreshOutline, 
-    CreateOutline, 
-    TrashOutline, 
-    CloseOutline, 
+import {
+    AddCircleOutline,
+    RefreshOutline,
+    CreateOutline,
+    TrashOutline,
+    CloseOutline,
     CheckmarkOutline,
     ServerOutline,
     LinkOutline,
@@ -132,6 +128,9 @@ interface Server {
 const message = useMessage()
 const dialog = useDialog()
 const sidebar = useSidebarStore()
+
+// 注入全局 loading
+const globalLoading = inject('globalLoading') as any
 
 const serverList = ref<Server[]>([])
 const serverFormData = ref({
@@ -288,7 +287,10 @@ const serverColumns = computed(() => [
 ])
 
 // 获取服务器列表
-const fetchServers = async (forceRefresh = false) => {
+const fetchServers = async (forceRefresh = false, showLoading = true) => {
+    if (forceRefresh && showLoading) {
+        globalLoading.show('正在刷新服务器列表...')
+    }
     try {
         // 使用DataManager的缓存机制
         const res = await dataManager.getServerData(forceRefresh)
@@ -301,12 +303,16 @@ const fetchServers = async (forceRefresh = false) => {
     } catch (error) {
         console.error('Failed to fetch servers:', error)
         message.error('获取服务器列表失败')
+    } finally {
+        if (forceRefresh && showLoading) {
+            globalLoading.hide()
+        }
     }
 }
 
 // 刷新服务器列表
 const refreshServers = () => {
-    fetchServers(true) // 强制刷新
+    fetchServers(true, true) // 强制刷新，显示 loading
 }
 
 
@@ -319,26 +325,26 @@ const submitServerForm = async () => {
             message.error('服务器ID和服务器名称为必填项')
             return
         }
-        
+
         const action = isEditMode.value ? 'server_update' : 'server_add'
         let requestData = { ...serverFormData.value }
-        
+
         // 如果是编辑模式，需要传递原始服务器ID
         if (isEditMode.value) {
             requestData.old_server_id = serverFormData.value.server_id // 编辑时原ID就是当前ID
         }
-        
 
-        
+        globalLoading.show(isEditMode.value ? '正在更新服务器...' : '正在添加服务器...')
+
         console.log('Submitting server form:', action, requestData)
         console.log('Default path value:', requestData.default_path)
         const res = await api(action, requestData)
         console.log('Server form response:', res)
-        
+
         if (res && (res.code === 200 || res.success)) {
             message.success(isEditMode.value ? '服务器更新成功' : '服务器添加成功')
             isServerFormVisible.value = false
-            await fetchServers()
+            await fetchServers(true, false) // 强制刷新列表，但不显示 loading
             // 刷新左侧菜单
             await reloadMenus()
             sidebar.setboolroute(true)
@@ -349,16 +355,18 @@ const submitServerForm = async () => {
     } catch (error) {
         console.error('Server form submission error:', error)
         message.error(isEditMode.value ? '服务器更新失败' : '服务器添加失败')
+    } finally {
+        globalLoading.hide()
     }
 }
 
 // 确认删除服务器
 const confirmDeleteServer = (server: Server) => {
     const projectCount = server.project_list?.length || 0
-    const content = projectCount > 0 
+    const content = projectCount > 0
         ? `该服务器下有 ${projectCount} 个项目，删除服务器将同时删除所有项目。此操作不可恢复，是否继续？`
         : '确定要删除该服务器吗？此操作不可恢复。'
-    
+
     dialog.warning({
         title: '确认删除',
         content,
@@ -370,14 +378,15 @@ const confirmDeleteServer = (server: Server) => {
 
 // 删除服务器
 const deleteServer = async (server: Server) => {
+    globalLoading.show('正在删除服务器...')
     try {
         const res = await api('server_delete', {
             server_id: server.server_id
         })
-        
+
         if (res.code === 200 || res.success) {
             message.success('服务器删除成功')
-            await fetchServers()
+            await fetchServers(true, false) // 强制刷新列表，但不显示 loading
             // 刷新左侧菜单
             await reloadMenus()
             sidebar.setboolroute(true)
@@ -387,6 +396,8 @@ const deleteServer = async (server: Server) => {
     } catch (error) {
         console.error('Server deletion error:', error)
         message.error('服务器删除失败')
+    } finally {
+        globalLoading.hide()
     }
 }
 
@@ -395,7 +406,7 @@ const deleteServer = async (server: Server) => {
 // 打开服务器表单
 const openServerForm = (editMode: boolean, server?: Server) => {
     isEditMode.value = editMode
-    
+
     if (editMode && server) {
         serverFormData.value = {
             server_id: server.server_id,
@@ -423,20 +434,20 @@ const openServerForm = (editMode: boolean, server?: Server) => {
 // 测试已存储服务器的SSH连接
 const testStoredServerSSH = async (serverId: string) => {
     testingServers.value.add(serverId)
-    
+
     try {
         const res = await api('test_stored_ssh', {
             server_id: serverId
         })
-        
+
         console.log('Stored SSH test result:', res)
-        
+
         if (res && res.code === 200) {
             message.success(`服务器 ${serverId} SSH连接测试成功`)
         } else {
             message.error(`服务器 ${serverId} SSH连接测试失败: ${res?.msg || '未知错误'}`)
         }
-        
+
         // 刷新服务器列表以显示最新状态
         await fetchServers()
     } catch (error) {
@@ -455,7 +466,7 @@ const updateAllProjects = async (server: Server) => {
     }
 
     const projectCount = server.project_list.length
-    
+
     // 确认对话框
     dialog.warning({
         title: '确认全部更新',
@@ -477,10 +488,10 @@ const updateAllProjects = async (server: Server) => {
 // 执行全部更新项目
 const executeUpdateAllProjects = async (server: Server) => {
     updatingServers.value.add(server.server_id)
-    
+
     try {
-        message.loading(`正在更新服务器 "${server.server_name}" 下的所有项目...`, { duration: 0 })
-        
+        globalLoading.show(`正在更新服务器 "${server.server_name}" 下的所有项目...`)
+
         // 1. 生成所有项目的配置JSON
         const extractDomain = (url: string): string => {
             if (!url) return ''
@@ -503,7 +514,7 @@ const executeUpdateAllProjects = async (server: Server) => {
         })
 
         const configJson = JSON.stringify(allProjectsConfig, null, 2)
-        
+
         console.log('生成的所有项目配置:', {
             serverId: server.server_id,
             projectCount: server.project_list.length,
@@ -526,12 +537,12 @@ const executeUpdateAllProjects = async (server: Server) => {
         // 3. 循环更新每个项目
         let successCount = 0
         let failCount = 0
-        const results: Array<{project: any, success: boolean, error?: string}> = []
+        const results: Array<{ project: any, success: boolean, error?: string }> = []
 
         for (const project of server.project_list) {
             try {
                 console.log(`正在更新项目: ${project.project_name} (${project.project_id})`)
-                
+
                 const updateResult = await api('project_update_with_data', {
                     server_id: server.server_id,
                     project_id: project.project_id,
@@ -554,8 +565,6 @@ const executeUpdateAllProjects = async (server: Server) => {
             }
         }
 
-        message.destroyAll()
-
         // 4. 显示结果
         if (failCount === 0) {
             message.success(`全部更新完成！成功更新 ${successCount} 个项目`)
@@ -570,9 +579,9 @@ const executeUpdateAllProjects = async (server: Server) => {
 
     } catch (error) {
         console.error('Update all projects error:', error)
-        message.destroyAll()
         message.error(`全部更新失败：${(error as Error).message}`)
     } finally {
+        globalLoading.hide()
         updatingServers.value.delete(server.server_id)
     }
 }

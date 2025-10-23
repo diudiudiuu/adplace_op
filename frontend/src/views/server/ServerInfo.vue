@@ -123,7 +123,7 @@
 </template>
 
 <script lang="ts" setup>
-import { ref, defineProps, onMounted } from 'vue'
+import { ref, defineProps, onMounted, inject } from 'vue'
 import { useRouter } from 'vue-router'
 import { useMessage, useDialog } from 'naive-ui'
 import { useSidebarStore } from '@/store/sidebar'
@@ -136,6 +136,9 @@ const sidebar = useSidebarStore()
 const router = useRouter()
 const message = useMessage()
 const dialog = useDialog()
+
+// 注入全局 loading
+const globalLoading = inject('globalLoading') as any
 
 // 定义接受 serverId 的 props
 const props = defineProps({
@@ -207,6 +210,7 @@ const getServerInfo = async () => {
 
 // 提交编辑
 const submitEdit = async () => {
+    globalLoading.show('正在更新服务器信息...')
     try {
         const res = await api('server_update', {
             old_server_id: props.serverId,  // 原服务器ID
@@ -230,6 +234,8 @@ const submitEdit = async () => {
     } catch (error) {
         console.error('Failed to update server info:', error)
         message.error('服务器信息更新失败')
+    } finally {
+        globalLoading.hide()
     }
 }
 
@@ -246,6 +252,7 @@ const handleDelete = () => {
         positiveText: '确定删除',
         negativeText: '取消',
         onPositiveClick: async () => {
+            globalLoading.show('正在删除服务器...')
             try {
                 const res = await api('server_delete', {
                     server_id: props.serverId,
@@ -262,6 +269,8 @@ const handleDelete = () => {
             } catch (error) {
                 console.error('Failed to delete server:', error)
                 message.error('服务器删除失败')
+            } finally {
+                globalLoading.hide()
             }
         }
     })

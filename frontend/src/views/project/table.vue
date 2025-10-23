@@ -92,7 +92,7 @@
 </template>
 
 <script lang="ts" setup>
-import { ref, onMounted, defineProps, computed, h } from 'vue'
+import { ref, onMounted, defineProps, computed, h, inject } from 'vue'
 import { useMessage, useDialog, NButton, NIcon, NSpace, NTooltip } from 'naive-ui'
 import { AddCircleOutline, RefreshOutline, CreateOutline, TrashOutline, CloseOutline, CheckmarkOutline } from '@vicons/ionicons5'
 import ColorfulButton from '@/components/ColorfulButton.vue'
@@ -107,6 +107,9 @@ const props = defineProps({
 
 const message = useMessage()
 const dialog = useDialog()
+
+// 注入全局 loading
+const globalLoading = inject('globalLoading') as any
 
 // 时间格式化函数
 const formatDateTime = (value: any): string => {
@@ -238,6 +241,7 @@ const columns = computed(() => {
 })
 
 const fetchData = async () => {
+    globalLoading.show('正在加载数据...')
     try {
         const res = await api('exec', {
             projectId: props.projectId,
@@ -259,6 +263,8 @@ const fetchData = async () => {
         message.error('获取数据失败')
         tableData.value = []
         pagination.value.itemCount = 0
+    } finally {
+        globalLoading.hide()
     }
 }
 onMounted(fetchData)
@@ -351,6 +357,7 @@ const confirmDelete = (row: any) => {
 
 // biome-ignore lint/suspicious/noExplicitAny: <explanation>
 const deleteEntry = async (row: any) => {
+    globalLoading.show('正在删除数据...')
     props.model.formData = row
     const res = await api('exec', {
         projectId: props.projectId,
@@ -364,9 +371,11 @@ const deleteEntry = async (row: any) => {
     } else {
         message.error('删除失败')
     }
+    globalLoading.hide()
 }
 
 const submitForm = async (action: string) => {
+    globalLoading.show(action === 'insert' ? '正在添加数据...' : '正在更新数据...')
     isFormVisible.value = false
     props.model.formData = formData.value
     const res = await api('exec', {
@@ -378,10 +387,12 @@ const submitForm = async (action: string) => {
     if (res.code !== 200) {
         message.error(action === 'insert' ? '添加失败' : '编辑失败')
         isFormVisible.value = true
+        globalLoading.hide()
         return
     }
     message.success(action === 'insert' ? '添加成功' : '编辑成功')
     fetchData()
+    globalLoading.hide()
 }
 
 const handleClick = async (field: string) => {

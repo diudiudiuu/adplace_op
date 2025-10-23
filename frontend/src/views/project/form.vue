@@ -84,7 +84,7 @@
 </template>
 
 <script setup lang="ts">
-import { reactive, ref, watch } from 'vue'
+import { reactive, ref, watch, inject } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useMessage } from 'naive-ui'
 import type { FormInst } from 'naive-ui'
@@ -98,6 +98,9 @@ const sidebar = useSidebarStore()
 const router = useRoute()
 const route = useRouter()
 const message = useMessage()
+
+// 注入全局 loading
+const globalLoading = inject('globalLoading') as any
 
 // Props for component mode and initial form data
 const props = defineProps({
@@ -262,6 +265,8 @@ const onSubmit = async () => {
     }
 
     try {
+        globalLoading.show(props.mode === 'edit' ? '正在更新项目...' : '正在添加项目...')
+        
         console.log('Submitting project form:', {
             serverId: serverId.value,
             form: form
@@ -296,6 +301,8 @@ const onSubmit = async () => {
     } catch (error) {
         console.error('Project form submission error:', error)
         message.error(isEdit ? '更新失败' : '添加失败')
+    } finally {
+        globalLoading.hide()
     }
 }
 

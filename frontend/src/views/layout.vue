@@ -84,13 +84,25 @@ const { boolroute } = storeToRefs(sidebar)
 // 获取 Naive UI 实例
 const message = useMessage()
 
+// Loading 状态管理
+let loadingStartTime = 0
+
 // 全局 Loading 控制函数
 const showContentLoading = (text: string = '请稍候...') => {
     loadingText.value = text
     isContentLoading.value = true
+    loadingStartTime = Date.now()
 }
 
-const hideContentLoading = () => {
+const hideContentLoading = async () => {
+    const elapsed = Date.now() - loadingStartTime
+    const minDisplayTime = 500 // 最小显示时间 500ms
+    
+    if (elapsed < minDisplayTime) {
+        // 如果显示时间不足 500ms，等待剩余时间
+        await new Promise(resolve => setTimeout(resolve, minDisplayTime - elapsed))
+    }
+    
     isContentLoading.value = false
 }
 

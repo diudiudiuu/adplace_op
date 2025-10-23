@@ -20,7 +20,7 @@
                     </n-tooltip>
                     <n-tooltip>
                         <template #trigger>
-                            <n-button type="error" @click="handleDelete">
+                            <n-button type="error" @click="handleDelete" :loading="deleteLoading">
                                 <template #icon>
                                     <n-icon>
                                         <TrashOutline />
@@ -264,7 +264,7 @@
         <n-modal v-model:show="showInitProjectModal" preset="dialog" title="选择要初始化的项目" style="width: 500px;">
             <n-form label-placement="left" label-width="100">
                 <n-form-item label="选择项目">
-                    <n-select v-model:value="selectedInitProjectId" :options="serverProjects.map(p => ({
+                    <n-select v-model:value="selectedInitProjectId" :options="serverProjects.map((p: any) => ({
                         label: `${p.project_name} (${p.project_id})`,
                         value: p.project_id,
                         disabled: false
@@ -286,7 +286,7 @@
         <n-modal v-model:show="showUpdateProjectModal" preset="dialog" title="选择要更新的项目" style="width: 500px;">
             <n-form label-placement="left" label-width="100">
                 <n-form-item label="选择项目">
-                    <n-select v-model:value="selectedUpdateProjectId" :options="serverProjects.map(p => ({
+                    <n-select v-model:value="selectedUpdateProjectId" :options="serverProjects.map((p: any) => ({
                         label: `${p.project_name} (${p.project_id})`,
                         value: p.project_id,
                         disabled: false
@@ -306,7 +306,7 @@
     </div>
 </template>
 <script lang="ts" setup>
-import { ref, defineProps, computed, h } from 'vue'
+import { ref, defineProps, computed, h, inject } from 'vue'
 import { useRouter } from 'vue-router'
 import { useMessage, useDialog, NButton, NIcon, NSpace, NTooltip, NTag, NText, NGrid, NGridItem, NScrollbar, NSelect, NModal, NForm, NFormItem } from 'naive-ui'
 import { useSidebarStore } from '@/store/sidebar'
@@ -322,6 +322,9 @@ const sidebar = useSidebarStore()
 const route = useRouter()
 const message = useMessage()
 const dialog = useDialog()
+
+// 注入全局 loading
+const globalLoading = inject('globalLoading') as any
 
 // 定义接受 projectId 的 props
 const props = defineProps({
@@ -357,6 +360,7 @@ const cloudflareConfig = ref({
 const configLoading = ref(false)
 const initLoading = ref(false)
 const updateLoading = ref(false)
+const deleteLoading = ref(false)
 const projectConfigPreview = ref('')
 const deploymentStatus = ref<{
     type: 'success' | 'warning' | 'error' | 'info'
@@ -576,8 +580,6 @@ const batchConfigureDNS = async () => {
         const manageDomain = extractDomain(projectInfo.value.project_manage_url)
         const apiDomain = extractDomain(projectInfo.value.project_api_url)
 
-        message.loading('正在批量配置 Cloudflare DNS 记录和 Pages 自定义域名...', { duration: 0 })
-
         // 1. 首先配置 Pages 自定义域名
         let pagesConfigSuccess = false
         try {
@@ -630,8 +632,6 @@ const batchConfigureDNS = async () => {
             records_json: JSON.stringify(records)
         })
 
-        message.destroyAll()
-
         if (result.code === 200) {
             const results = result.data || []
 
@@ -678,7 +678,6 @@ const batchConfigureDNS = async () => {
 
     } catch (error) {
         console.error('DNS batch configuration error:', error)
-        message.destroyAll()
         message.error('DNS 配置失败：' + (error as Error).message)
     } finally {
         dnsLoading.value = false
@@ -852,8 +851,6 @@ const configureSingleDNS = async (record: any) => {
             content = serverInfo.server_ip
         }
 
-        message.loading(`正在配置 ${record.name} 的 ${record.type} 记录...`, { duration: 0 })
-
         // 如果是 CNAME 记录，先配置 Pages 自定义域名
         if (record.type === 'CNAME') {
             try {
@@ -894,8 +891,6 @@ const configureSingleDNS = async (record: any) => {
             proxied: true
         })
 
-        message.destroyAll()
-
         if (result.code === 200) {
             const recordData = result.data.record
             const action = result.data.action
@@ -916,7 +911,6 @@ const configureSingleDNS = async (record: any) => {
 
     } catch (error) {
         console.error('Single DNS configuration error:', error)
-        message.destroyAll()
         message.error(`配置失败：${(error as Error).message}`)
 
         // 更新记录为错误状态
@@ -953,16 +947,12 @@ const deleteSingleDNS = async (record: any) => {
             record.loading = true
 
             try {
-                message.loading(`正在删除 ${record.name} 的 ${record.type} 记录...`, { duration: 0 })
-
                 // 调用后端 API 删除记录
                 const result = await api('cloudflare_delete_dns', {
                     api_token: apiToken,
                     zone_id: zoneId,
                     record_id: record.recordId
                 })
-
-                message.destroyAll()
 
                 if (result.code === 200) {
                     // 如果是 CNAME 记录，同时删除 Pages 自定义域名
@@ -1004,7 +994,6 @@ const deleteSingleDNS = async (record: any) => {
 
             } catch (error) {
                 console.error('Single DNS deletion error:', error)
-                message.destroyAll()
                 message.error(`删除失败：${(error as Error).message}`)
             } finally {
                 record.loading = false
@@ -1021,6 +1010,7 @@ const handleDelete = () => {
         positiveText: '确定',
         negativeText: '取消',
         onPositiveClick: async () => {
+            deleteLoading.value = true
             try {
                 const res = await api('project_delete', {
                     serverId: props.serverId,
@@ -1041,6 +1031,8 @@ const handleDelete = () => {
             } catch (error) {
                 console.error('Project deletion error:', error)
                 message.error('删除失败')
+            } finally {
+                deleteLoading.value = false
             }
         }
     })
@@ -1052,8 +1044,6 @@ const generateCurrentProjectConfig = async () => {
     deploymentStatus.value = null
 
     try {
-        message.loading('正在生成当前项目配置并上传到服务器...', { duration: 0 })
-
         // 获取当前服务器的完整数据
         const serverData = await dataManager.getServerById(props.serverId)
         if (!serverData) {
@@ -1061,7 +1051,7 @@ const generateCurrentProjectConfig = async () => {
         }
 
         // 验证当前项目是否存在
-        const currentProject = serverData.project_list?.find(p => p.project_id === props.projectId)
+        const currentProject = serverData.project_list?.find((p: any) => p.project_id === props.projectId)
         if (!currentProject) {
             throw new Error('当前项目不存在于服务器数据中')
         }
@@ -1107,8 +1097,6 @@ const generateCurrentProjectConfig = async () => {
             authorization: getAuthorization()
         })
 
-        message.destroyAll()
-
         if (result.code === 200) {
             projectConfigPreview.value = projectConfigJson
             
@@ -1132,7 +1120,6 @@ const generateCurrentProjectConfig = async () => {
         }
     } catch (error) {
         console.error('Upload project config error:', error)
-        message.destroyAll()
         deploymentStatus.value = {
             type: 'error',
             title: '配置上传异常',
@@ -1161,14 +1148,10 @@ const initProject = async () => {
     }
 
     try {
-        message.loading(`正在初始化项目 ${projectInfo.value.project_id}...`, { duration: 0 })
-
         const result = await api('project_init', {
             server_id: props.serverId,
             project_id: projectInfo.value.project_id
         })
-
-        message.destroyAll()
 
         if (result.code === 200) {
             deploymentStatus.value = {
@@ -1189,7 +1172,6 @@ const initProject = async () => {
         }
     } catch (error) {
         console.error('Project init error:', error)
-        message.destroyAll()
         deploymentStatus.value = {
             type: 'error',
             title: '初始化异常',
@@ -1214,8 +1196,6 @@ const executeInitCurrentProject = async () => {
     }
 
     try {
-        message.loading(`正在初始化当前项目 ${projectInfo.value.project_name}...`, { duration: 0 })
-
         // 获取当前服务器的完整数据
         const serverData = await dataManager.getServerById(props.serverId)
         if (!serverData) {
@@ -1236,8 +1216,6 @@ const executeInitCurrentProject = async () => {
             project_id: props.projectId,
             server_data_json: JSON.stringify(serverData)
         })
-
-        message.destroyAll()
 
         if (result.code === 200) {
             deploymentStatus.value = {
@@ -1260,7 +1238,6 @@ const executeInitCurrentProject = async () => {
         }
     } catch (error) {
         console.error('Project init error:', error)
-        message.destroyAll()
         deploymentStatus.value = {
             type: 'error',
             title: '初始化异常',
@@ -1285,8 +1262,6 @@ const executeUpdateCurrentProject = async () => {
     }
 
     try {
-        message.loading(`正在更新当前项目 ${projectInfo.value.project_name}...`, { duration: 0 })
-
         // 获取当前服务器的完整数据
         const serverData = await dataManager.getServerById(props.serverId)
         if (!serverData) {
@@ -1307,8 +1282,6 @@ const executeUpdateCurrentProject = async () => {
             project_id: props.projectId,
             server_data_json: JSON.stringify(serverData)
         })
-
-        message.destroyAll()
 
         if (result.code === 200) {
             deploymentStatus.value = {
@@ -1331,7 +1304,6 @@ const executeUpdateCurrentProject = async () => {
         }
     } catch (error) {
         console.error('Project update error:', error)
-        message.destroyAll()
         deploymentStatus.value = {
             type: 'error',
             title: '更新异常',
@@ -1365,8 +1337,6 @@ const executeInitProject = async () => {
     }
 
     try {
-        message.loading(`正在初始化项目 ${projectName}...`, { duration: 0 })
-
         // 获取当前服务器的完整数据
         const serverData = await dataManager.getServerById(props.serverId)
         if (!serverData) {
@@ -1387,8 +1357,6 @@ const executeInitProject = async () => {
             project_id: selectedInitProjectId.value,
             server_data_json: JSON.stringify(serverData)
         })
-
-        message.destroyAll()
 
         if (result.code === 200) {
             deploymentStatus.value = {
@@ -1411,7 +1379,6 @@ const executeInitProject = async () => {
         }
     } catch (error) {
         console.error('Project init error:', error)
-        message.destroyAll()
         deploymentStatus.value = {
             type: 'error',
             title: '初始化异常',
@@ -1441,14 +1408,10 @@ const updateProject = async () => {
     }
 
     try {
-        message.loading(`正在更新项目 ${projectInfo.value.project_id}...`, { duration: 0 })
-
         const result = await api('project_update', {
             server_id: props.serverId,
             project_id: projectInfo.value.project_id
         })
-
-        message.destroyAll()
 
         if (result.code === 200) {
             deploymentStatus.value = {
@@ -1469,7 +1432,6 @@ const updateProject = async () => {
         }
     } catch (error) {
         console.error('Project update error:', error)
-        message.destroyAll()
         deploymentStatus.value = {
             type: 'error',
             title: '更新异常',
@@ -1503,8 +1465,6 @@ const executeUpdateProject = async () => {
     }
 
     try {
-        message.loading(`正在更新项目 ${projectName}...`, { duration: 0 })
-
         // 获取当前服务器的完整数据
         const serverData = await dataManager.getServerById(props.serverId)
         if (!serverData) {
@@ -1525,8 +1485,6 @@ const executeUpdateProject = async () => {
             project_id: selectedUpdateProjectId.value,
             server_data_json: JSON.stringify(serverData)
         })
-
-        message.destroyAll()
 
         if (result.code === 200) {
             deploymentStatus.value = {
@@ -1549,7 +1507,6 @@ const executeUpdateProject = async () => {
         }
     } catch (error) {
         console.error('Project update error:', error)
-        message.destroyAll()
         deploymentStatus.value = {
             type: 'error',
             title: '更新异常',

@@ -81,8 +81,9 @@ const apiMap: Record<string, (data: any) => Promise<string>> = {
     'project_update_with_data': (data: any) => window.go!.main!.App!.ProjectUpdateWithData(data.server_id, data.project_id, data.server_data_json, data.authorization),
 };
 
-// 简化的 API 调用函数 - 移除共通弹框，只保留必要的401处理
-const api = async (uri: string, data: any, showLoading: boolean = false) => {
+// API 调用函数 - 纯净的 API 调用，不处理 loading
+const api = async (uri: string, data: any) => {
+
     try {
         // 检查 Wails 环境
         if (!window.go?.main?.App) {
@@ -130,13 +131,13 @@ const api = async (uri: string, data: any, showLoading: boolean = false) => {
             parsedData = JSON.parse(res);
         } catch (error) {
             console.error(`API ${uri}: JSON parse error`, {
-                error: error.message,
+                error: (error as Error).message,
                 response: res.substring(0, 500),
                 responseLength: res.length,
                 responseType: typeof res
             });
 
-            throw new Error(`API ${uri}: JSON解析失败 - ${error.message}`);
+            throw new Error(`API ${uri}: JSON解析失败 - ${(error as Error).message}`);
         }
 
         // 检查是否返回 401 未授权错误 - 这是必要的共通处理
@@ -165,8 +166,8 @@ const api = async (uri: string, data: any, showLoading: boolean = false) => {
         if (parsedData?.data && typeof parsedData.data === 'string') {
             try {
                 parsedData.data = decryptAes(parsedData.data);
-            } catch (error) {
-                console.warn(`Failed to decrypt data for API ${uri}:`, error);
+            } catch (decryptError) {
+                console.warn(`Failed to decrypt data for API ${uri}:`, decryptError);
                 // 如果解密失败，保持原始数据
             }
         }
@@ -215,12 +216,7 @@ if (typeof window !== 'undefined') {
     };
 }
 
-// 静默API调用函数 - 不显示任何弹框，只返回结果
-const apiSilent = async (uri: string, data: any) => {
-    return await api(uri, data, false);
-}
-
 // 导出未授权处理函数，供其他地方使用
-export { handleUnauthorized, apiSilent };
+export { handleUnauthorized };
 
 export default api

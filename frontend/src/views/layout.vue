@@ -35,7 +35,7 @@
 
                 <n-layout class="main-layout">
                     <n-layout-content content-style="padding: 8px;" class="main-content">
-                        <div class="content-wrapper">
+                        <div class="content-wrapper" :class="{ 'content-loading': isContentLoading }">
                             <router-view v-slot="{ Component }" :key="$route.fullPath">
                                 <transition name="fade" mode="out-in">
                                     <keep-alive>
@@ -43,6 +43,17 @@
                                     </keep-alive>
                                 </transition>
                             </router-view>
+                            
+                            <!-- 主内容区域 Loading 遮罩 -->
+                            <div v-if="isContentLoading" class="content-loading-overlay">
+                                <div class="loading-spinner">
+                                    <n-spin size="large" :show="true">
+                                        <template #description>
+                                            <span class="loading-text">{{ loadingText }}</span>
+                                        </template>
+                                    </n-spin>
+                                </div>
+                            </div>
                         </div>
                     </n-layout-content>
                 </n-layout>
@@ -54,13 +65,13 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch, h, onMounted } from 'vue'
+import { computed, ref, watch, h, onMounted, provide } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useSidebarStore } from '@/store/sidebar'
 import { useRoute, useRouter } from 'vue-router'
 import { getMenus, reloadMenus } from '@/components/menu'
-import { NIcon, useMessage, useDialog } from 'naive-ui'
-import { setGlobalInstances, handleUnauthorized } from '@/api'
+import { NIcon, useMessage, useDialog, NSpin } from 'naive-ui'
+import { setGlobalInstances } from '@/api'
 import ColorfulIcons from '@/components/ColorfulIcons.vue'
 
 const route = useRoute()
@@ -72,17 +83,52 @@ const { boolroute } = storeToRefs(sidebar)
 
 // 获取 Naive UI 实例
 const message = useMessage()
-const dialog = useDialog()
 
-// 设置全局实例 - 只设置message，不设置loading避免重复弹框
+// 全局 Loading 控制函数
+const showContentLoading = (text: string = '请稍候...') => {
+    loadingText.value = text
+    isContentLoading.value = true
+}
+
+const hideContentLoading = () => {
+    isContentLoading.value = false
+}
+
+// 创建全局 Loading 实例
+const createGlobalLoading = () => {
+    return {
+        create: (options: any) => {
+            const text = options.description || '请稍候...'
+            showContentLoading(text)
+            return {
+                destroy: () => hideContentLoading()
+            }
+        }
+    }
+}
+
+// 设置全局实例
 onMounted(() => {
-    // 只设置message实例用于401错误处理，不设置loading实例
-    setGlobalInstances(message, null)
+    // 设置message和loading实例
+    setGlobalInstances(message, createGlobalLoading())
 })
+
+// 暴露给子组件使用的方法
+const globalLoading = {
+    show: showContentLoading,
+    hide: hideContentLoading
+}
+
+// 提供给子组件
+provide('globalLoading', globalLoading)
 
 const menuData = ref<any[]>([])
 const menuOptions = ref<any[]>([])
 const showMenu = ref(true)
+
+// 主内容区域 Loading 状态
+const isContentLoading = ref(false)
+const loadingText = ref('请稍候...')
 
 // 渲染彩色图标
 const renderIcon = (iconName: string) => {
@@ -262,6 +308,49 @@ watch(boolroute, (newVal) => {
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
     font-size: var(--table-font-size, 12px);
     line-height: 1.3;
+    position: relative;
+    overflow: hidden;
+}
+
+/* Loading 状态下的内容区域 */
+.content-wrapper.content-loading {
+    pointer-events: none;
+    user-select: none;
+}
+
+/* 主内容区域 Loading 遮罩 */
+.content-loading-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(2px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    border-radius: 6px;
+}
+
+.loading-spinner {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.loading-text {
+    margin-top: 12px;
+    font-size: 14px;
+    color: #666;
+    font-weight: 500;
 }
 
 .fade-enter-active,

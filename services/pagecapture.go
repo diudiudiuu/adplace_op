@@ -215,6 +215,39 @@ func (s *PageCaptureService) formatFileSize(bytes int64) string {
 	return result
 }
 
+// resetState 重置所有状态，确保每次下载都是全新开始
+func (s *PageCaptureService) resetState() {
+	s.mutex.Lock()
+	s.progressMutex.Lock()
+	defer s.mutex.Unlock()
+	defer s.progressMutex.Unlock()
+	
+	s.debugPrintf("=== 重置所有状态 ===\n")
+	
+	// 清空资源映射
+	oldResourceCount := len(s.resources)
+	s.resources = make(map[string]*ResourceInfo)
+	s.fileCount = 0
+	
+	// 重置进度信息
+	oldFileListCount := len(s.progressInfo.FileList)
+	s.progressInfo = ProgressInfo{
+		Phase:          "analyzing",
+		TotalFiles:     0,
+		CompletedFiles: 0,
+		CurrentFile:    "",
+		FileProgress:   0,
+		FileList:       []FileInfo{},
+	}
+	
+	// 重置其他可能的状态
+	s.baseURL = nil
+	s.tempDir = ""
+	
+	s.debugPrintf("状态重置完成: 清理了 %d 个资源, %d 个文件记录\n", oldResourceCount, oldFileListCount)
+	s.debugPrintf("=== 状态重置完成 ===\n")
+}
+
 // debugPrintf 调试输出函数
 func (s *PageCaptureService) debugPrintf(format string, args ...interface{}) {
 	if s.debug {
@@ -330,6 +363,9 @@ func (s *PageCaptureService) CapturePage(targetURL string, options CaptureOption
 	
 	// 临时启用调试模式来诊断问题
 	s.debug = true
+	
+	// 重置所有状态 - 确保每次下载都是全新开始
+	s.resetState()
 
 	// 设置超时 - 对于大文件需要更长时间
 	timeout := options.Timeout
@@ -354,10 +390,13 @@ func (s *PageCaptureService) CapturePage(targetURL string, options CaptureOption
 	}
 
 	// 解析HTML并下载资源
+	s.debugPrintf("开始处理HTML和下载资源...\n")
 	modifiedHTML, err := s.processHTMLAndDownloadResources(htmlContent, options)
 	if err != nil {
+		s.debugPrintf("处理HTML失败: %v\n", err)
 		return nil, fmt.Errorf("处理HTML失败: %v", err)
 	}
+	s.debugPrintf("HTML处理完成\n")
 
 	// 保存文件
 	err = s.saveAllFiles(modifiedHTML)
@@ -929,8 +968,12 @@ func (s *PageCaptureService) downloadPageWithEncoding(targetURL string, forceEnc
 
 // processHTMLAndDownloadResources 处理HTML并下载资源（并发版本）
 func (s *PageCaptureService) processHTMLAndDownloadResources(htmlContent string, options CaptureOptions) (string, error) {
+	s.debugPrintf("=== 开始处理HTML和下载资源 ===\n")
 	s.debugPrintf("HTML内容长度: %d 字符\n", len(htmlContent))
 	s.debugPrintf("HTML前500字符: %s\n", htmlContent[:min(len(htmlContent), 500)])
+	
+	// 更新进度
+	s.updateProgress("analyzing", "解析HTML文档...", 0)
 	
 	doc, err := goquery.NewDocumentFromReader(strings.NewReader(htmlContent))
 	if err != nil {
@@ -939,6 +982,7 @@ func (s *PageCaptureService) processHTMLAndDownloadResources(htmlContent string,
 	}
 
 	s.debugPrintf("HTML解析成功\n")
+	s.updateProgress("analyzing", "收集资源列表...", 10)
 
 	// 收集所有下载任务
 	var tasks []DownloadTask
@@ -1165,11 +1209,24 @@ func (s *PageCaptureService) processHTMLAndDownloadResources(htmlContent string,
 		})
 	}
 
+	s.debugPrintf("=== 任务收集完成 ===\n")
+	s.debugPrintf("总共收集到 %d 个下载任务\n", len(tasks))
+	for i, task := range tasks {
+		if i < 5 { // 只显示前5个任务
+			s.debugPrintf("任务 %d: %s (%s)\n", i+1, task.URL, task.ResourceType)
+		}
+	}
+	if len(tasks) > 5 {
+		s.debugPrintf("... 还有 %d 个任务\n", len(tasks)-5)
+	}
+	
 	// 并发下载所有资源
 	maxConcurrency := options.MaxConcurrency
 	if maxConcurrency <= 0 {
 		maxConcurrency = 10 // 默认10个并发
 	}
+	
+	s.debugPrintf("准备开始下载，最大并发数: %d\n", maxConcurrency)
 	
 	// 初始化进度信息
 	s.progressMutex.Lock()
@@ -1229,16 +1286,30 @@ func (s *PageCaptureService) processHTMLAndDownloadResources(htmlContent string,
 
 	// 处理CSS中的背景图片和字体（这些需要特殊处理，暂时保持同步）
 	if options.IncludeImages || options.IncludeFonts {
-		doc.Find("style").Each(func(i int, sel *goquery.Selection) {
+		s.updateProgress("analyzing", "处理CSS样式...", 80)
+		s.debugPrintf("开始处理内联CSS样式...\n")
+		styleElements := doc.Find("style")
+		s.debugPrintf("找到 %d 个style标签\n", styleElements.Length())
+		
+		styleElements.Each(func(i int, sel *goquery.Selection) {
+			s.debugPrintf("处理第 %d 个style标签\n", i+1)
 			cssContent := sel.Text()
+			s.debugPrintf("CSS内容长度: %d 字符\n", len(cssContent))
+			
 			if options.IncludeImages {
+				s.debugPrintf("处理CSS中的图片...\n")
 				cssContent = s.processCSSContent(cssContent)
+				s.debugPrintf("CSS图片处理完成\n")
 			}
 			if options.IncludeFonts {
+				s.debugPrintf("处理CSS中的字体...\n")
 				cssContent = s.processFontContent(cssContent)
+				s.debugPrintf("CSS字体处理完成\n")
 			}
 			sel.SetText(cssContent)
+			s.debugPrintf("第 %d 个style标签处理完成\n", i+1)
 		})
+		s.debugPrintf("所有CSS样式处理完成\n")
 	}
 
 	html, err := doc.Html()
@@ -1470,46 +1541,11 @@ func (s *PageCaptureService) downloadResourceSync(resourceURL, resourceType stri
 	return localPath
 }
 
-// downloadResource 下载单个资源（保持向后兼容）
+// downloadResource 下载单个资源（已废弃，使用downloadResourceSync）
+// 这个函数保留是为了向后兼容，但实际调用downloadResourceSync
 func (s *PageCaptureService) downloadResource(resourceURL, resourceType string) string {
-	if s.fileCount >= s.maxFiles {
-		return ""
-	}
-
-	// 检查是否已下载
-	if resource, exists := s.resources[resourceURL]; exists {
-		return resource.LocalPath
-	}
-
-	// 下载资源
-	resp, err := s.client.Get(resourceURL)
-	if err != nil {
-		return ""
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != 200 {
-		return ""
-	}
-
-	content, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return ""
-	}
-
-	// 生成本地路径
-	localPath := s.generateLocalPath(resourceURL, resourceType)
-
-	// 存储资源信息
-	s.resources[resourceURL] = &ResourceInfo{
-		URL:       resourceURL,
-		LocalPath: localPath,
-		Type:      resourceType,
-		Content:   content,
-	}
-
-	s.fileCount++
-	return localPath
+	s.debugPrintf("警告: 使用了废弃的downloadResource函数，建议使用downloadResourceSync\n")
+	return s.downloadResourceSync(resourceURL, resourceType)
 }
 
 // resolveURL 解析URL
@@ -1603,39 +1639,65 @@ func (s *PageCaptureService) getExtensionByType(resourceType string) string {
 
 // processCSSContent 处理CSS内容中的URL
 func (s *PageCaptureService) processCSSContent(cssContent string) string {
+	s.debugPrintf("开始处理CSS内容，长度: %d\n", len(cssContent))
+	
 	if s.fileCount >= s.maxFiles {
+		s.debugPrintf("已达到最大文件数限制，跳过CSS处理\n")
 		return cssContent
 	}
 
 	urlRegex := regexp.MustCompile(`url\s*\(\s*['"]?([^'")]+)['"]?\s*\)`)
+	matches := urlRegex.FindAllString(cssContent, -1)
+	s.debugPrintf("在CSS中找到 %d 个URL匹配\n", len(matches))
 
-	return urlRegex.ReplaceAllStringFunc(cssContent, func(match string) string {
+	result := urlRegex.ReplaceAllStringFunc(cssContent, func(match string) string {
 		submatches := urlRegex.FindStringSubmatch(match)
 		if len(submatches) > 1 {
 			resourceURL := submatches[1]
+			s.debugPrintf("CSS中发现URL: '%s'\n", resourceURL)
 			absoluteURL := s.resolveURL(resourceURL)
 			if absoluteURL != "" {
-				localPath := s.downloadResource(absoluteURL, "images")
-				if localPath != "" {
-					return strings.Replace(match, resourceURL, localPath, 1)
+				s.debugPrintf("解析后的绝对URL: '%s'\n", absoluteURL)
+				
+				// 检查是否已经下载过
+				s.mutex.RLock()
+				if resource, exists := s.resources[absoluteURL]; exists {
+					s.mutex.RUnlock()
+					s.debugPrintf("使用已下载的资源: '%s'\n", resource.LocalPath)
+					return strings.Replace(match, resourceURL, resource.LocalPath, 1)
 				}
+				s.mutex.RUnlock()
+				
+				// 生成本地路径（不立即下载，等待统一的下载任务处理）
+				localPath := s.generateLocalPath(absoluteURL, "images")
+				s.debugPrintf("生成的本地路径: '%s'\n", localPath)
+				return strings.Replace(match, resourceURL, localPath, 1)
 			}
 		}
 		return match
 	})
+	
+	s.debugPrintf("CSS内容处理完成\n")
+	return result
 }
 
 // processFontContent 处理CSS内容中的字体文件URL
 func (s *PageCaptureService) processFontContent(cssContent string) string {
+	s.debugPrintf("开始处理CSS字体内容，长度: %d\n", len(cssContent))
+	
 	if s.fileCount >= s.maxFiles {
+		s.debugPrintf("已达到最大文件数限制，跳过字体处理\n")
 		return cssContent
 	}
 
 	// 处理 @font-face 规则中的 src 属性
 	fontFaceRegex := regexp.MustCompile(`@font-face\s*\{[^}]*src\s*:\s*([^;}]+)[;}]`)
 	urlRegex := regexp.MustCompile(`url\s*\(\s*['"]?([^'")]+)['"]?\s*\)`)
+	
+	fontFaceMatches := fontFaceRegex.FindAllString(cssContent, -1)
+	s.debugPrintf("在CSS中找到 %d 个@font-face规则\n", len(fontFaceMatches))
 
-	return fontFaceRegex.ReplaceAllStringFunc(cssContent, func(match string) string {
+	result := fontFaceRegex.ReplaceAllStringFunc(cssContent, func(match string) string {
 		return urlRegex.ReplaceAllStringFunc(match, func(urlMatch string) string {
 			submatches := urlRegex.FindStringSubmatch(urlMatch)
 			if len(submatches) > 1 {
@@ -1644,16 +1706,26 @@ func (s *PageCaptureService) processFontContent(cssContent string) string {
 				if s.isFontFile(resourceURL) {
 					absoluteURL := s.resolveURL(resourceURL)
 					if absoluteURL != "" {
-						localPath := s.downloadResource(absoluteURL, "fonts")
-						if localPath != "" {
-							return strings.Replace(urlMatch, resourceURL, localPath, 1)
+						// 检查是否已经下载过
+						s.mutex.RLock()
+						if resource, exists := s.resources[absoluteURL]; exists {
+							s.mutex.RUnlock()
+							return strings.Replace(urlMatch, resourceURL, resource.LocalPath, 1)
 						}
+						s.mutex.RUnlock()
+						
+						// 生成本地路径（不立即下载）
+						localPath := s.generateLocalPath(absoluteURL, "fonts")
+						return strings.Replace(urlMatch, resourceURL, localPath, 1)
 					}
 				}
 			}
 			return urlMatch
 		})
 	})
+	
+	s.debugPrintf("CSS字体处理完成\n")
+	return result
 }
 
 // isFontFile 检查是否是字体文件

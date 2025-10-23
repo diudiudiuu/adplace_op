@@ -168,9 +168,15 @@ class MenuManager {
                 .filter(server => server?.server_id && server?.server_name)
                 .map(server => this.buildServerMenu(server));
 
-            // 合并菜单
+            // 合并菜单 - 将抓页面菜单放在最后
             const baseMenus = this.getBaseMenu();
-            this.menus = [...baseMenus, ...serverMenus];
+            const pageCaptureMenu = {
+                id: 'page-capture',
+                title: '抓页面',
+                index: '/page-capture',
+                icon: 'Camera',
+            };
+            this.menus = [...baseMenus, ...serverMenus, pageCaptureMenu];
 
             // 添加动态路由
             if (serverMenus.length > 0) {
@@ -206,7 +212,14 @@ class MenuManager {
 
     // 清除菜单（用于退出登录）
     clearMenus(): void {
-        this.menus = this.getBaseMenu();
+        const baseMenus = this.getBaseMenu();
+        const pageCaptureMenu = {
+            id: 'page-capture',
+            title: '抓页面',
+            index: '/page-capture',
+            icon: 'Camera',
+        };
+        this.menus = [...baseMenus, pageCaptureMenu];
         this.hasLoaded = false;
         this.isLoading = false;
         this.clearCache();

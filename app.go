@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"os"
 	"strings"
 	"time"
 
@@ -17,20 +18,22 @@ import (
 
 // App struct
 type App struct {
-	ctx               context.Context
-	jsonService       *services.JsonService
-	aesService        *services.AesService
-	kvService         *services.KvService
-	cloudflareService *services.CloudflareService
+	ctx                context.Context
+	jsonService        *services.JsonService
+	aesService         *services.AesService
+	kvService          *services.KvService
+	cloudflareService  *services.CloudflareService
+	pageCaptureService *services.PageCaptureService
 }
 
 // NewApp creates a new App application struct
 func NewApp() *App {
 	return &App{
-		jsonService:       services.NewJsonService(),
-		aesService:        services.NewAesService(),
-		kvService:         services.NewKvService(),
-		cloudflareService: services.NewCloudflareService(),
+		jsonService:        services.NewJsonService(),
+		aesService:         services.NewAesService(),
+		kvService:          services.NewKvService(),
+		cloudflareService:  services.NewCloudflareService(),
+		pageCaptureService: services.NewPageCaptureService(),
 	}
 }
 
@@ -940,7 +943,7 @@ func (a *App) GenerateProjectConfig(serverID, authorization, clientJson string) 
 			"api_domain": apiDomain,
 		}
 	}
-	
+
 	configJSON, err := json.MarshalIndent(projectConfig, "", "  ")
 	if err != nil {
 		log.Printf("Failed to generate project config: %v", err)
@@ -1021,7 +1024,7 @@ func (a *App) UploadProjectConfig(serverDataJson, projectConfigJson, authorizati
 // GenerateProjectConfigForSingleProject 上传前端生成的项目配置（兼容绑定文件）
 // 注意：由于绑定文件的限制，参数名可能显示为serverID, projectID等，但实际用途如下：
 // 第1个参数：服务器数据JSON
-// 第2个参数：项目配置JSON  
+// 第2个参数：项目配置JSON
 // 第3个参数：未使用
 // 第4个参数：授权token
 func (a *App) GenerateProjectConfigForSingleProject(serverDataJson, projectConfigJson, unused, authorization string) string {
@@ -1038,7 +1041,7 @@ func (a *App) GenerateProjectConfigForSingleProject(serverDataJson, projectConfi
 	log.Printf("  projectConfigJson: %s", projectConfigJson)
 	log.Printf("  unused: %s", unused)
 	log.Printf("  authorization length: %d", len(authorization))
-	
+
 	// 检查授权
 	if authorization == "" || strings.TrimSpace(authorization) == "" {
 		log.Printf("Authorization is empty or whitespace")
@@ -1090,7 +1093,7 @@ func (a *App) GenerateProjectConfigForSingleProject(serverDataJson, projectConfi
 		server.ServerPort = "22"
 	}
 
-	log.Printf("Successfully parsed server data: ServerID=%s, IP=%s, DefaultPath=%s", 
+	log.Printf("Successfully parsed server data: ServerID=%s, IP=%s, DefaultPath=%s",
 		server.ServerID, server.ServerIP, server.DefaultPath)
 
 	log.Printf("Uploading frontend-generated config to server: %s", server.ServerID)
@@ -1126,7 +1129,7 @@ func (a *App) generateCurrentProjectConfigJSON(server *services.ServerData, proj
 	projectConfig := make(map[string]map[string]string)
 
 	log.Printf("Generating config for current project: %s", projectID)
-	
+
 	// 查找当前项目
 	var currentProject *services.ProjectData
 	for _, project := range server.ProjectList {
@@ -1143,7 +1146,7 @@ func (a *App) generateCurrentProjectConfigJSON(server *services.ServerData, proj
 	// 提取API域名
 	apiDomain := extractDomainFromURL(currentProject.ProjectAPIURL)
 
-	log.Printf("Processing current project %s: API=%s, APIPort=%s, FrontPort=%s", 
+	log.Printf("Processing current project %s: API=%s, APIPort=%s, FrontPort=%s",
 		currentProject.ProjectID, apiDomain, currentProject.APIPort, currentProject.FrontPort)
 
 	// 只包含您指定的三个字段
@@ -1618,4 +1621,98 @@ func (a *App) processReleaseAndUploadConfig(server *services.ServerData, filenam
 
 	log.Printf("Config file uploaded successfully to: %s", targetPath)
 	return nil
+}
+
+// CapturePage 抓取页面内容
+func (a *App) CapturePage(targetURL, optionsJson string) string {
+	log.Printf("CapturePage called with URL: %s, options: %s", targetURL, optionsJson)
+
+	// 验证URL
+	if targetURL == "" || strings.TrimSpace(targetURL) == "" {
+		response := ApiResponse{Code: 400, Msg: "URL不能为空"}
+		result, _ := json.Marshal(response)
+		return string(result)
+	}
+
+	// 解析选项
+	var options services.CaptureOptions
+	if optionsJson != "" {
+		if err := json.Unmarshal([]byte(optionsJson), &options); err != nil {
+			log.Printf("Failed to unmarshal options: %v", err)
+			// 使用默认选项
+			options = services.CaptureOptions{
+				IncludeImages:   true,
+				IncludeStyles:   true,
+				IncludeScripts:  true,
+				FollowRedirects: true,
+				Timeout:         60,
+				CreateZip:       true,
+				MaxFiles:        200,
+			}
+		}
+	} else {
+		// 默认选项
+		options = services.CaptureOptions{
+			IncludeImages:   true,
+			IncludeStyles:   true,
+			IncludeScripts:  true,
+			FollowRedirects: true,
+			Timeout:         60,
+			CreateZip:       true,
+			MaxFiles:        200,
+		}
+	}
+
+	// 设置超时范围
+	if options.Timeout < 10 {
+		options.Timeout = 10
+	}
+	if options.Timeout > 180 {
+		options.Timeout = 180
+	}
+
+	// 设置文件数量范围
+	if options.MaxFiles < 50 {
+		options.MaxFiles = 50
+	}
+	if options.MaxFiles > 1000 {
+		options.MaxFiles = 1000
+	}
+
+	log.Printf("Using options: %+v", options)
+
+	// 执行页面抓取
+	result, err := a.pageCaptureService.CapturePage(targetURL, options)
+	if err != nil {
+		log.Printf("Failed to capture page: %v", err)
+		response := ApiResponse{Code: 500, Msg: fmt.Sprintf("页面抓取失败: %v", err)}
+		responseResult, _ := json.Marshal(response)
+		return string(responseResult)
+	}
+
+	log.Printf("Page captured successfully: status=%d, contentLength=%d, duration=%dms",
+		result.StatusCode, result.ContentLength, result.Duration)
+
+	response := ApiResponse{Code: 200, Msg: "页面抓取成功", Data: result}
+	responseResult, _ := json.Marshal(response)
+	return string(responseResult)
+}
+
+// DownloadFile 下载文件
+func (a *App) DownloadFile(filePath string) ([]byte, error) {
+	log.Printf("DownloadFile called with path: %s", filePath)
+
+	// 检查文件是否存在
+	if _, err := os.Stat(filePath); os.IsNotExist(err) {
+		return nil, fmt.Errorf("文件不存在: %s", filePath)
+	}
+
+	// 读取文件内容
+	content, err := os.ReadFile(filePath)
+	if err != nil {
+		return nil, fmt.Errorf("读取文件失败: %v", err)
+	}
+
+	log.Printf("File downloaded successfully, size: %d bytes", len(content))
+	return content, nil
 }

@@ -79,6 +79,8 @@ const apiMap: Record<string, (data: any) => Promise<string>> = {
     'project_init_with_data': (data: any) => window.go!.main!.App!.ProjectInitWithData(data.server_id, data.project_id, data.server_data_json, data.authorization),
     'project_update': (data: any) => window.go!.main!.App!.ProjectUpdate(data.server_id, data.project_id, data.authorization, data.client_json),
     'project_update_with_data': (data: any) => window.go!.main!.App!.ProjectUpdateWithData(data.server_id, data.project_id, data.server_data_json, data.authorization),
+    'capture_page': (data: any) => window.go!.main!.App!.CapturePage(data.url, data.options || '{}'),
+    'download_file': (data: any) => window.go!.main!.App!.DownloadFile(data.filePath),
 };
 
 // API 调用函数 - 纯净的 API 调用，不处理 loading

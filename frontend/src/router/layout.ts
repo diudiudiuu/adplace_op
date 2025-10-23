@@ -38,6 +38,11 @@ const layoutRouter = {
             component: () => import('@/views/server/ServerInfo.vue'),
             props: true,
         },
+        {
+            path: '/page-capture',
+            name: 'page-capture',
+            component: () => import('@/views/common/PageCapture.vue'),
+        },
         // 动态路由将通过 addDynamicRoutes 函数添加
     ],
 }

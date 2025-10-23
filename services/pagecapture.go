@@ -173,9 +173,13 @@ func (s *PageCaptureService) updateFileSize(url string, size int64) {
 	s.progressMutex.Lock()
 	defer s.progressMutex.Unlock()
 	
+	formattedSize := s.formatFileSize(size)
+	s.debugPrintf("更新文件大小: %s -> %d 字节 -> %s\n", url, size, formattedSize)
+	
 	for i := range s.progressInfo.FileList {
 		if s.progressInfo.FileList[i].URL == url {
-			s.progressInfo.FileList[i].Size = s.formatFileSize(size)
+			s.progressInfo.FileList[i].Size = formattedSize
+			s.debugPrintf("文件大小已更新: %s = %s\n", s.progressInfo.FileList[i].Name, formattedSize)
 			break
 		}
 	}
@@ -203,7 +207,12 @@ func (s *PageCaptureService) formatFileSize(bytes int64) string {
 	}
 	
 	sizes := []string{"B", "KB", "MB", "GB", "TB"}
-	return fmt.Sprintf("%.1f %s", float64(bytes)/float64(div), sizes[exp])
+	result := fmt.Sprintf("%.1f %s", float64(bytes)/float64(div), sizes[exp])
+	
+	// 调试信息
+	s.debugPrintf("格式化文件大小: %d 字节 -> %s (div=%d, exp=%d)\n", bytes, result, div, exp)
+	
+	return result
 }
 
 // debugPrintf 调试输出函数
@@ -1320,8 +1329,18 @@ func (s *PageCaptureService) downloadWorker(taskChan <-chan DownloadTask, result
 		}
 		s.mutex.RUnlock()
 
+		// 更新状态为下载中
+		s.updateFileStatus(task.URL, "downloading", 0)
+		
 		// 下载资源
 		localPath := s.downloadResourceSync(task.URL, task.ResourceType)
+		
+		// 更新最终状态
+		if localPath != "" {
+			s.updateFileStatus(task.URL, "completed", 100)
+		} else {
+			s.updateFileStatus(task.URL, "failed", 0)
+		}
 		
 		resultChan <- DownloadResult{
 			Task:      task,
@@ -1349,7 +1368,6 @@ func (s *PageCaptureService) downloadResourceSync(resourceURL, resourceType stri
 
 	// 在锁外进行网络下载（这是耗时操作）
 	s.debugPrintf("开始下载: %s (%s)\n", resourceURL, resourceType)
-	s.updateFileStatus(resourceURL, "downloading", 0)
 	
 	// 为大文件创建更长超时的客户端
 	client := s.client
@@ -1365,23 +1383,24 @@ func (s *PageCaptureService) downloadResourceSync(resourceURL, resourceType stri
 	resp, err := client.Get(resourceURL)
 	if err != nil {
 		s.debugPrintf("下载失败: %s - %v\n", resourceURL, err)
-		s.updateFileStatus(resourceURL, "failed", 0)
 		return ""
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
 		s.debugPrintf("HTTP错误: %s - %d\n", resourceURL, resp.StatusCode)
-		s.updateFileStatus(resourceURL, "failed", 0)
 		return ""
 	}
 
 	// 获取文件大小信息
 	contentLength := resp.ContentLength
+	s.debugPrintf("HTTP响应头 Content-Length: %d 字节\n", contentLength)
 	if contentLength > 0 {
-		s.debugPrintf("下载中: %s - 大小: %.2f MB\n", resourceURL, float64(contentLength)/(1024*1024))
-		// 更新文件大小信息
-		s.updateFileSize(resourceURL, contentLength)
+		s.debugPrintf("下载中: %s - 预期大小: %.2f MB\n", resourceURL, float64(contentLength)/(1024*1024))
+		// 暂时不更新文件大小，等下载完成后用实际大小更新
+		// s.updateFileSize(resourceURL, contentLength)
+	} else {
+		s.debugPrintf("Content-Length无效(%d)，将在下载完成后更新文件大小\n", contentLength)
 	}
 
 	// 为大文件添加分块并发下载
@@ -1394,18 +1413,24 @@ func (s *PageCaptureService) downloadResourceSync(resourceURL, resourceType stri
 		s.debugPrintf("大文件下载，启用进度监控...\n")
 		content, err = s.readWithProgress(resp.Body, contentLength, resourceURL)
 	} else {
+		// 小文件直接读取，进度由worker管理
 		content, err = io.ReadAll(resp.Body)
 	}
 	
 	if err != nil {
 		s.debugPrintf("读取失败: %s - %v\n", resourceURL, err)
-		s.updateFileStatus(resourceURL, "failed", 0)
 		return ""
 	}
 
 	s.debugPrintf("下载完成: %s - 实际大小: %.2f MB\n", resourceURL, float64(len(content))/(1024*1024))
 	s.debugPrintf("尝试更新状态，URL: %s\n", resourceURL)
-	s.updateFileStatus(resourceURL, "completed", 100)
+	
+	// 用实际下载的文件大小更新（这样可以处理Content-Length为-1的情况）
+	actualSize := int64(len(content))
+	if actualSize > 0 {
+		s.debugPrintf("实际文件大小: %d 字节 (%.2f MB)\n", actualSize, float64(actualSize)/(1024*1024))
+		s.updateFileSize(resourceURL, actualSize)
+	}
 
 	// 对于CSS和JS文件，尝试处理编码问题
 	if resourceType == "css" || resourceType == "js" {

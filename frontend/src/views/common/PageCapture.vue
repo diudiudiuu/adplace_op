@@ -544,6 +544,69 @@ const fileTableColumns = [
         }
     },
     {
+        title: '大小',
+        key: 'size',
+        width: 80,
+        render: (row: any) => {
+            return h('span', {
+                style: {
+                    fontSize: '11px',
+                    color: '#666'
+                }
+            }, row.size || '未知')
+        }
+    },
+    {
+        title: '进度',
+        key: 'progress',
+        width: 120,
+        render: (row: any) => {
+            const progress = row.progress || 0
+            const isDownloading = row.status === 'downloading'
+            const isCompleted = row.status === 'completed'
+            const isFailed = row.status === 'failed'
+            
+            let progressColor = '#70c0e8'
+            if (isCompleted) progressColor = '#18a058'
+            else if (isFailed) progressColor = '#d03050'
+            else if (isDownloading) progressColor = '#f0a020'
+            
+            return h('div', {
+                style: {
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px'
+                }
+            }, [
+                h('div', {
+                    style: {
+                        width: '60px',
+                        height: '4px',
+                        backgroundColor: '#f0f0f0',
+                        borderRadius: '2px',
+                        overflow: 'hidden'
+                    }
+                }, [
+                    h('div', {
+                        style: {
+                            width: `${progress}%`,
+                            height: '100%',
+                            backgroundColor: progressColor,
+                            transition: 'width 0.3s ease'
+                        }
+                    })
+                ]),
+                h('span', {
+                    style: {
+                        fontSize: '10px',
+                        color: '#666',
+                        minWidth: '30px'
+                    }
+                }, `${progress}%`)
+            ])
+        }
+    },
+    {
         title: '状态',
         key: 'status',
         width: 100,

@@ -6,6 +6,7 @@ require (
 	github.com/PuerkitoBio/goquery v1.10.3
 	github.com/wailsapp/wails/v2 v2.10.2
 	golang.org/x/crypto v0.37.0
+	golang.org/x/text v0.24.0
 )
 
 require (
@@ -35,7 +36,6 @@ require (
 	github.com/wailsapp/mimetype v1.4.1 // indirect
 	golang.org/x/net v0.39.0 // indirect
 	golang.org/x/sys v0.32.0 // indirect
-	golang.org/x/text v0.24.0 // indirect
 )
 
 // replace github.com/wailsapp/wails/v2 v2.10.2 => C:\Users\startiasoft\go\pkg\mod

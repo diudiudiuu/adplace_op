@@ -1687,6 +1687,39 @@ func (a *App) CapturePage(targetURL, optionsJson string) string {
 
 	log.Printf("Using options: %+v", options)
 
+	// 设置进度回调 - 使用Wails事件系统发送到前端
+	a.pageCaptureService.SetProgressCallback(func(progress services.ProgressInfo) {
+		log.Printf("Progress: %s - %d/%d files, current: %s", 
+			progress.Phase, progress.CompletedFiles, progress.TotalFiles, progress.CurrentFile)
+		
+		// 发送进度事件到前端
+		runtime.EventsEmit(a.ctx, "capture_progress", progress)
+		
+		// 打印文件列表状态（调试用）
+		if len(progress.FileList) > 0 {
+			completed := 0
+			downloading := 0
+			pending := 0
+			failed := 0
+			
+			for _, file := range progress.FileList {
+				switch file.Status {
+				case "completed":
+					completed++
+				case "downloading":
+					downloading++
+				case "pending":
+					pending++
+				case "failed":
+					failed++
+				}
+			}
+			
+			log.Printf("File status: completed=%d, downloading=%d, pending=%d, failed=%d", 
+				completed, downloading, pending, failed)
+		}
+	})
+
 	// 执行页面抓取
 	result, err := a.pageCaptureService.CapturePage(targetURL, options)
 	if err != nil {
@@ -1729,6 +1762,21 @@ func (a *App) CapturePage(targetURL, optionsJson string) string {
 	response := ApiResponse{Code: 200, Msg: "页面抓取成功", Data: result}
 	responseResult, _ := json.Marshal(response)
 	return string(responseResult)
+}
+
+// GetCaptureProgress 获取页面抓取进度
+func (a *App) GetCaptureProgress() string {
+	// 从页面抓取服务获取当前进度
+	progress := a.pageCaptureService.GetCurrentProgress()
+	
+	response := ApiResponse{
+		Code: 200,
+		Msg:  "success",
+		Data: progress,
+	}
+	
+	result, _ := json.Marshal(response)
+	return string(result)
 }
 
 // DownloadFile 下载文件并返回API响应格式

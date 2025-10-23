@@ -50,6 +50,10 @@ export function GenerateProjectConfigForSingleProject(arg1, arg2, arg3, arg4) {
   return window['go']['main']['App']['GenerateProjectConfigForSingleProject'](arg1, arg2, arg3, arg4);
 }
 
+export function GetCaptureProgress() {
+  return window['go']['main']['App']['GetCaptureProgress']();
+}
+
 export function Greet(arg1) {
   return window['go']['main']['App']['Greet'](arg1);
 }

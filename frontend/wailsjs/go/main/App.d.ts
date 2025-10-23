@@ -25,6 +25,8 @@ export function GenerateProjectConfig(arg1:string,arg2:string,arg3:string):Promi
 
 export function GenerateProjectConfigForSingleProject(arg1:string,arg2:string,arg3:string,arg4:string):Promise<string>;
 
+export function GetCaptureProgress():Promise<string>;
+
 export function Greet(arg1:string):Promise<string>;
 
 export function List(arg1:string,arg2:string):Promise<string>;

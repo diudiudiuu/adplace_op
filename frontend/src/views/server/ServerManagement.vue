@@ -147,8 +147,7 @@ const isServerFormVisible = ref(false)
 const isEditMode = ref(false)
 const serverFormRef = ref()
 
-const testingServers = ref(new Set<string>())
-const updatingServers = ref(new Set<string>())
+// 移除按钮级loading状态，统一使用全局loading
 
 // 分页配置
 const pagination = {
@@ -184,7 +183,7 @@ const serverColumns = computed(() => [
                             type: 'info',
                             class: 'special-table-btn',
                             onClick: () => testStoredServerSSH(row.server_id),
-                            loading: testingServers.value.has(row.server_id)
+
                         }, {
                             icon: () => h(NIcon, { size: 16 }, { default: () => h(LinkOutline) })
                         }),
@@ -196,7 +195,7 @@ const serverColumns = computed(() => [
                             type: 'warning',
                             class: 'special-table-btn',
                             onClick: () => updateAllProjects(row),
-                            loading: updatingServers.value.has(row.server_id),
+
                             disabled: !row.project_list || row.project_list.length === 0
                         }, {
                             icon: () => h(NIcon, { size: 16 }, { default: () => h(CloudUploadOutline) })
@@ -334,29 +333,39 @@ const submitServerForm = async () => {
             requestData.old_server_id = serverFormData.value.server_id // 编辑时原ID就是当前ID
         }
 
-        globalLoading.show(isEditMode.value ? '正在更新服务器...' : '正在添加服务器...')
+        // 先隐藏弹框
+        isServerFormVisible.value = false
+        
+        // 延迟一点时间确保弹框完全关闭后再显示loading
+        setTimeout(async () => {
+            globalLoading.show(isEditMode.value ? '正在更新服务器...' : '正在添加服务器...')
 
-        console.log('Submitting server form:', action, requestData)
-        console.log('Default path value:', requestData.default_path)
-        const res = await api(action, requestData)
-        console.log('Server form response:', res)
+            try {
+                console.log('Submitting server form:', action, requestData)
+                console.log('Default path value:', requestData.default_path)
+                const res = await api(action, requestData)
+                console.log('Server form response:', res)
 
-        if (res && (res.code === 200 || res.success)) {
-            message.success(isEditMode.value ? '服务器更新成功' : '服务器添加成功')
-            isServerFormVisible.value = false
-            await fetchServers(true, false) // 强制刷新列表，但不显示 loading
-            // 刷新左侧菜单
-            await reloadMenus()
-            sidebar.setboolroute(true)
-        } else {
-            const errorMsg = res?.msg || res?.message || (isEditMode.value ? '服务器更新失败' : '服务器添加失败')
-            message.error(errorMsg)
-        }
+                if (res && (res.code === 200 || res.success)) {
+                    message.success(isEditMode.value ? '服务器更新成功' : '服务器添加成功')
+                    await fetchServers(true, false) // 强制刷新列表，但不显示 loading
+                    // 刷新左侧菜单
+                    await reloadMenus()
+                    sidebar.setboolroute(true)
+                } else {
+                    const errorMsg = res?.msg || res?.message || (isEditMode.value ? '服务器更新失败' : '服务器添加失败')
+                    message.error(errorMsg)
+                }
+            } catch (error) {
+                console.error('Server form submission error:', error)
+                message.error(isEditMode.value ? '服务器更新失败' : '服务器添加失败')
+            } finally {
+                globalLoading.hide()
+            }
+        }, 100)
     } catch (error) {
         console.error('Server form submission error:', error)
         message.error(isEditMode.value ? '服务器更新失败' : '服务器添加失败')
-    } finally {
-        globalLoading.hide()
     }
 }
 
@@ -372,7 +381,12 @@ const confirmDeleteServer = (server: Server) => {
         content,
         positiveText: '确定删除',
         negativeText: '取消',
-        onPositiveClick: () => deleteServer(server)
+        onPositiveClick: () => {
+            // 延迟执行确保弹框完全关闭后再显示loading
+            setTimeout(() => {
+                deleteServer(server)
+            }, 100)
+        }
     })
 }
 
@@ -433,7 +447,9 @@ const openServerForm = (editMode: boolean, server?: Server) => {
 
 // 测试已存储服务器的SSH连接
 const testStoredServerSSH = async (serverId: string) => {
-    testingServers.value.add(serverId)
+    if (globalLoading && globalLoading.show) {
+        globalLoading.show('正在测试SSH连接...')
+    }
 
     try {
         const res = await api('test_stored_ssh', {
@@ -454,7 +470,9 @@ const testStoredServerSSH = async (serverId: string) => {
         console.error('Stored SSH test error:', error)
         message.error(`服务器 ${serverId} SSH连接测试异常`)
     } finally {
-        testingServers.value.delete(serverId)
+        if (globalLoading && globalLoading.hide) {
+            globalLoading.hide()
+        }
     }
 }
 
@@ -479,18 +497,28 @@ const updateAllProjects = async (server: Server) => {
 是否继续？`,
         positiveText: '确认更新',
         negativeText: '取消',
-        onPositiveClick: async () => {
-            await executeUpdateAllProjects(server)
+        onPositiveClick: () => {
+            // 不使用async，让弹框正常关闭，然后执行操作
+            setTimeout(() => {
+                executeUpdateAllProjects(server)
+            }, 100)
         }
     })
 }
 
 // 执行全部更新项目
 const executeUpdateAllProjects = async (server: Server) => {
-    updatingServers.value.add(server.server_id)
-
     try {
-        globalLoading.show(`正在更新服务器 "${server.server_name}" 下的所有项目...`)
+        console.log('executeUpdateAllProjects: About to show loading')
+        console.log('executeUpdateAllProjects: globalLoading:', globalLoading)
+        
+        if (globalLoading && globalLoading.show) {
+            globalLoading.show(`正在更新服务器 "${server.server_name}" 下的所有项目...`)
+            console.log('executeUpdateAllProjects: Loading shown successfully')
+        } else {
+            console.error('executeUpdateAllProjects: globalLoading not available')
+            message.loading(`正在更新服务器 "${server.server_name}" 下的所有项目...`, { duration: 0 })
+        }
 
         // 1. 生成所有项目的配置JSON
         const extractDomain = (url: string): string => {
@@ -581,8 +609,11 @@ const executeUpdateAllProjects = async (server: Server) => {
         console.error('Update all projects error:', error)
         message.error(`全部更新失败：${(error as Error).message}`)
     } finally {
-        globalLoading.hide()
-        updatingServers.value.delete(server.server_id)
+        console.log('executeUpdateAllProjects: About to hide loading')
+        if (globalLoading && globalLoading.hide) {
+            globalLoading.hide()
+            console.log('executeUpdateAllProjects: Loading hidden successfully')
+        }
     }
 }
 

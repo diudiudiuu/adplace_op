@@ -1,6 +1,7 @@
 import { decryptAes } from '@/utils';
 import { isAuthorized, getAuthorization, clearAllStorage } from '@/utils/auth';
 import { clearMenus } from '@/components/menu';
+import router from '@/router';
 
 // 全局消息和加载实例
 let globalMessage: any = null;
@@ -40,15 +41,12 @@ const handleUnauthorized = () => {
     // 清除菜单缓存
     clearMenus();
 
-    // 重定向到登录页面
-    if (typeof window !== 'undefined') {
-        // 延迟一点时间确保清理完成
-        setTimeout(() => {
-            if (window.location.pathname !== '/lock') {
-                window.location.href = '/lock';
-            }
-        }, 1500); // 延长时间让用户看到提示
-    }
+    // 使用 Vue Router 进行路由跳转
+    setTimeout(() => {
+        if (router.currentRoute.value.path !== '/lock') {
+            router.push('/lock');
+        }
+    }, 1500); // 延长时间让用户看到提示
 };
 
 // 简化的 API 调用映射

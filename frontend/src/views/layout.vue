@@ -74,23 +74,10 @@ const { boolroute } = storeToRefs(sidebar)
 const message = useMessage()
 const dialog = useDialog()
 
-// 设置全局实例
+// 设置全局实例 - 只设置message，不设置loading避免重复弹框
 onMounted(() => {
-    // 创建Naive UI loading实例
-    const createLoading = () => {
-        return {
-            create: (options: any) => {
-                const loadingInstance = message.loading(options.description || '加载中...', {
-                    duration: 0
-                });
-                return {
-                    destroy: () => loadingInstance.destroy()
-                };
-            }
-        };
-    };
-    
-    setGlobalInstances(message, createLoading())
+    // 只设置message实例用于401错误处理，不设置loading实例
+    setGlobalInstances(message, null)
 })
 
 const menuData = ref<any[]>([])

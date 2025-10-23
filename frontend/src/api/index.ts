@@ -81,25 +81,12 @@ const apiMap: Record<string, (data: any) => Promise<string>> = {
     'project_update_with_data': (data: any) => window.go!.main!.App!.ProjectUpdateWithData(data.server_id, data.project_id, data.server_data_json, data.authorization),
 };
 
-// 简化的 API 调用函数
-const api = async (uri: string, data: any, showLoading: boolean = true) => {
-    let loadingInstance: any = null;
-
-    // 开始全屏加载
-    if (showLoading && globalLoading) {
-        loadingInstance = globalLoading.create({
-            show: true,
-            description: '请稍候...'
-        });
-    }
-
+// 简化的 API 调用函数 - 移除共通弹框，只保留必要的401处理
+const api = async (uri: string, data: any, showLoading: boolean = false) => {
     try {
         // 检查 Wails 环境
         if (!window.go?.main?.App) {
             console.warn(`API ${uri}: Wails not available, returning empty data`);
-            if (globalMessage) {
-                globalMessage.warning('应用环境未准备就绪，请稍后重试');
-            }
             return uri === 'list' ? [] : {};
         }
 
@@ -149,27 +136,18 @@ const api = async (uri: string, data: any, showLoading: boolean = true) => {
                 responseType: typeof res
             });
 
-            // 显示更友好的错误信息
-            if (globalMessage) {
-                globalMessage.error(`API ${uri} 响应格式错误: ${error.message}`);
-            }
-
             throw new Error(`API ${uri}: JSON解析失败 - ${error.message}`);
         }
 
-        // 检查是否返回 401 未授权错误
+        // 检查是否返回 401 未授权错误 - 这是必要的共通处理
         if (parsedData?.code === 401) {
             console.warn(`API ${uri}: Received 401 Unauthorized, logging out...`);
             handleUnauthorized();
             return uri === 'list' ? [] : {};
         }
 
-        // 检查其他错误状态码
+        // 其他错误不在共通层处理，由业务层处理
         if (parsedData?.code && parsedData.code !== 200) {
-            const errorMsg = parsedData.msg || `请求失败 (${parsedData.code})`;
-            if (globalMessage) {
-                globalMessage.error(errorMsg);
-            }
             console.error(`API ${uri} error:`, parsedData);
         }
 
@@ -196,17 +174,8 @@ const api = async (uri: string, data: any, showLoading: boolean = true) => {
         return parsedData || {};
     } catch (error) {
         console.error(`API ${uri} error:`, error);
-
-        if (globalMessage) {
-            globalMessage.error(`请求失败: ${error}`);
-        }
-
+        // 不在共通层显示错误弹框，由业务层处理
         return uri === 'list' ? [] : {};
-    } finally {
-        // 关闭加载
-        if (loadingInstance) {
-            loadingInstance.destroy();
-        }
     }
 }
 
@@ -246,7 +215,12 @@ if (typeof window !== 'undefined') {
     };
 }
 
+// 静默API调用函数 - 不显示任何弹框，只返回结果
+const apiSilent = async (uri: string, data: any) => {
+    return await api(uri, data, false);
+}
+
 // 导出未授权处理函数，供其他地方使用
-export { handleUnauthorized };
+export { handleUnauthorized, apiSilent };
 
 export default api

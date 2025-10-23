@@ -528,6 +528,13 @@ watch(boolroute, (newVal) => {
     font-size: 14px;
     color: #666;
     font-weight: 500;
+    text-align: center;
+    word-wrap: break-word;
+    word-break: break-all;
+    white-space: pre-wrap;
+    max-width: 300px;
+    line-height: 1.4;
+    padding: 0 16px;
 }
 
 .fade-enter-active,

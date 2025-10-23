@@ -251,6 +251,104 @@ func (s *PageCaptureService) processHTMLAndDownloadResources(htmlContent string,
 		})
 	}
 
+	// 下载视频
+	if options.IncludeVideos {
+		// 处理 video 标签的 src 属性
+		doc.Find("video[src]").Each(func(i int, sel *goquery.Selection) {
+			if s.fileCount >= s.maxFiles {
+				return
+			}
+			src, exists := sel.Attr("src")
+			if exists {
+				absoluteURL := s.resolveURL(src)
+				if absoluteURL != "" {
+					localPath := s.downloadResource(absoluteURL, "videos")
+					if localPath != "" {
+						sel.SetAttr("src", localPath)
+					}
+				}
+			}
+		})
+
+		// 处理 video 标签内的 source 标签
+		doc.Find("video source[src]").Each(func(i int, sel *goquery.Selection) {
+			if s.fileCount >= s.maxFiles {
+				return
+			}
+			src, exists := sel.Attr("src")
+			if exists {
+				absoluteURL := s.resolveURL(src)
+				if absoluteURL != "" {
+					localPath := s.downloadResource(absoluteURL, "videos")
+					if localPath != "" {
+						sel.SetAttr("src", localPath)
+					}
+				}
+			}
+		})
+
+		// 处理 audio 标签（音频文件）
+		doc.Find("audio[src]").Each(func(i int, sel *goquery.Selection) {
+			if s.fileCount >= s.maxFiles {
+				return
+			}
+			src, exists := sel.Attr("src")
+			if exists {
+				absoluteURL := s.resolveURL(src)
+				if absoluteURL != "" {
+					localPath := s.downloadResource(absoluteURL, "videos")
+					if localPath != "" {
+						sel.SetAttr("src", localPath)
+					}
+				}
+			}
+		})
+
+		// 处理 audio 标签内的 source 标签
+		doc.Find("audio source[src]").Each(func(i int, sel *goquery.Selection) {
+			if s.fileCount >= s.maxFiles {
+				return
+			}
+			src, exists := sel.Attr("src")
+			if exists {
+				absoluteURL := s.resolveURL(src)
+				if absoluteURL != "" {
+					localPath := s.downloadResource(absoluteURL, "videos")
+					if localPath != "" {
+						sel.SetAttr("src", localPath)
+					}
+				}
+			}
+		})
+	}
+
+	// 下载字体文件
+	if options.IncludeFonts {
+		// 处理 link 标签中的字体文件
+		doc.Find("link[rel='preload'][as='font']").Each(func(i int, sel *goquery.Selection) {
+			if s.fileCount >= s.maxFiles {
+				return
+			}
+			href, exists := sel.Attr("href")
+			if exists {
+				absoluteURL := s.resolveURL(href)
+				if absoluteURL != "" {
+					localPath := s.downloadResource(absoluteURL, "fonts")
+					if localPath != "" {
+						sel.SetAttr("href", localPath)
+					}
+				}
+			}
+		})
+
+		// 处理 @font-face 规则中的字体文件（在CSS中）
+		doc.Find("style").Each(func(i int, sel *goquery.Selection) {
+			cssContent := sel.Text()
+			modifiedCSS := s.processFontContent(cssContent)
+			sel.SetText(modifiedCSS)
+		})
+	}
+
 	html, err := doc.Html()
 	if err != nil {
 		return htmlContent, err
@@ -362,6 +460,10 @@ func (s *PageCaptureService) getExtensionByType(resourceType string) string {
 		return ".js"
 	case "images":
 		return ".jpg"
+	case "videos":
+		return ".mp4"
+	case "fonts":
+		return ".woff2"
 	default:
 		return ".txt"
 	}
@@ -389,6 +491,49 @@ func (s *PageCaptureService) processCSSContent(cssContent string) string {
 		}
 		return match
 	})
+}
+
+// processFontContent 处理CSS内容中的字体文件URL
+func (s *PageCaptureService) processFontContent(cssContent string) string {
+	if s.fileCount >= s.maxFiles {
+		return cssContent
+	}
+
+	// 处理 @font-face 规则中的 src 属性
+	fontFaceRegex := regexp.MustCompile(`@font-face\s*\{[^}]*src\s*:\s*([^;}]+)[;}]`)
+	urlRegex := regexp.MustCompile(`url\s*\(\s*['"]?([^'")]+)['"]?\s*\)`)
+
+	return fontFaceRegex.ReplaceAllStringFunc(cssContent, func(match string) string {
+		return urlRegex.ReplaceAllStringFunc(match, func(urlMatch string) string {
+			submatches := urlRegex.FindStringSubmatch(urlMatch)
+			if len(submatches) > 1 {
+				resourceURL := submatches[1]
+				// 检查是否是字体文件
+				if s.isFontFile(resourceURL) {
+					absoluteURL := s.resolveURL(resourceURL)
+					if absoluteURL != "" {
+						localPath := s.downloadResource(absoluteURL, "fonts")
+						if localPath != "" {
+							return strings.Replace(urlMatch, resourceURL, localPath, 1)
+						}
+					}
+				}
+			}
+			return urlMatch
+		})
+	})
+}
+
+// isFontFile 检查是否是字体文件
+func (s *PageCaptureService) isFontFile(url string) bool {
+	fontExtensions := []string{".woff", ".woff2", ".ttf", ".otf", ".eot"}
+	lowerURL := strings.ToLower(url)
+	for _, ext := range fontExtensions {
+		if strings.Contains(lowerURL, ext) {
+			return true
+		}
+	}
+	return false
 }
 
 // saveAllFiles 保存所有文件

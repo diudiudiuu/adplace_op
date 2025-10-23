@@ -320,7 +320,7 @@ const options = ref({
     includeScripts: true,
     followRedirects: true,
     includeFonts: true,
-    includeVideos: false,
+    includeVideos: true,
     removeAnalytics: true,
     removeTracking: true,
     removeAds: true,

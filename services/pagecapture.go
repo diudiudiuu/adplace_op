@@ -89,6 +89,9 @@ func (s *PageCaptureService) GetCurrentProgress() ProgressInfo {
 	s.progressMutex.RLock()
 	defer s.progressMutex.RUnlock()
 	
+	s.debugPrintf("GetCurrentProgress调用: Phase=%s, TotalFiles=%d, CompletedFiles=%d, FileListLen=%d\n",
+		s.progressInfo.Phase, s.progressInfo.TotalFiles, s.progressInfo.CompletedFiles, len(s.progressInfo.FileList))
+	
 	// 返回进度信息的副本
 	progress := ProgressInfo{
 		Phase:          s.progressInfo.Phase,
@@ -101,6 +104,13 @@ func (s *PageCaptureService) GetCurrentProgress() ProgressInfo {
 	
 	// 复制文件列表
 	copy(progress.FileList, s.progressInfo.FileList)
+	
+	// 打印前几个文件的状态
+	for i, file := range progress.FileList {
+		if i < 3 {
+			s.debugPrintf("文件 %d: %s - %s\n", i, file.Name, file.Status)
+		}
+	}
 	
 	return progress
 }
@@ -124,64 +134,38 @@ func (s *PageCaptureService) updateFileStatus(url, status string, progress int) 
 	s.progressMutex.Lock()
 	defer s.progressMutex.Unlock()
 	
+	found := false
 	for i := range s.progressInfo.FileList {
 		if s.progressInfo.FileList[i].URL == url {
+			oldStatus := s.progressInfo.FileList[i].Status
 			s.progressInfo.FileList[i].Status = status
 			s.progressInfo.FileList[i].Progress = progress
+			s.debugPrintf("更新文件状态: %s %s -> %s\n", s.progressInfo.FileList[i].Name, oldStatus, status)
+			found = true
 			break
 		}
+	}
+	
+	if !found {
+		s.debugPrintf("警告: 未找到要更新的文件 URL: %s\n", url)
 	}
 	
 	// 更新完成文件数
 	completed := 0
+	failed := 0
 	for _, file := range s.progressInfo.FileList {
 		if file.Status == "completed" {
 			completed++
+		} else if file.Status == "failed" {
+			failed++
 		}
 	}
 	s.progressInfo.CompletedFiles = completed
+	s.debugPrintf("状态统计: 完成=%d, 失败=%d, 总数=%d\n", completed, failed, len(s.progressInfo.FileList))
 	
 	if s.progressCallback != nil {
 		s.progressCallback(s.progressInfo)
 	}
-}
-
-// updateFileSize 更新文件大小
-func (s *PageCaptureService) updateFileSize(url string, size int64) {
-	s.progressMutex.Lock()
-	defer s.progressMutex.Unlock()
-	
-	for i := range s.progressInfo.FileList {
-		if s.progressInfo.FileList[i].URL == url {
-			s.progressInfo.FileList[i].Size = s.formatFileSize(size)
-			break
-		}
-	}
-	
-	if s.progressCallback != nil {
-		s.progressCallback(s.progressInfo)
-	}
-}
-
-// formatFileSize 格式化文件大小
-func (s *PageCaptureService) formatFileSize(bytes int64) string {
-	if bytes == 0 {
-		return "0 B"
-	}
-	
-	const unit = 1024
-	if bytes < unit {
-		return fmt.Sprintf("%d B", bytes)
-	}
-	
-	div, exp := int64(unit), 0
-	for n := bytes / unit; n >= unit; n /= unit {
-		div *= unit
-		exp++
-	}
-	
-	sizes := []string{"B", "KB", "MB", "GB", "TB"}
-	return fmt.Sprintf("%.1f %s", float64(bytes)/float64(div), sizes[exp])
 }
 
 // updateFileSize 更新文件大小
@@ -1195,6 +1179,7 @@ func (s *PageCaptureService) processHTMLAndDownloadResources(htmlContent string,
 			Progress: 0,
 			URL:      task.URL,
 		}
+		s.debugPrintf("初始化文件 %d: %s -> URL: %s\n", i, fileName, task.URL)
 	}
 	s.progressMutex.Unlock()
 	
@@ -1380,12 +1365,14 @@ func (s *PageCaptureService) downloadResourceSync(resourceURL, resourceType stri
 	resp, err := client.Get(resourceURL)
 	if err != nil {
 		s.debugPrintf("下载失败: %s - %v\n", resourceURL, err)
+		s.updateFileStatus(resourceURL, "failed", 0)
 		return ""
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
 		s.debugPrintf("HTTP错误: %s - %d\n", resourceURL, resp.StatusCode)
+		s.updateFileStatus(resourceURL, "failed", 0)
 		return ""
 	}
 
@@ -1417,6 +1404,7 @@ func (s *PageCaptureService) downloadResourceSync(resourceURL, resourceType stri
 	}
 
 	s.debugPrintf("下载完成: %s - 实际大小: %.2f MB\n", resourceURL, float64(len(content))/(1024*1024))
+	s.debugPrintf("尝试更新状态，URL: %s\n", resourceURL)
 	s.updateFileStatus(resourceURL, "completed", 100)
 
 	// 对于CSS和JS文件，尝试处理编码问题

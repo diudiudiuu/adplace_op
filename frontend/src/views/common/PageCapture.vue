@@ -178,7 +178,7 @@
                             
                             <n-data-table
                                 :columns="fileTableColumns"
-                                :data="captureProgress.fileList"
+                                :data="sortedFileList"
                                 :pagination="false"
                                 :max-height="120"
                                 size="small"
@@ -243,7 +243,7 @@
                             
                             <n-data-table
                                 :columns="fileTableColumns"
-                                :data="captureProgress.fileList"
+                                :data="sortedFileList"
                                 :pagination="false"
                                 :max-height="120"
                                 size="small"
@@ -275,7 +275,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, inject, onMounted, onUnmounted, h, watch } from 'vue'
+import { ref, inject, onMounted, onUnmounted, h, watch, computed } from 'vue'
 import { useMessage } from 'naive-ui'
 import { 
     RefreshOutline, 
@@ -355,6 +355,45 @@ const showTestModal = ref(false)
 // 界面状态
 const quickOptions = ref(['images', 'styles', 'scripts'])
 const privacyOptions = ref(['analytics', 'tracking'])
+
+// 排序后的文件列表
+const sortedFileList = computed(() => {
+    if (!captureProgress.value.fileList || captureProgress.value.fileList.length === 0) {
+        return []
+    }
+    
+    // 定义状态优先级
+    const statusPriority = {
+        'downloading': 1,  // 下载中 - 最高优先级
+        'pending': 2,      // 等待下载 - 其次
+        'completed': 3,    // 下载完成 - 再次
+        'failed': 0        // 下载失败 - 特殊处理，在所有完成后显示在最上面
+    }
+    
+    // 检查是否所有文件都已完成（completed 或 failed）
+    const allCompleted = captureProgress.value.fileList.every(file => 
+        file.status === 'completed' || file.status === 'failed'
+    )
+    
+    return [...captureProgress.value.fileList].sort((a, b) => {
+        // 如果所有文件都已完成，失败的文件显示在最上面
+        if (allCompleted) {
+            if (a.status === 'failed' && b.status !== 'failed') return -1
+            if (b.status === 'failed' && a.status !== 'failed') return 1
+        }
+        
+        // 正常情况下按优先级排序
+        const priorityA = statusPriority[a.status] || 999
+        const priorityB = statusPriority[b.status] || 999
+        
+        if (priorityA !== priorityB) {
+            return priorityA - priorityB
+        }
+        
+        // 相同状态按文件名排序
+        return a.name.localeCompare(b.name)
+    })
+})
 
 // 同步快速选项和详细选项
 watch(quickOptions, (newVal) => {
@@ -457,10 +496,36 @@ const fileTableColumns = [
         key: 'name',
         ellipsis: true,
         render: (row: any) => {
-            console.log('渲染文件:', row.name, row.type)
+            console.log('渲染文件:', row.name, row.type, 'URL:', row.url)
+            
+            // 优先显示完整路径，如果没有则显示文件名
+            let displayName = row.url || row.name || '未知文件'
+            let fullPath = displayName
+            
+            // 如果是完整URL，提取路径部分进行显示
+            if (displayName.startsWith('http')) {
+                try {
+                    const urlObj = new URL(displayName)
+                    displayName = urlObj.pathname
+                    if (displayName === '/' || displayName === '') {
+                        displayName = '/index.html'
+                    }
+                } catch (e) {
+                    // URL解析失败，使用原始字符串
+                }
+            }
+            
+            // 如果路径太长，进行省略处理
+            const maxLength = 60
+            if (displayName.length > maxLength) {
+                const start = displayName.substring(0, 25)
+                const end = displayName.substring(displayName.length - 30)
+                displayName = `${start}...${end}`
+            }
+            
             return h('div', { 
                 class: 'file-name-cell',
-                title: row.name,
+                title: fullPath, // 完整路径作为tooltip
                 style: { display: 'flex', alignItems: 'center' }
             }, [
                 h('n-icon', { 
@@ -474,7 +539,7 @@ const fileTableColumns = [
                         textOverflow: 'ellipsis', 
                         whiteSpace: 'nowrap'
                     }
-                }, row.name || '未知文件')
+                }, displayName)
             ])
         }
     },
@@ -506,11 +571,21 @@ const fileTableColumns = [
                     statusColor = '#70c0e8'
             }
             
+            // 为下载中的状态添加特殊样式
+            const isDownloading = row.status === 'downloading'
+            const isFailed = row.status === 'failed'
+            
             return h('span', { 
                 style: {
                     fontSize: '12px',
                     color: statusColor,
-                    fontWeight: '500'
+                    fontWeight: isDownloading ? '600' : '500',
+                    backgroundColor: isDownloading ? 'rgba(240, 160, 32, 0.1)' : 
+                                   isFailed ? 'rgba(208, 48, 80, 0.1)' : 'transparent',
+                    padding: isDownloading || isFailed ? '2px 6px' : '0',
+                    borderRadius: isDownloading || isFailed ? '4px' : '0',
+                    border: isDownloading ? '1px solid rgba(240, 160, 32, 0.3)' : 
+                           isFailed ? '1px solid rgba(208, 48, 80, 0.3)' : 'none'
                 }
             }, statusText)
         }
@@ -594,8 +669,12 @@ const captureUrl = async () => {
             captureProgress.value.phase = 'saving'
             captureProgress.value.currentFile = '保存文件中...'
             
-            // 更新文件列表为真实数据
-            if (result.data.fileDetails && result.data.fileDetails.length > 0) {
+            // 获取最新的进度状态（包含最终的文件状态）
+            await getProgress()
+            
+            // 如果轮询没有获取到文件列表，使用后端返回的数据作为备用
+            if (captureProgress.value.fileList.length === 0 && result.data.fileDetails && result.data.fileDetails.length > 0) {
+                console.log('使用后端返回的文件详情作为备用数据')
                 captureProgress.value.fileList = result.data.fileDetails.map((file: any) => ({
                     name: file.name,
                     type: file.type,
@@ -960,24 +1039,35 @@ let progressPollingInterval: NodeJS.Timeout | null = null
 const getProgress = async () => {
     try {
         const result = await api('get_capture_progress', {})
+        console.log('轮询API响应:', result)
+        
         if (result && result.code === 200 && result.data) {
             const data = result.data
-            console.log('轮询获取进度:', data)
+            console.log('轮询获取进度详情:', {
+                phase: data.phase,
+                totalFiles: data.totalFiles,
+                completedFiles: data.completedFiles,
+                fileListLength: data.fileList ? data.fileList.length : 0
+            })
             
-            // 更新进度状态
-            captureProgress.value = {
-                phase: data.phase || captureProgress.value.phase,
-                totalFiles: data.totalFiles || captureProgress.value.totalFiles,
-                completedFiles: data.completedFiles || captureProgress.value.completedFiles,
-                currentFile: data.currentFile || captureProgress.value.currentFile,
-                fileProgress: data.fileProgress || captureProgress.value.fileProgress,
-                downloadSpeed: data.downloadSpeed || captureProgress.value.downloadSpeed,
-                estimatedTime: data.estimatedTime || captureProgress.value.estimatedTime,
-                fileList: data.fileList || captureProgress.value.fileList
+            // 如果有文件列表数据，更新进度状态
+            if (data.fileList && data.fileList.length > 0) {
+                captureProgress.value = {
+                    phase: data.phase || captureProgress.value.phase,
+                    totalFiles: data.totalFiles || captureProgress.value.totalFiles,
+                    completedFiles: data.completedFiles || captureProgress.value.completedFiles,
+                    currentFile: data.currentFile || captureProgress.value.currentFile,
+                    fileProgress: data.fileProgress || captureProgress.value.fileProgress,
+                    downloadSpeed: data.downloadSpeed || captureProgress.value.downloadSpeed,
+                    estimatedTime: data.estimatedTime || captureProgress.value.estimatedTime,
+                    fileList: data.fileList
+                }
+                console.log('更新后的文件列表长度:', captureProgress.value.fileList.length)
             }
+        } else {
+            console.log('轮询API无数据或失败:', result)
         }
     } catch (error) {
-        // 静默处理错误，避免干扰用户体验
         console.log('获取进度失败:', error)
     }
 }
@@ -1004,6 +1094,16 @@ const stopProgressPolling = () => {
         progressPollingInterval = null
     }
 }
+
+// 组件挂载时初始化
+onMounted(() => {
+    // 确保保存目录正确加载
+    const savedDir = localStorage.getItem('pageCapture_saveDirectory')
+    if (savedDir && savedDir !== saveDirectory.value) {
+        saveDirectory.value = savedDir
+        console.log('从本地存储加载保存目录:', savedDir)
+    }
+})
 
 // 组件卸载时清理轮询
 onUnmounted(() => {

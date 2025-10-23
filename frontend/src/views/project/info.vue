@@ -271,8 +271,7 @@
             <template #action>
                 <n-space>
                     <n-button @click="showInitProjectModal = false">取消</n-button>
-                    <n-button type="primary" @click="executeInitProject"
-                        :disabled="!selectedInitProjectId">
+                    <n-button type="primary" @click="executeInitProject" :disabled="!selectedInitProjectId">
                         开始初始化
                     </n-button>
                 </n-space>
@@ -293,8 +292,7 @@
             <template #action>
                 <n-space>
                     <n-button @click="showUpdateProjectModal = false">取消</n-button>
-                    <n-button type="warning" @click="executeUpdateProject"
-                        :disabled="!selectedUpdateProjectId">
+                    <n-button type="warning" @click="executeUpdateProject" :disabled="!selectedUpdateProjectId">
                         开始更新
                     </n-button>
                 </n-space>
@@ -1091,7 +1089,7 @@ const generateCurrentProjectConfig = async () => {
 
         if (result.code === 200) {
             projectConfigPreview.value = projectConfigJson
-            
+
             deploymentStatus.value = {
                 type: 'success',
                 title: '当前项目配置上传成功',
@@ -1099,7 +1097,7 @@ const generateCurrentProjectConfig = async () => {
                 icon: CheckmarkCircleOutline
             }
             message.success(`当前项目配置文件上传成功`)
-            
+
             console.log('配置上传成功:', result.data)
         } else {
             deploymentStatus.value = {
@@ -1216,7 +1214,7 @@ const executeInitCurrentProject = async () => {
                 icon: CheckmarkCircleOutline
             }
             message.success('当前项目初始化成功')
-            
+
             console.log('初始化成功:', result.data)
         } else {
             deploymentStatus.value = {
@@ -1281,7 +1279,7 @@ const executeUpdateCurrentProject = async () => {
                 icon: CheckmarkCircleOutline
             }
             message.success('当前项目更新成功')
-            
+
             console.log('更新成功:', result.data)
         } else {
             deploymentStatus.value = {
@@ -1356,7 +1354,7 @@ const executeInitProject = async () => {
                 icon: CheckmarkCircleOutline
             }
             message.success('项目初始化成功')
-            
+
             console.log('初始化成功:', result.data)
         } else {
             deploymentStatus.value = {
@@ -1484,7 +1482,7 @@ const executeUpdateProject = async () => {
                 icon: CheckmarkCircleOutline
             }
             message.success('项目更新成功')
-            
+
             console.log('更新成功:', result.data)
         } else {
             deploymentStatus.value = {

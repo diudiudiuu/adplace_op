@@ -6,10 +6,12 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"net/url"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -1665,16 +1667,16 @@ func (a *App) CapturePage(targetURL, optionsJson string) string {
 	}
 
 	// 设置超时范围
-	if options.Timeout < 10 {
-		options.Timeout = 10
+	if options.Timeout < 60 {
+		options.Timeout = 60
 	}
-	if options.Timeout > 180 {
-		options.Timeout = 180
+	if options.Timeout > 300 {
+		options.Timeout = 300
 	}
 
 	// 设置文件数量范围
-	if options.MaxFiles < 50 {
-		options.MaxFiles = 50
+	if options.MaxFiles < 200 {
+		options.MaxFiles = 200
 	}
 	if options.MaxFiles > 1000 {
 		options.MaxFiles = 1000
@@ -1755,6 +1757,86 @@ func (a *App) DownloadFile(filePath string) string {
 
 	// 返回成功响应，包含Base64编码的文件内容
 	response := ApiResponse{Code: 200, Msg: "文件下载成功", Data: base64Data}
+	result, _ := json.Marshal(response)
+	return string(result)
+}
+
+// SelectDirectory 选择目录
+func (a *App) SelectDirectory() string {
+	log.Printf("SelectDirectory called")
+
+	// 使用Wails的目录选择对话框
+	selectedDir, err := runtime.OpenDirectoryDialog(a.ctx, runtime.OpenDialogOptions{
+		Title: "选择保存目录",
+	})
+
+	if err != nil {
+		log.Printf("Failed to open directory dialog: %v", err)
+		response := ApiResponse{Code: 500, Msg: fmt.Sprintf("打开目录选择对话框失败: %v", err)}
+		result, _ := json.Marshal(response)
+		return string(result)
+	}
+
+	if selectedDir == "" {
+		// 用户取消选择
+		response := ApiResponse{Code: 400, Msg: "用户取消选择目录"}
+		result, _ := json.Marshal(response)
+		return string(result)
+	}
+
+	log.Printf("Directory selected: %s", selectedDir)
+	response := ApiResponse{Code: 200, Msg: "目录选择成功", Data: selectedDir}
+	result, _ := json.Marshal(response)
+	return string(result)
+}
+
+// SaveZipToDirectory 保存ZIP文件到指定目录
+func (a *App) SaveZipToDirectory(sourcePath, targetDirectory, fileName string) string {
+	log.Printf("SaveZipToDirectory called: source=%s, target=%s, fileName=%s", sourcePath, targetDirectory, fileName)
+
+	// 检查源文件是否存在
+	if _, err := os.Stat(sourcePath); os.IsNotExist(err) {
+		response := ApiResponse{Code: 404, Msg: fmt.Sprintf("源文件不存在: %s", sourcePath)}
+		result, _ := json.Marshal(response)
+		return string(result)
+	}
+
+	// 检查目标目录是否存在
+	if _, err := os.Stat(targetDirectory); os.IsNotExist(err) {
+		response := ApiResponse{Code: 404, Msg: fmt.Sprintf("目标目录不存在: %s", targetDirectory)}
+		result, _ := json.Marshal(response)
+		return string(result)
+	}
+
+	// 构建目标文件路径
+	targetPath := filepath.Join(targetDirectory, fileName)
+
+	// 复制文件
+	sourceFile, err := os.Open(sourcePath)
+	if err != nil {
+		response := ApiResponse{Code: 500, Msg: fmt.Sprintf("打开源文件失败: %v", err)}
+		result, _ := json.Marshal(response)
+		return string(result)
+	}
+	defer sourceFile.Close()
+
+	targetFile, err := os.Create(targetPath)
+	if err != nil {
+		response := ApiResponse{Code: 500, Msg: fmt.Sprintf("创建目标文件失败: %v", err)}
+		result, _ := json.Marshal(response)
+		return string(result)
+	}
+	defer targetFile.Close()
+
+	_, err = io.Copy(targetFile, sourceFile)
+	if err != nil {
+		response := ApiResponse{Code: 500, Msg: fmt.Sprintf("复制文件失败: %v", err)}
+		result, _ := json.Marshal(response)
+		return string(result)
+	}
+
+	log.Printf("File saved successfully to: %s", targetPath)
+	response := ApiResponse{Code: 200, Msg: "文件保存成功", Data: targetPath}
 	result, _ := json.Marshal(response)
 	return string(result)
 }

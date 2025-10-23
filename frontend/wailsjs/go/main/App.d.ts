@@ -45,6 +45,10 @@ export function ProjectUpdate(arg1:string,arg2:string,arg3:string,arg4:string):P
 
 export function ProjectUpdateWithData(arg1:string,arg2:string,arg3:string,arg4:string):Promise<string>;
 
+export function SaveZipToDirectory(arg1:string,arg2:string,arg3:string):Promise<string>;
+
+export function SelectDirectory():Promise<string>;
+
 export function ServerAdd(arg1:string,arg2:string,arg3:string,arg4:string,arg5:string,arg6:string,arg7:string,arg8:string,arg9:string):Promise<string>;
 
 export function ServerDelete(arg1:string,arg2:string,arg3:string):Promise<string>;

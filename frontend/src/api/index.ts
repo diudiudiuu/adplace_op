@@ -81,6 +81,8 @@ const apiMap: Record<string, (data: any) => Promise<string>> = {
     'project_update_with_data': (data: any) => window.go!.main!.App!.ProjectUpdateWithData(data.server_id, data.project_id, data.server_data_json, data.authorization),
     'capture_page': (data: any) => window.go!.main!.App!.CapturePage(data.url, data.options || '{}'),
     'download_file': (data: any) => window.go!.main!.App!.DownloadFile(data.filePath),
+    'select_directory': (data: any) => window.go!.main!.App!.SelectDirectory(),
+    'save_zip_to_directory': (data: any) => window.go!.main!.App!.SaveZipToDirectory(data.sourcePath, data.targetDirectory, data.fileName),
 };
 
 // API 调用函数 - 纯净的 API 调用，不处理 loading

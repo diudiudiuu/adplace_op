@@ -249,7 +249,9 @@ func (s *PageCaptureService) processHTMLAndDownloadResources(htmlContent string,
 		return htmlContent, err
 	}
 
-	return html, nil
+	// 格式化HTML
+	formattedHTML := s.formatHTML(html)
+	return formattedHTML, nil
 }
 
 // downloadResource 下载单个资源
@@ -459,6 +461,63 @@ func (s *PageCaptureService) createZipFile() (string, int64, error) {
 	}
 
 	return zipPath, zipInfo.Size(), nil
+}
+
+// formatHTML 格式化HTML代码
+func (s *PageCaptureService) formatHTML(html string) string {
+	// 简单的HTML格式化
+	formatted := html
+
+	// 添加适当的换行和缩进
+	formatted = strings.ReplaceAll(formatted, "><", ">\n<")
+	formatted = strings.ReplaceAll(formatted, "</head>", "</head>\n")
+	formatted = strings.ReplaceAll(formatted, "</body>", "\n</body>")
+	formatted = strings.ReplaceAll(formatted, "</html>", "\n</html>")
+
+	// 处理常见标签的换行
+	tags := []string{"div", "p", "h1", "h2", "h3", "h4", "h5", "h6", "ul", "ol", "li", "nav", "section", "article", "header", "footer", "main"}
+	for _, tag := range tags {
+		formatted = strings.ReplaceAll(formatted, fmt.Sprintf("</%s>", tag), fmt.Sprintf("</%s>\n", tag))
+		formatted = strings.ReplaceAll(formatted, fmt.Sprintf("<%s", tag), fmt.Sprintf("\n<%s", tag))
+	}
+
+	// 清理多余的空行
+	lines := strings.Split(formatted, "\n")
+	var cleanLines []string
+	for _, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		if trimmed != "" {
+			cleanLines = append(cleanLines, trimmed)
+		}
+	}
+
+	// 添加基本缩进
+	var indentedLines []string
+	indent := 0
+	for _, line := range cleanLines {
+		trimmed := strings.TrimSpace(line)
+
+		// 减少缩进（闭合标签）
+		if strings.HasPrefix(trimmed, "</") && !strings.Contains(trimmed, "<meta") && !strings.Contains(trimmed, "<link") && !strings.Contains(trimmed, "<img") {
+			indent--
+			if indent < 0 {
+				indent = 0
+			}
+		}
+
+		// 添加缩进
+		indentStr := strings.Repeat("  ", indent)
+		indentedLines = append(indentedLines, indentStr+trimmed)
+
+		// 增加缩进（开放标签）
+		if strings.HasPrefix(trimmed, "<") && !strings.HasPrefix(trimmed, "</") &&
+			!strings.Contains(trimmed, "<meta") && !strings.Contains(trimmed, "<link") &&
+			!strings.Contains(trimmed, "<img") && !strings.HasSuffix(trimmed, "/>") {
+			indent++
+		}
+	}
+
+	return strings.Join(indentedLines, "\n")
 }
 
 // getFileList 获取文件列表

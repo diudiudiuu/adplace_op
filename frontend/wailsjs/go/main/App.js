@@ -90,6 +90,14 @@ export function ProjectUpdateWithData(arg1, arg2, arg3, arg4) {
   return window['go']['main']['App']['ProjectUpdateWithData'](arg1, arg2, arg3, arg4);
 }
 
+export function SaveZipToDirectory(arg1, arg2, arg3) {
+  return window['go']['main']['App']['SaveZipToDirectory'](arg1, arg2, arg3);
+}
+
+export function SelectDirectory() {
+  return window['go']['main']['App']['SelectDirectory']();
+}
+
 export function ServerAdd(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9) {
   return window['go']['main']['App']['ServerAdd'](arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9);
 }

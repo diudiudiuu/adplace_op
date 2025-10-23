@@ -1,22 +1,15 @@
 <template>
     <div>
-        <n-card title="🔍 页面抓取工具">
-            <template #header-extra>
-                <n-tooltip>
-                    <template #trigger>
-                        <n-tag type="info">完整下载</n-tag>
-                    </template>
-                    原封不动地下载整个网页，包括所有资源文件，并打包成ZIP
-                </n-tooltip>
-            </template>
+        <n-card title=" 页网页备份工具">
             <n-space vertical size="large">
                 <!-- 功能说明 -->
                 <n-alert type="info" title="功能说明" closable>
                     <n-ul>
-                        <n-li>📄 <strong>完整下载</strong>：原封不动地下载整个网页，包括HTML、CSS、JavaScript、图片等所有资源</n-li>
+                        <n-li>📄 <strong>完整备份</strong>：完整保存网页内容，包括HTML、CSS、JavaScript、图片等所有资源</n-li>
                         <n-li>📦 <strong>标准结构</strong>：生成标准的静态网站结构，index.html + static资源目录</n-li>
                         <n-li>🔗 <strong>链接修正</strong>：自动修正页面中的资源链接，确保离线浏览正常</n-li>
-                        <n-li>⚙️ <strong>灵活配置</strong>：可选择包含或排除特定类型的资源文件</n-li>
+                        <n-li>📁 <strong>自定义保存</strong>：可选择任意目录保存备份文件</n-li>
+                        <n-li>✨ <strong>HTML格式化</strong>：自动格式化HTML代码，便于阅读和编辑</n-li>
                     </n-ul>
                 </n-alert>
 
@@ -30,10 +23,10 @@
                                         <CameraOutline />
                                     </n-icon>
                                 </template>
-                                开始抓取
+                                开始备份
                             </n-button>
                         </template>
-                        抓取指定 URL 的页面内容
+                        备份指定 URL 的页面内容
                     </n-tooltip>
                     <n-tooltip>
                         <template #trigger>
@@ -46,36 +39,34 @@
                                 清空结果
                             </n-button>
                         </template>
-                        清空抓取结果
+                        清空备份结果
                     </n-tooltip>
                 </n-space>
-                <!-- 抓取配置 -->
-                <n-card size="small" title="抓取配置">
+                <!-- 备份配置 -->
+                <n-card size="small" title="备份配置">
                     <template #header-extra>
                         <n-tag type="success" size="small">已优化默认配置</n-tag>
                     </template>
                     <n-form :model="form" label-placement="left" label-width="120">
                         <n-form-item label="目标 URL" required>
-                            <n-input v-model:value="form.url" placeholder="请输入要抓取的网页 URL，如：https://example.com"
+                            <n-input v-model:value="form.url" placeholder="请输入要备份的网页 URL，如：https://example.com"
                                 @keyup.enter="captureUrl" />
                             <template #suffix>
-                                <n-space>
-                                    <n-dropdown :options="urlOptions" @select="selectUrl">
-                                        <n-button text>
-                                            <template #icon>
-                                                <n-icon>
-                                                    <ChevronDownOutline />
-                                                </n-icon>
-                                            </template>
-                                        </n-button>
-                                    </n-dropdown>
-                                    <n-button text type="primary" @click="testConnection" :disabled="!form.url.trim()">
-                                        测试连接
-                                    </n-button>
-                                </n-space>
+                                <n-button text type="primary" @click="testConnection" :disabled="!form.url.trim()">
+                                    测试连接
+                                </n-button>
                             </template>
                         </n-form-item>
-                        <n-form-item label="抓取选项">
+                        <n-form-item label="保存目录" required>
+                            <n-input v-model:value="saveDirectory" placeholder="请选择保存备份文件的目录" readonly>
+                                <template #suffix>
+                                    <n-button text type="primary" @click="selectDirectory">
+                                        选择目录
+                                    </n-button>
+                                </template>
+                            </n-input>
+                        </n-form-item>
+                        <n-form-item label="备份选项">
                             <n-space vertical>
                                 <n-checkbox v-model:checked="options.includeImages">
                                     包含图片
@@ -93,20 +84,16 @@
                             </n-space>
                         </n-form-item>
                         <n-form-item label="超时时间">
-                            <n-input-number v-model:value="options.timeout" :min="10" :max="180" :step="10"
+                            <n-input-number v-model:value="options.timeout" :min="60" :max="300" :step="10"
                                 placeholder="秒" />
                             <template #suffix>秒</template>
                         </n-form-item>
                         <n-form-item label="最大文件数">
-                            <n-input-number v-model:value="options.maxFiles" :min="50" :max="1000" :step="50"
+                            <n-input-number v-model:value="options.maxFiles" :min="200" :max="1000" :step="50"
                                 placeholder="个" />
                             <template #suffix>个</template>
                         </n-form-item>
-                        <n-form-item label="调试模式">
-                            <n-checkbox v-model:checked="debugMode">
-                                显示详细错误信息
-                            </n-checkbox>
-                        </n-form-item>
+
                     </n-form>
                 </n-card>
 
@@ -148,44 +135,41 @@
                             </n-descriptions-item>
                         </n-descriptions>
 
-                        <!-- ZIP下载状态 -->
-                        <n-alert v-if="captureResult.zipPath" type="success" title="ZIP包已自动下载">
+                        <!-- 备份保存状态 -->
+                        <n-alert v-if="captureResult.zipPath && saveDirectory" type="success" title="备份文件已保存">
                             <template #icon>
                                 <n-icon>
                                     <ArchiveOutline />
                                 </n-icon>
                             </template>
-                            <n-text>完整的网页已打包并下载，包含 {{ captureResult.filesCount }} 个文件</n-text>
+                            <n-space vertical>
+                                <n-text>完整的网页已备份并保存，包含 {{ captureResult.filesCount }} 个文件</n-text>
+                                <n-text depth="3" style="font-size: 12px;">保存位置: {{ saveDirectory }}</n-text>
+                            </n-space>
+                        </n-alert>
+
+                        <!-- 未选择目录提示 -->
+                        <n-alert v-if="captureResult.zipPath && !saveDirectory" type="warning" title="请选择保存目录">
+                            <template #icon>
+                                <n-icon>
+                                    <ArchiveOutline />
+                                </n-icon>
+                            </template>
+                            <n-space vertical>
+                                <n-text>网页备份成功，但未选择保存目录</n-text>
+                                <n-button type="primary" @click="selectDirectory">
+                                    选择保存目录
+                                </n-button>
+                            </n-space>
                         </n-alert>
 
                         <!-- 错误信息 -->
-                        <n-alert v-if="!captureResult.success && captureResult.error" type="error" title="抓取失败">
+                        <n-alert v-if="!captureResult.success && captureResult.error" type="error" title="备份失败">
                             {{ captureResult.error }}
                         </n-alert>
 
                         <!-- 文件列表 -->
-                        <div
-                            v-if="captureResult.success && captureResult.downloadedFiles && captureResult.downloadedFiles.length > 0">
-                            <n-card size="small" title="下载的文件">
-                                <n-scrollbar style="max-height: 300px;">
-                                    <n-list>
-                                        <n-list-item v-for="(file, index) in captureResult.downloadedFiles"
-                                            :key="index">
-                                            <n-thing>
-                                                <template #header>
-                                                    <n-text>{{ formatFilePath(file) }}</n-text>
-                                                </template>
-                                                <template #description>
-                                                    <n-tag size="small" :type="getFileTypeColor(file)">
-                                                        {{ getFileType(file) }}
-                                                    </n-tag>
-                                                </template>
-                                            </n-thing>
-                                        </n-list-item>
-                                    </n-list>
-                                </n-scrollbar>
-                            </n-card>
-                        </div>
+
                     </n-space>
                 </n-card>
             </n-space>
@@ -196,7 +180,7 @@
 <script setup lang="ts">
 import { ref, inject } from 'vue'
 import { useMessage } from 'naive-ui'
-import { CameraOutline, RefreshOutline, ArchiveOutline, DownloadOutline, ChevronDownOutline } from '@vicons/ionicons5'
+import { RefreshOutline, ArchiveOutline } from '@vicons/ionicons5'
 import api from '@/api'
 
 const message = useMessage()
@@ -222,37 +206,12 @@ const options = ref({
 // 抓取结果
 const captureResult = ref<any>(null)
 
-// 调试模式
-const debugMode = ref(true) // 默认开启调试模式
 
-// URL选项
-const urlOptions = [
-    {
-        label: 'Example.com (测试)',
-        key: 'https://example.com'
-    },
-    {
-        label: 'httpbin.org (测试)',
-        key: 'https://httpbin.org/html'
-    },
-    {
-        label: 'GitHub',
-        key: 'https://github.com'
-    },
-    {
-        label: 'MDN Web Docs',
-        key: 'https://developer.mozilla.org'
-    },
-    {
-        label: 'Bootstrap',
-        key: 'https://getbootstrap.com'
-    }
-]
 
-// 选择URL
-const selectUrl = (key: string) => {
-    form.value.url = key
-}
+// 保存目录（从本地缓存加载）
+const saveDirectory = ref(localStorage.getItem('pageCapture_saveDirectory') || '')
+
+
 
 // 格式化字节大小
 const formatBytes = (bytes: number): string => {
@@ -292,22 +251,23 @@ const captureUrl = async () => {
         return
     }
 
-    globalLoading.show(`正在抓取页面：${processedUrl}`)
+    // 验证保存目录
+    if (!saveDirectory.value.trim()) {
+        message.error('请先选择保存目录')
+        return
+    }
+
+    globalLoading.show(`正在备份页面：${processedUrl}`)
 
     try {
-        if (debugMode.value) {
-            console.log('开始抓取页面:', processedUrl)
-            console.log('抓取选项:', options.value)
-        }
+
 
         const result = await api('capture_page', {
             url: processedUrl,
             options: JSON.stringify(options.value)
         })
 
-        if (debugMode.value) {
-            console.log('API响应:', result)
-        }
+
 
         if (result.code === 200) {
             captureResult.value = {
@@ -324,12 +284,15 @@ const captureUrl = async () => {
                 downloadedFiles: result.data.downloadedFiles
             }
 
-            // 自动下载ZIP文件
+            // 保存ZIP文件到指定目录
             if (result.data.zipPath) {
-                await autoDownloadZip(result.data.zipPath)
-                message.success('页面抓取完成，ZIP文件已自动下载')
+                if (saveDirectory.value) {
+                    await saveZipToDirectory(result.data.zipPath)
+                } else {
+                    message.warning('未选择保存目录，ZIP文件已生成但未保存')
+                }
             } else {
-                message.success('页面抓取成功')
+                message.success('页面备份成功')
             }
         } else {
             captureResult.value = {
@@ -339,7 +302,7 @@ const captureUrl = async () => {
                 error: result.msg || '抓取失败',
                 statusCode: result.data?.statusCode || 0
             }
-            message.error(result.msg || '页面抓取失败')
+            message.error(result.msg || '页面备份失败')
         }
     } catch (error) {
         console.error('Page capture error:', error)
@@ -376,26 +339,51 @@ const captureUrl = async () => {
 // 清空结果
 const clearResults = () => {
     captureResult.value = null
-    message.info('已清空抓取结果')
+    message.info('已清空备份结果')
 }
 
-// 自动下载ZIP文件
+// 保存ZIP文件到指定目录
+const saveZipToDirectory = async (zipPath: string) => {
+    try {
+
+
+        // 生成文件名：网站域名_时间戳.zip
+        const urlObj = new URL(captureResult.value.url)
+        const domain = urlObj.hostname.replace(/[^a-zA-Z0-9]/g, '_')
+        const timestamp = new Date().toISOString().slice(0, 19).replace(/[:-]/g, '')
+        const fileName = `${domain}_${timestamp}.zip`
+
+        // 调用Go后端的文件保存方法
+        const response = await api('save_zip_to_directory', {
+            sourcePath: zipPath,
+            targetDirectory: saveDirectory.value,
+            fileName: fileName
+        })
+
+
+
+        if (response && response.code === 200) {
+            message.success(`ZIP文件已保存到: ${saveDirectory.value}\\${fileName}`)
+        } else {
+            message.error('保存失败：' + (response?.msg || '未知错误'))
+        }
+    } catch (error) {
+        console.error('Save zip error:', error)
+        message.error('保存失败：' + (error as Error).message)
+    }
+}
+
+// 自动下载ZIP文件（保留作为备用）
 const autoDownloadZip = async (zipPath: string) => {
     try {
-        if (debugMode.value) {
-            console.log('开始下载ZIP文件:', zipPath)
-        }
+
 
         // 调用Go后端的文件下载方法
         const response = await api('download_file', {
             filePath: zipPath
         })
 
-        if (debugMode.value) {
-            console.log('下载API响应:', response)
-            console.log('响应数据类型:', typeof response?.data)
-            console.log('响应数据长度:', response?.data?.length)
-        }
+
 
         if (response && response.code === 200 && response.data) {
             // 处理Base64编码的二进制数据
@@ -408,9 +396,7 @@ const autoDownloadZip = async (zipPath: string) => {
                     for (let i = 0; i < binaryString.length; i++) {
                         binaryData[i] = binaryString.charCodeAt(i)
                     }
-                    if (debugMode.value) {
-                        console.log('Base64解码成功，数据长度:', binaryData.length)
-                    }
+
                 } catch (e) {
                     console.error('Base64解码失败:', e)
                     throw new Error('Base64解码失败: ' + (e as Error).message)
@@ -439,10 +425,7 @@ const autoDownloadZip = async (zipPath: string) => {
             document.body.removeChild(link)
             window.URL.revokeObjectURL(url)
 
-            if (debugMode.value) {
-                console.log('ZIP文件已自动下载:', link.download)
-                console.log('文件大小:', blob.size, 'bytes')
-            }
+
 
             message.success(`ZIP文件已下载: ${link.download}`)
         } else {
@@ -454,49 +437,28 @@ const autoDownloadZip = async (zipPath: string) => {
     }
 }
 
-// 获取文件类型
-const getFileType = (fileName: string): string => {
-    const ext = fileName.split('.').pop()?.toLowerCase()
-    switch (ext) {
-        case 'html':
-        case 'htm':
-            return 'HTML'
-        case 'css':
-            return 'CSS'
-        case 'js':
-            return 'JavaScript'
-        case 'jpg':
-        case 'jpeg':
-        case 'png':
-        case 'gif':
-        case 'webp':
-        case 'svg':
-            return '图片'
-        default:
-            return '其他'
-    }
-}
 
-// 获取文件类型颜色
-const getFileTypeColor = (fileName: string): string => {
-    const ext = fileName.split('.').pop()?.toLowerCase()
-    switch (ext) {
-        case 'html':
-        case 'htm':
-            return 'success'
-        case 'css':
-            return 'info'
-        case 'js':
-            return 'warning'
-        case 'jpg':
-        case 'jpeg':
-        case 'png':
-        case 'gif':
-        case 'webp':
-        case 'svg':
-            return 'error'
-        default:
-            return 'default'
+
+// 选择保存目录
+const selectDirectory = async () => {
+    try {
+        // 调用Go后端的目录选择方法
+        const result = await api('select_directory', {})
+
+        if (result && result.code === 200 && result.data) {
+            saveDirectory.value = result.data
+            // 缓存到本地存储
+            localStorage.setItem('pageCapture_saveDirectory', result.data)
+            message.success('目录选择成功')
+        } else if (result && result.code === 400) {
+            // 用户取消选择
+            message.info('已取消选择目录')
+        } else {
+            message.error('选择目录失败：' + (result?.msg || '未知错误'))
+        }
+    } catch (error) {
+        console.error('Select directory error:', error)
+        message.error('选择目录异常：' + (error as Error).message)
     }
 }
 

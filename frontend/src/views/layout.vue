@@ -8,9 +8,10 @@
 
 
                         <div class="menu-container">
-                            <n-menu v-if="showMenu" :value="onRoutes" :collapsed="sidebar.collapse" :collapsed-width="64"
-                                :options="menuOptions" @update:value="handleMenuSelect" :indent="20" />
-                            
+                            <n-menu v-if="showMenu" :value="onRoutes" :collapsed="sidebar.collapse"
+                                :collapsed-width="64" :options="menuOptions" @update:value="handleMenuSelect"
+                                :indent="20" />
+
                             <!-- 折叠按钮 -->
                             <div class="collapse-button-container">
                                 <n-button quaternary circle size="small" @click="sidebar.handleCollapse"
@@ -43,9 +44,11 @@
                                     </keep-alive>
                                 </transition>
                             </router-view>
-                            
+
                             <!-- 主内容区域 Loading 遮罩 -->
-                            <div v-if="isContentLoading" class="content-loading-overlay">
+                            <div v-if="isContentLoading" class="content-loading-overlay" @wheel.prevent.stop
+                                @touchmove.prevent.stop @scroll.prevent.stop @mousewheel.prevent.stop
+                                @DOMMouseScroll.prevent.stop>
                                 <div class="loading-spinner">
                                     <n-spin size="large" :show="true">
                                         <template #description>
@@ -86,24 +89,72 @@ const message = useMessage()
 
 // Loading 状态管理
 let loadingStartTime = 0
+let originalBodyOverflow = ''
+let originalHtmlOverflow = ''
+
+// 阻止滚动的事件处理函数
+const preventScroll = (e: Event) => {
+    e.preventDefault()
+    e.stopPropagation()
+    return false
+}
+
+// 阻止键盘滚动的事件处理函数
+const preventKeyboardScroll = (e: KeyboardEvent) => {
+    // 阻止方向键、空格键、Page Up/Down 等滚动按键
+    if ([32, 33, 34, 35, 36, 37, 38, 39, 40].includes(e.keyCode)) {
+        e.preventDefault()
+        e.stopPropagation()
+    }
+}
 
 // 全局 Loading 控制函数
 const showContentLoading = (text: string = '请稍候...') => {
     loadingText.value = text
     isContentLoading.value = true
     loadingStartTime = Date.now()
+
+    // 保存原始样式
+    originalBodyOverflow = document.body.style.overflow
+    originalHtmlOverflow = document.documentElement.style.overflow
+
+    // 阻止页面滚动 - 多层防护
+    document.body.style.overflow = 'hidden'
+    document.documentElement.style.overflow = 'hidden'
+    document.body.style.position = 'fixed'
+    document.body.style.width = '100%'
+    document.body.style.height = '100%'
+
+    // 添加事件监听器阻止滚动
+    document.addEventListener('wheel', preventScroll, { passive: false })
+    document.addEventListener('touchmove', preventScroll, { passive: false })
+    document.addEventListener('scroll', preventScroll, { passive: false })
+    document.addEventListener('keydown', preventKeyboardScroll, { passive: false })
 }
 
 const hideContentLoading = async () => {
     const elapsed = Date.now() - loadingStartTime
     const minDisplayTime = 500 // 最小显示时间 500ms
-    
+
     if (elapsed < minDisplayTime) {
         // 如果显示时间不足 500ms，等待剩余时间
         await new Promise(resolve => setTimeout(resolve, minDisplayTime - elapsed))
     }
-    
+
     isContentLoading.value = false
+
+    // 恢复页面滚动
+    document.body.style.overflow = originalBodyOverflow
+    document.documentElement.style.overflow = originalHtmlOverflow
+    document.body.style.position = ''
+    document.body.style.width = ''
+    document.body.style.height = ''
+
+    // 移除事件监听器
+    document.removeEventListener('wheel', preventScroll)
+    document.removeEventListener('touchmove', preventScroll)
+    document.removeEventListener('scroll', preventScroll)
+    document.removeEventListener('keydown', preventKeyboardScroll)
 }
 
 // 创建全局 Loading 实例
@@ -328,6 +379,45 @@ watch(boolroute, (newVal) => {
 .content-wrapper.content-loading {
     pointer-events: none;
     user-select: none;
+    overflow: hidden !important;
+    /* 防止滚动 */
+    position: relative;
+    /* 确保遮罩定位正确 */
+    /* 强制固定高度，防止内容溢出 */
+    max-height: calc(100vh - 24px);
+    /* 阻止所有滚动行为 */
+    overscroll-behavior: none;
+    scroll-behavior: auto;
+    /* 阻止触摸滚动 */
+    touch-action: none;
+    /* 阻止鼠标滚轮 */
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+/* 隐藏滚动条 */
+.content-wrapper.content-loading::-webkit-scrollbar {
+    display: none;
+}
+
+/* 防止 loading 时整个页面滚动 */
+.content-wrapper.content-loading * {
+    pointer-events: none !important;
+    user-select: none !important;
+    overflow: hidden !important;
+    /* 阻止所有子元素的滚动 */
+    overscroll-behavior: none !important;
+    touch-action: none !important;
+    scroll-behavior: auto !important;
+}
+
+/* 特别处理可能的滚动容器 */
+.content-wrapper.content-loading .n-scrollbar,
+.content-wrapper.content-loading .n-data-table-wrapper,
+.content-wrapper.content-loading .n-layout-content {
+    overflow: hidden !important;
+    overscroll-behavior: none !important;
+    touch-action: none !important;
 }
 
 /* 主内容区域 Loading 遮罩 */
@@ -337,13 +427,27 @@ watch(boolroute, (newVal) => {
     left: 0;
     right: 0;
     bottom: 0;
-    background: rgba(255, 255, 255, 0.8);
-    backdrop-filter: blur(2px);
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(3px);
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 9999;
+    z-index: 999999;
+    /* 提高层级 */
     border-radius: 6px;
+    /* 完全阻止所有交互 */
+    pointer-events: all;
+    user-select: none;
+    touch-action: none;
+    /* 防止滚动穿透 - 加强版 */
+    overscroll-behavior: none;
+    overflow: hidden;
+    /* 阻止所有滚动相关的行为 */
+    scroll-behavior: auto;
+    -webkit-overflow-scrolling: touch;
+    /* 确保遮罩能够捕获所有事件 */
+    width: 100%;
+    height: 100%;
 }
 
 .loading-spinner {
@@ -351,11 +455,18 @@ watch(boolroute, (newVal) => {
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: 20px;
-    background: rgba(255, 255, 255, 0.95);
-    border-radius: 12px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-    border: 1px solid rgba(0, 0, 0, 0.05);
+    padding: 24px 32px;
+    background: rgba(255, 255, 255, 0.98);
+    border-radius: 16px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    /* 确保 loading 区域本身也阻止事件 */
+    pointer-events: all;
+    user-select: none;
+    /* 防止内容被选中或拖拽 */
+    -webkit-user-drag: none;
+    -webkit-touch-callout: none;
+    -webkit-tap-highlight-color: transparent;
 }
 
 .loading-text {
@@ -588,6 +699,4 @@ watch(boolroute, (newVal) => {
     margin: 4px 0;
     line-height: 1.3;
 }
-
-
 </style>

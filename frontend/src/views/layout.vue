@@ -34,8 +34,9 @@
                     </div>
                 </n-layout-sider>
 
-                <n-layout class="main-layout">
-                    <n-layout-content content-style="padding: 8px;" class="main-content">
+                <n-layout class="main-layout" :class="{ 'layout-loading': isContentLoading }">
+                    <n-layout-content content-style="padding: 8px;" class="main-content"
+                        :class="{ 'content-loading-parent': isContentLoading }">
                         <div class="content-wrapper" :class="{ 'content-loading': isContentLoading }">
                             <router-view v-slot="{ Component }" :key="$route.fullPath">
                                 <transition name="fade" mode="out-in">
@@ -50,11 +51,8 @@
                                 @touchmove.prevent.stop @scroll.prevent.stop @mousewheel.prevent.stop
                                 @DOMMouseScroll.prevent.stop>
                                 <div class="loading-spinner">
-                                    <n-spin size="large" :show="true">
-                                        <template #description>
-                                            <span class="loading-text">{{ loadingText }}</span>
-                                        </template>
-                                    </n-spin>
+                                    <img :src="loadingGif" alt="Loading..." class="loading-gif" />
+                                    <span class="loading-text">{{ loadingText }}</span>
                                 </div>
                             </div>
                         </div>
@@ -76,6 +74,7 @@ import { getMenus, reloadMenus } from '@/components/menu'
 import { NIcon, useMessage, useDialog, NSpin } from 'naive-ui'
 import { setGlobalInstances } from '@/api'
 import ColorfulIcons from '@/components/ColorfulIcons.vue'
+import loadingGif from '@/assets/img/loading.gif'
 
 const route = useRoute()
 const router = useRouter()
@@ -124,6 +123,14 @@ const showContentLoading = (text: string = '请稍候...') => {
     document.body.style.position = 'fixed'
     document.body.style.width = '100%'
     document.body.style.height = '100%'
+    document.body.style.top = '0'
+    document.body.style.left = '0'
+
+    // 锁定视口，防止任何形式的滚动
+    const viewport = document.querySelector('meta[name=viewport]')
+    if (viewport) {
+        viewport.setAttribute('content', 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no')
+    }
 
     // 添加事件监听器阻止滚动
     document.addEventListener('wheel', preventScroll, { passive: false })
@@ -149,6 +156,14 @@ const hideContentLoading = async () => {
     document.body.style.position = ''
     document.body.style.width = ''
     document.body.style.height = ''
+    document.body.style.top = ''
+    document.body.style.left = ''
+
+    // 恢复视口设置
+    const viewport = document.querySelector('meta[name=viewport]')
+    if (viewport) {
+        viewport.setAttribute('content', 'width=device-width, initial-scale=1.0')
+    }
 
     // 移除事件监听器
     document.removeEventListener('wheel', preventScroll)
@@ -362,6 +377,19 @@ watch(boolroute, (newVal) => {
     background: #FFFFFF !important;
 }
 
+/* Loading 状态下的主布局固定 */
+.main-layout.layout-loading {
+    overflow: hidden !important;
+    height: 100vh !important;
+    max-height: 100vh !important;
+}
+
+.main-content.content-loading-parent {
+    overflow: hidden !important;
+    height: 100vh !important;
+    max-height: 100vh !important;
+}
+
 .content-wrapper {
     background: #FFFFFF;
     border-radius: 6px;
@@ -380,11 +408,11 @@ watch(boolroute, (newVal) => {
     pointer-events: none;
     user-select: none;
     overflow: hidden !important;
-    /* 防止滚动 */
     position: relative;
-    /* 确保遮罩定位正确 */
-    /* 强制固定高度，防止内容溢出 */
-    max-height: calc(100vh - 24px);
+    /* 强制固定高度，完全锁定内容区域 */
+    height: calc(100vh - 24px) !important;
+    max-height: calc(100vh - 24px) !important;
+    min-height: calc(100vh - 24px) !important;
     /* 阻止所有滚动行为 */
     overscroll-behavior: none;
     scroll-behavior: auto;
@@ -393,6 +421,11 @@ watch(boolroute, (newVal) => {
     /* 阻止鼠标滚轮 */
     -ms-overflow-style: none;
     scrollbar-width: none;
+    /* 锁定内容，防止任何形式的移动 */
+    transform: translateZ(0);
+    /* 强制硬件加速，锁定位置 */
+    will-change: auto;
+    /* 重置 will-change */
 }
 
 /* 隐藏滚动条 */
@@ -455,11 +488,11 @@ watch(boolroute, (newVal) => {
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: 24px 32px;
-    background: rgba(255, 255, 255, 0.98);
-    border-radius: 16px;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
-    border: 1px solid rgba(0, 0, 0, 0.08);
+    padding: 16px;
+    /* 移除背景颜色、边框和阴影 */
+    background: transparent;
+    border: none;
+    box-shadow: none;
     /* 确保 loading 区域本身也阻止事件 */
     pointer-events: all;
     user-select: none;
@@ -467,6 +500,27 @@ watch(boolroute, (newVal) => {
     -webkit-user-drag: none;
     -webkit-touch-callout: none;
     -webkit-tap-highlight-color: transparent;
+}
+
+.loading-gif {
+    width: 112px;
+    height: 112px;
+
+    /* 确保 GIF 正常播放 */
+    image-rendering: auto;
+    /* 防止图片被拖拽 */
+    -webkit-user-drag: none;
+    -moz-user-drag: none;
+    -o-user-drag: none;
+    user-drag: none;
+    /* 防止图片被选中 */
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+    /* 防止右键菜单 */
+    -webkit-touch-callout: none;
+    pointer-events: none;
 }
 
 .loading-text {

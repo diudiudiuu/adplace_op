@@ -174,7 +174,7 @@ class MenuManager {
                 id: 'page-capture',
                 title: '网页备份',
                 index: '/page-capture',
-                icon: 'Archive',
+                icon: 'Platform',
             };
             this.menus = [...baseMenus, ...serverMenus, pageCaptureMenu];
 
@@ -215,9 +215,9 @@ class MenuManager {
         const baseMenus = this.getBaseMenu();
         const pageCaptureMenu = {
             id: 'page-capture',
-            title: '网页备份',
+            title: '📄 网页备份',
             index: '/page-capture',
-            icon: 'Archive',
+            icon: 'Platform',
         };
         this.menus = [...baseMenus, pageCaptureMenu];
         this.hasLoaded = false;

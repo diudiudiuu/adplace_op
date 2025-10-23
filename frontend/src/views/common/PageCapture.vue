@@ -10,6 +10,7 @@
                         <n-li>🔗 <strong>链接修正</strong>：自动修正页面中的资源链接，确保离线浏览正常</n-li>
                         <n-li>📁 <strong>自定义保存</strong>：可选择任意目录保存备份文件</n-li>
                         <n-li>✨ <strong>HTML格式化</strong>：自动格式化HTML代码，便于阅读和编辑</n-li>
+                        <n-li>🛡️ <strong>隐私清理</strong>：自动删除第三方跟踪、统计、广告代码，保护隐私</n-li>
                     </n-ul>
                 </n-alert>
 
@@ -42,10 +43,40 @@
                         清空备份结果
                     </n-tooltip>
                 </n-space>
+
+
                 <!-- 备份配置 -->
                 <n-card size="small" title="备份配置">
                     <template #header-extra>
-                        <n-tag type="success" size="small">已优化默认配置</n-tag>
+                        <n-space size="small">
+                            <n-tooltip>
+                                <template #trigger>
+                                    <n-button text size="small" @click="showDocumentation">
+                                        <template #icon>
+                                            <n-icon>
+                                                <DocumentTextOutline />
+                                            </n-icon>
+                                        </template>
+                                        功能说明
+                                    </n-button>
+                                </template>
+                                查看详细的功能说明文档
+                            </n-tooltip>
+                            <n-tooltip>
+                                <template #trigger>
+                                    <n-button text size="small" @click="showTestPage">
+                                        <template #icon>
+                                            <n-icon>
+                                                <CodeOutline />
+                                            </n-icon>
+                                        </template>
+                                        测试示例
+                                    </n-button>
+                                </template>
+                                查看包含第三方代码和恶意标签的测试页面
+                            </n-tooltip>
+                            <n-tag type="success" size="small">已优化默认配置</n-tag>
+                        </n-space>
                     </template>
                     <n-form :model="form" label-placement="left" label-width="120">
                         <n-form-item label="目标 URL" required>
@@ -68,19 +99,98 @@
                         </n-form-item>
                         <n-form-item label="备份选项">
                             <n-space vertical>
-                                <n-checkbox v-model:checked="options.includeImages">
-                                    包含图片
-                                </n-checkbox>
-                                <n-checkbox v-model:checked="options.includeStyles">
-                                    包含样式
-                                </n-checkbox>
-                                <n-checkbox v-model:checked="options.includeScripts">
-                                    包含脚本
-                                </n-checkbox>
-                                <n-checkbox v-model:checked="options.followRedirects">
-                                    跟随重定向
-                                </n-checkbox>
-
+                                <n-tooltip>
+                                    <template #trigger>
+                                        <n-checkbox v-model:checked="options.includeImages">
+                                            包含图片
+                                        </n-checkbox>
+                                    </template>
+                                    下载并保存网页中的图片资源
+                                </n-tooltip>
+                                <n-tooltip>
+                                    <template #trigger>
+                                        <n-checkbox v-model:checked="options.includeStyles">
+                                            包含样式
+                                        </n-checkbox>
+                                    </template>
+                                    下载并保存CSS样式文件
+                                </n-tooltip>
+                                <n-tooltip>
+                                    <template #trigger>
+                                        <n-checkbox v-model:checked="options.includeScripts">
+                                            包含脚本
+                                        </n-checkbox>
+                                    </template>
+                                    下载并保存JavaScript脚本文件
+                                </n-tooltip>
+                                <n-tooltip>
+                                    <template #trigger>
+                                        <n-checkbox v-model:checked="options.followRedirects">
+                                            跟随重定向
+                                        </n-checkbox>
+                                    </template>
+                                    自动跟随页面重定向链接
+                                </n-tooltip>
+                                <n-tooltip>
+                                    <template #trigger>
+                                        <n-checkbox v-model:checked="options.includeFonts">
+                                            包含字体
+                                        </n-checkbox>
+                                    </template>
+                                    下载并保存网页字体文件
+                                </n-tooltip>
+                                <n-tooltip>
+                                    <template #trigger>
+                                        <n-checkbox v-model:checked="options.includeVideos">
+                                            包含视频
+                                        </n-checkbox>
+                                    </template>
+                                    下载并保存视频文件（可能较大）
+                                </n-tooltip>
+                            </n-space>
+                        </n-form-item>
+                        <n-form-item label="隐私清理">
+                            <n-space vertical>
+                                <n-tooltip>
+                                    <template #trigger>
+                                        <n-checkbox v-model:checked="options.removeAnalytics">
+                                            删除统计分析代码
+                                        </n-checkbox>
+                                    </template>
+                                    移除Google Analytics、百度统计、Mixpanel等数据统计代码
+                                </n-tooltip>
+                                <n-tooltip>
+                                    <template #trigger>
+                                        <n-checkbox v-model:checked="options.removeTracking">
+                                            删除跟踪代码
+                                        </n-checkbox>
+                                    </template>
+                                    移除Facebook Pixel、TikTok Pixel、Hotjar等用户行为跟踪代码
+                                </n-tooltip>
+                                <n-tooltip>
+                                    <template #trigger>
+                                        <n-checkbox v-model:checked="options.removeAds">
+                                            删除广告代码
+                                        </n-checkbox>
+                                    </template>
+                                    移除Google Ads、Taboola、PopAds等广告投放和联盟代码
+                                </n-tooltip>
+                                <n-tooltip>
+                                    <template #trigger>
+                                        <n-checkbox v-model:checked="options.removeTagManager">
+                                            删除标签管理器
+                                        </n-checkbox>
+                                    </template>
+                                    移除Google Tag Manager (GTM)等标签管理系统
+                                </n-tooltip>
+                                <n-tooltip>
+                                    <template #trigger>
+                                        <n-checkbox v-model:checked="options.removeMaliciousTags">
+                                            删除恶意标签
+                                        </n-checkbox>
+                                    </template>
+                                    移除可能被恶意利用的HTML标签：base、meta refresh、meta referrer等
+                                </n-tooltip>
                             </n-space>
                         </n-form-item>
                         <n-form-item label="超时时间">
@@ -174,13 +284,23 @@
                 </n-card>
             </n-space>
         </n-card>
+
+        <!-- 功能说明弹窗 -->
+        <n-modal v-model:show="showDocModal" preset="card" title="📖 页面捕获隐私清理功能说明" style="width: 90%; max-width: 1000px;">
+            <div v-html="documentationContent" class="documentation-content"></div>
+        </n-modal>
+
+        <!-- 测试页面弹窗 -->
+        <n-modal v-model:show="showTestModal" preset="card" title="🧪 测试页面代码" style="width: 90%; max-width: 1000px;">
+            <n-code :code="testPageContent" language="html" show-line-numbers />
+        </n-modal>
     </div>
 </template>
 
 <script setup lang="ts">
 import { ref, inject } from 'vue'
 import { useMessage } from 'naive-ui'
-import { RefreshOutline, ArchiveOutline } from '@vicons/ionicons5'
+import { RefreshOutline, ArchiveOutline, DocumentTextOutline, CodeOutline } from '@vicons/ionicons5'
 import api from '@/api'
 
 const message = useMessage()
@@ -199,12 +319,27 @@ const options = ref({
     includeStyles: true,
     includeScripts: true,
     followRedirects: true,
+    includeFonts: true,
+    includeVideos: false,
+    removeAnalytics: true,
+    removeTracking: true,
+    removeAds: true,
+    removeTagManager: true,
+    removeMaliciousTags: true,
     timeout: 60,
     maxFiles: 200
 })
 
 // 抓取结果
 const captureResult = ref<any>(null)
+
+// 弹窗控制
+const showDocModal = ref(false)
+const showTestModal = ref(false)
+
+// 文档内容
+const documentationContent = ref('')
+const testPageContent = ref('')
 
 
 
@@ -504,6 +639,104 @@ const formatFilePath = (filePath: string): string => {
     }
     return '📄 ' + filePath
 }
+
+// 显示功能说明文档
+const showDocumentation = () => {
+    documentationContent.value = `
+        <h2>🛡️ 页面捕获隐私清理功能</h2>
+        
+        <h3>功能概述</h3>
+        <p>在页面备份工具中新增了隐私清理功能，可以自动删除网页中的第三方跟踪、统计、广告代码，保护用户隐私。</p>
+        
+        <h3>隐私清理选项</h3>
+        
+        <h4>1. 删除统计分析代码 ✅</h4>
+        <ul>
+            <li>Google Analytics / gtag.js / GA4</li>
+            <li>百度统计 / CNZZ</li>
+            <li>Mixpanel / Segment</li>
+        </ul>
+        
+        <h4>2. 删除跟踪代码 ✅</h4>
+        <ul>
+            <li>Facebook Pixel</li>
+            <li>TikTok Pixel / Snapchat Pixel</li>
+            <li>Hotjar / CrazyEgg / Clarity</li>
+        </ul>
+        
+        <h4>3. 删除广告代码 ✅</h4>
+        <ul>
+            <li>Google Ads / DoubleClick</li>
+            <li>Taboola / Outbrain</li>
+            <li>PopAds / PropellerAds / AdCash</li>
+            <li>affiliate.js / redirect.js</li>
+        </ul>
+        
+        <h4>4. 删除标签管理器 ✅</h4>
+        <ul>
+            <li>Google Tag Manager (GTM)</li>
+        </ul>
+        
+        <h4>5. 删除恶意标签 ✅</h4>
+        <ul>
+            <li><code>&lt;base href="..."&gt;</code> - 防止劫持所有相对链接</li>
+            <li><code>&lt;meta http-equiv="refresh"&gt;</code> - 防止自动跳转到恶意网站</li>
+            <li><code>&lt;meta name="referrer"&gt;</code> - 防止来源伪造</li>
+            <li>恶意JavaScript重定向代码</li>
+        </ul>
+        
+        <h3>安全防护</h3>
+        
+        <h4>恶意标签防护</h4>
+        <ol>
+            <li><strong>&lt;base&gt; 标签劫持防护</strong> - 自动删除所有 base 标签，防止恶意网站劫持页面中的所有相对链接</li>
+            <li><strong>自动跳转防护</strong> - 删除 meta refresh 标签，防止页面自动跳转到钓鱼网站或恶意网站</li>
+            <li><strong>来源伪造防护</strong> - 删除 meta referrer 标签，防止恶意网站伪造访问来源</li>
+            <li><strong>JavaScript重定向防护</strong> - 检测并删除包含恶意重定向的JavaScript代码</li>
+        </ol>
+        
+        <h3>使用方法</h3>
+        <ol>
+            <li>在页面捕获界面中，找到"隐私清理"选项组</li>
+            <li>根据需要勾选要删除的第三方代码类型</li>
+            <li>开始备份，系统会自动清理选中的代码类型</li>
+            <li>备份完成后，生成的HTML文件将不包含被清理的第三方代码</li>
+        </ol>
+        
+        <h3>注意事项</h3>
+        <ul>
+            <li>隐私清理功能默认启用，确保用户隐私安全</li>
+            <li>恶意标签清理功能默认启用，提供额外的安全防护</li>
+            <li>清理过程不会影响页面的基本功能和样式</li>
+            <li>被清理的代码包括外部引用和内联代码</li>
+            <li>清理后的页面在离线环境下浏览更加安全</li>
+        </ul>
+    `
+    showDocModal.value = true
+}
+
+// 显示测试页面代码
+const showTestPage = () => {
+    testPageContent.value = 'HTML测试页面包含以下内容：\n\n' +
+        '1. 恶意标签示例：\n' +
+        '   - <base href="https://evil-site.com/">\n' +
+        '   - <meta http-equiv="refresh" content="5;url=https://phishing-site.com">\n' +
+        '   - <meta name="referrer" content="no-referrer">\n\n' +
+        '2. 第三方跟踪代码：\n' +
+        '   - Google Analytics\n' +
+        '   - Facebook Pixel\n' +
+        '   - 百度统计\n' +
+        '   - Google Tag Manager\n\n' +
+        '3. 恶意JavaScript代码：\n' +
+        '   - window.location.href 重定向\n' +
+        '   - setTimeout 延时跳转\n' +
+        '   - 动态创建base标签\n\n' +
+        '这些代码在启用隐私清理功能后会被自动删除。'
+    
+    showTestModal.value = true
+}
+
+
 </script>
 
 <style scoped>
@@ -517,5 +750,46 @@ const formatFilePath = (filePath: string): string => {
 
 :deep(.n-form-item) {
     margin-bottom: 16px;
+}
+
+.documentation-content {
+    line-height: 1.6;
+    font-size: 14px;
+}
+
+.documentation-content h2 {
+    color: #2080f0;
+    border-bottom: 2px solid #2080f0;
+    padding-bottom: 8px;
+    margin-bottom: 16px;
+}
+
+.documentation-content h3 {
+    color: #18a058;
+    margin-top: 24px;
+    margin-bottom: 12px;
+}
+
+.documentation-content h4 {
+    color: #f0a020;
+    margin-top: 16px;
+    margin-bottom: 8px;
+}
+
+.documentation-content ul, .documentation-content ol {
+    margin-left: 20px;
+    margin-bottom: 12px;
+}
+
+.documentation-content li {
+    margin-bottom: 4px;
+}
+
+.documentation-content code {
+    background-color: #f5f5f5;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-family: 'Courier New', monospace;
+    color: #d03050;
 }
 </style>

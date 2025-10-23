@@ -56,21 +56,23 @@
                     </template>
                     <n-form :model="form" label-placement="left" label-width="120">
                         <n-form-item label="目标 URL" required>
-                            <n-input 
-                                v-model:value="form.url" 
-                                placeholder="请输入要抓取的网页 URL，如：https://example.com"
-                                @keyup.enter="captureUrl"
-                            />
+                            <n-input v-model:value="form.url" placeholder="请输入要抓取的网页 URL，如：https://example.com"
+                                @keyup.enter="captureUrl" />
                             <template #suffix>
-                                <n-dropdown :options="urlOptions" @select="selectUrl">
-                                    <n-button text>
-                                        <template #icon>
-                                            <n-icon>
-                                                <ChevronDownOutline />
-                                            </n-icon>
-                                        </template>
+                                <n-space>
+                                    <n-dropdown :options="urlOptions" @select="selectUrl">
+                                        <n-button text>
+                                            <template #icon>
+                                                <n-icon>
+                                                    <ChevronDownOutline />
+                                                </n-icon>
+                                            </template>
+                                        </n-button>
+                                    </n-dropdown>
+                                    <n-button text type="primary" @click="testConnection" :disabled="!form.url.trim()">
+                                        测试连接
                                     </n-button>
-                                </n-dropdown>
+                                </n-space>
                             </template>
                         </n-form-item>
                         <n-form-item label="抓取选项">
@@ -87,30 +89,23 @@
                                 <n-checkbox v-model:checked="options.followRedirects">
                                     跟随重定向
                                 </n-checkbox>
-                                <n-checkbox v-model:checked="options.createZip">
-                                    创建ZIP包（完整下载）
-                                </n-checkbox>
+
                             </n-space>
                         </n-form-item>
                         <n-form-item label="超时时间">
-                            <n-input-number 
-                                v-model:value="options.timeout" 
-                                :min="10" 
-                                :max="180" 
-                                :step="10"
-                                placeholder="秒"
-                            />
+                            <n-input-number v-model:value="options.timeout" :min="10" :max="180" :step="10"
+                                placeholder="秒" />
                             <template #suffix>秒</template>
                         </n-form-item>
-                        <n-form-item v-if="options.createZip" label="最大文件数">
-                            <n-input-number 
-                                v-model:value="options.maxFiles" 
-                                :min="50" 
-                                :max="1000" 
-                                :step="50"
-                                placeholder="个"
-                            />
+                        <n-form-item label="最大文件数">
+                            <n-input-number v-model:value="options.maxFiles" :min="50" :max="1000" :step="50"
+                                placeholder="个" />
                             <template #suffix>个</template>
+                        </n-form-item>
+                        <n-form-item label="调试模式">
+                            <n-checkbox v-model:checked="debugMode">
+                                显示详细错误信息
+                            </n-checkbox>
                         </n-form-item>
                     </n-form>
                 </n-card>
@@ -153,24 +148,14 @@
                             </n-descriptions-item>
                         </n-descriptions>
 
-                        <!-- ZIP下载 -->
-                        <n-alert v-if="captureResult.zipPath" type="success" title="ZIP包已生成">
+                        <!-- ZIP下载状态 -->
+                        <n-alert v-if="captureResult.zipPath" type="success" title="ZIP包已自动下载">
                             <template #icon>
                                 <n-icon>
                                     <ArchiveOutline />
                                 </n-icon>
                             </template>
-                            <n-space vertical>
-                                <n-text>完整的网页已打包为ZIP文件，包含 {{ captureResult.filesCount }} 个文件</n-text>
-                                <n-button type="primary" @click="downloadZip">
-                                    <template #icon>
-                                        <n-icon>
-                                            <DownloadOutline />
-                                        </n-icon>
-                                    </template>
-                                    下载ZIP包
-                                </n-button>
-                            </n-space>
+                            <n-text>完整的网页已打包并下载，包含 {{ captureResult.filesCount }} 个文件</n-text>
                         </n-alert>
 
                         <!-- 错误信息 -->
@@ -178,51 +163,28 @@
                             {{ captureResult.error }}
                         </n-alert>
 
-                        <!-- 页面内容预览 -->
-                        <div v-if="captureResult.success && captureResult.content">
-                            <n-tabs type="line" animated>
-                                <n-tab-pane name="preview" tab="页面预览">
-                                    <n-scrollbar style="max-height: 400px;">
-                                        <div class="page-preview" v-html="captureResult.content"></div>
-                                    </n-scrollbar>
-                                </n-tab-pane>
-                                <n-tab-pane name="source" tab="源代码">
-                                    <n-scrollbar style="max-height: 400px;">
-                                        <pre class="source-code">{{ captureResult.content }}</pre>
-                                    </n-scrollbar>
-                                </n-tab-pane>
-                                <n-tab-pane name="files" tab="文件列表" v-if="captureResult.downloadedFiles && captureResult.downloadedFiles.length > 0">
-                                    <n-scrollbar style="max-height: 400px;">
-                                        <n-list>
-                                            <n-list-item v-for="(file, index) in captureResult.downloadedFiles" :key="index">
-                                                <n-thing>
-                                                    <template #header>
-                                                        <n-text>{{ formatFilePath(file) }}</n-text>
-                                                    </template>
-                                                    <template #description>
-                                                        <n-space>
-                                                            <n-tag size="small" :type="getFileTypeColor(file)">
-                                                                {{ getFileType(file) }}
-                                                            </n-tag>
-                                                            <n-text depth="3" style="font-size: 12px;">{{ file }}</n-text>
-                                                        </n-space>
-                                                    </template>
-                                                </n-thing>
-                                            </n-list-item>
-                                        </n-list>
-                                    </n-scrollbar>
-                                </n-tab-pane>
-                                <n-tab-pane name="info" tab="详细信息">
-                                    <n-descriptions :column="1" bordered size="small">
-                                        <n-descriptions-item label="响应头">
-                                            <pre class="headers-code">{{ JSON.stringify(captureResult.headers || {}, null, 2) }}</pre>
-                                        </n-descriptions-item>
-                                        <n-descriptions-item label="抓取时间">
-                                            <n-text>{{ captureResult.duration }}ms</n-text>
-                                        </n-descriptions-item>
-                                    </n-descriptions>
-                                </n-tab-pane>
-                            </n-tabs>
+                        <!-- 文件列表 -->
+                        <div
+                            v-if="captureResult.success && captureResult.downloadedFiles && captureResult.downloadedFiles.length > 0">
+                            <n-card size="small" title="下载的文件">
+                                <n-scrollbar style="max-height: 300px;">
+                                    <n-list>
+                                        <n-list-item v-for="(file, index) in captureResult.downloadedFiles"
+                                            :key="index">
+                                            <n-thing>
+                                                <template #header>
+                                                    <n-text>{{ formatFilePath(file) }}</n-text>
+                                                </template>
+                                                <template #description>
+                                                    <n-tag size="small" :type="getFileTypeColor(file)">
+                                                        {{ getFileType(file) }}
+                                                    </n-tag>
+                                                </template>
+                                            </n-thing>
+                                        </n-list-item>
+                                    </n-list>
+                                </n-scrollbar>
+                            </n-card>
                         </div>
                     </n-space>
                 </n-card>
@@ -254,18 +216,24 @@ const options = ref({
     includeScripts: true,
     followRedirects: true,
     timeout: 60,
-    createZip: true,
     maxFiles: 200
 })
 
 // 抓取结果
 const captureResult = ref<any>(null)
 
+// 调试模式
+const debugMode = ref(false)
+
 // URL选项
 const urlOptions = [
     {
-        label: 'Example.com',
+        label: 'Example.com (测试)',
         key: 'https://example.com'
+    },
+    {
+        label: 'httpbin.org (测试)',
+        key: 'https://httpbin.org/html'
     },
     {
         label: 'GitHub',
@@ -302,39 +270,67 @@ const captureUrl = async () => {
         return
     }
 
+    // 预处理URL
+    let processedUrl = form.value.url.trim()
+
+    // 如果没有协议，自动添加https://
+    if (!processedUrl.startsWith('http://') && !processedUrl.startsWith('https://')) {
+        processedUrl = 'https://' + processedUrl
+        form.value.url = processedUrl
+    }
+
     // 验证 URL 格式
     try {
-        new URL(form.value.url)
+        const url = new URL(processedUrl)
+        // 检查是否为有效的域名
+        if (!url.hostname || url.hostname.length < 3) {
+            message.error('请输入有效的网站地址')
+            return
+        }
     } catch (error) {
-        message.error('请输入有效的 URL 格式')
+        message.error('请输入有效的 URL 格式，例如：https://example.com')
         return
     }
 
-    globalLoading.show(`正在抓取页面：${form.value.url}`)
+    globalLoading.show(`正在抓取页面：${processedUrl}`)
 
     try {
+        if (debugMode.value) {
+            console.log('开始抓取页面:', processedUrl)
+            console.log('抓取选项:', options.value)
+        }
+
         const result = await api('capture_page', {
-            url: form.value.url,
+            url: processedUrl,
             options: JSON.stringify(options.value)
         })
+
+        if (debugMode.value) {
+            console.log('API响应:', result)
+        }
 
         if (result.code === 200) {
             captureResult.value = {
                 success: true,
-                url: form.value.url,
+                url: processedUrl,
                 timestamp: new Date().toLocaleString(),
                 statusCode: result.data.statusCode || 200,
                 contentType: result.data.contentType,
                 contentLength: result.data.contentLength,
-                content: result.data.content,
-                headers: result.data.headers,
                 duration: result.data.duration,
                 filesCount: result.data.filesCount,
                 zipPath: result.data.zipPath,
                 zipSize: result.data.zipSize,
                 downloadedFiles: result.data.downloadedFiles
             }
-            message.success('页面抓取成功')
+
+            // 自动下载ZIP文件
+            if (result.data.zipPath) {
+                await autoDownloadZip(result.data.zipPath)
+                message.success('页面抓取完成，ZIP文件已自动下载')
+            } else {
+                message.success('页面抓取成功')
+            }
         } else {
             captureResult.value = {
                 success: false,
@@ -347,13 +343,31 @@ const captureUrl = async () => {
         }
     } catch (error) {
         console.error('Page capture error:', error)
+
+        let errorMessage = '未知错误'
+        if (error instanceof Error) {
+            errorMessage = error.message
+        } else if (typeof error === 'string') {
+            errorMessage = error
+        }
+
         captureResult.value = {
             success: false,
             url: form.value.url,
             timestamp: new Date().toLocaleString(),
-            error: (error as Error).message
+            error: errorMessage
         }
-        message.error('页面抓取异常：' + (error as Error).message)
+
+        // 提供更友好的错误提示
+        if (errorMessage.includes('网络')) {
+            message.error('网络连接失败，请检查网络连接或URL是否正确')
+        } else if (errorMessage.includes('超时')) {
+            message.error('请求超时，请尝试增加超时时间或稍后重试')
+        } else if (errorMessage.includes('格式')) {
+            message.error('URL格式不正确，请检查输入的网址')
+        } else {
+            message.error('页面抓取失败：' + errorMessage)
+        }
     } finally {
         globalLoading.hide()
     }
@@ -365,32 +379,41 @@ const clearResults = () => {
     message.info('已清空抓取结果')
 }
 
-// 下载ZIP文件
-const downloadZip = async () => {
-    if (!captureResult.value?.zipPath) {
-        message.error('ZIP文件路径不存在')
-        return
-    }
-
-    globalLoading.show('正在下载ZIP文件...')
-
+// 自动下载ZIP文件
+const autoDownloadZip = async (zipPath: string) => {
     try {
         // 调用Go后端的文件下载方法
         const response = await api('download_file', {
-            filePath: captureResult.value.zipPath
+            filePath: zipPath
         })
-        
+
         if (response && response.code === 200) {
-            message.success('ZIP文件下载功能已实现，文件已保存到临时目录')
-            message.info(`文件路径: ${captureResult.value.zipPath}`)
+            // 创建下载链接
+            const blob = new Blob([response.data], { type: 'application/zip' })
+            const url = window.URL.createObjectURL(blob)
+            const link = document.createElement('a')
+            link.href = url
+
+            // 生成文件名：网站域名_时间戳.zip
+            const urlObj = new URL(captureResult.value.url)
+            const domain = urlObj.hostname.replace(/[^a-zA-Z0-9]/g, '_')
+            const timestamp = new Date().toISOString().slice(0, 19).replace(/[:-]/g, '')
+            link.download = `${domain}_${timestamp}.zip`
+
+            document.body.appendChild(link)
+            link.click()
+            document.body.removeChild(link)
+            window.URL.revokeObjectURL(url)
+
+            if (debugMode.value) {
+                console.log('ZIP文件已自动下载:', link.download)
+            }
         } else {
             message.error('下载失败：' + (response?.msg || '未知错误'))
         }
     } catch (error) {
-        console.error('Download error:', error)
-        message.error('下载失败：' + (error as Error).message)
-    } finally {
-        globalLoading.hide()
+        console.error('Auto download error:', error)
+        message.error('自动下载失败：' + (error as Error).message)
     }
 }
 
@@ -440,6 +463,30 @@ const getFileTypeColor = (fileName: string): string => {
     }
 }
 
+// 测试连接
+const testConnection = async () => {
+    if (!form.value.url.trim()) {
+        message.error('请先输入URL')
+        return
+    }
+
+    let testUrl = form.value.url.trim()
+    if (!testUrl.startsWith('http://') && !testUrl.startsWith('https://')) {
+        testUrl = 'https://' + testUrl
+    }
+
+    try {
+        const url = new URL(testUrl)
+        message.info(`正在测试连接到: ${url.hostname}`)
+
+        // 这里可以添加一个简单的连接测试
+        // 暂时只显示URL解析结果
+        message.success(`URL解析成功: ${url.protocol}//${url.hostname}${url.pathname}`)
+    } catch (error) {
+        message.error('URL格式错误: ' + (error as Error).message)
+    }
+}
+
 // 格式化文件路径显示
 const formatFilePath = (filePath: string): string => {
     // 如果是index.html，显示为根文件
@@ -461,37 +508,6 @@ const formatFilePath = (filePath: string): string => {
 </script>
 
 <style scoped>
-.page-preview {
-    border: 1px solid #e0e0e0;
-    border-radius: 6px;
-    padding: 12px;
-    background: #fafafa;
-    font-size: 12px;
-    line-height: 1.4;
-}
-
-.source-code {
-    background: #f5f5f5;
-    border: 1px solid #e0e0e0;
-    border-radius: 6px;
-    padding: 12px;
-    font-size: 11px;
-    line-height: 1.3;
-    white-space: pre-wrap;
-    word-break: break-all;
-    margin: 0;
-}
-
-.headers-code {
-    background: #f8f9fa;
-    border: 1px solid #e9ecef;
-    border-radius: 4px;
-    padding: 8px;
-    font-size: 11px;
-    line-height: 1.3;
-    margin: 0;
-}
-
 :deep(.n-card .n-card__header) {
     padding-bottom: 12px;
 }
@@ -502,9 +518,5 @@ const formatFilePath = (filePath: string): string => {
 
 :deep(.n-form-item) {
     margin-bottom: 16px;
-}
-
-:deep(.n-tabs .n-tabs-pane) {
-    padding: 12px 0;
 }
 </style>

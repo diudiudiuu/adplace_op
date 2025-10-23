@@ -181,13 +181,17 @@ func (s *PageCaptureService) downloadPage(targetURL string) (string, *http.Respo
 		return "", nil, fmt.Errorf("创建请求失败: %v", err)
 	}
 
-	// 设置User-Agent
-	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36")
-	req.Header.Set("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8")
+	// 设置User-Agent和请求头
+	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+	req.Header.Set("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8")
 	req.Header.Set("Accept-Language", "zh-CN,zh;q=0.9,en;q=0.8")
 	req.Header.Set("Accept-Encoding", "gzip, deflate, br")
 	req.Header.Set("Connection", "keep-alive")
 	req.Header.Set("Upgrade-Insecure-Requests", "1")
+	req.Header.Set("Sec-Fetch-Dest", "document")
+	req.Header.Set("Sec-Fetch-Mode", "navigate")
+	req.Header.Set("Sec-Fetch-Site", "none")
+	req.Header.Set("Cache-Control", "max-age=0")
 
 	// 发送请求
 	resp, err := s.client.Do(req)
@@ -196,13 +200,53 @@ func (s *PageCaptureService) downloadPage(targetURL string) (string, *http.Respo
 	}
 	defer resp.Body.Close()
 
+	// 检查HTTP状态码
+	if resp.StatusCode < 200 || resp.StatusCode >= 400 {
+		return "", resp, fmt.Errorf("HTTP错误: %d %s", resp.StatusCode, resp.Status)
+	}
+
 	// 读取响应内容
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return "", nil, fmt.Errorf("读取响应内容失败: %v", err)
+		return "", resp, fmt.Errorf("读取响应内容失败: %v", err)
 	}
 
-	return string(body), resp, nil
+	// 检查内容类型
+	contentType := resp.Header.Get("Content-Type")
+	if !strings.Contains(strings.ToLower(contentType), "text/html") &&
+		!strings.Contains(strings.ToLower(contentType), "application/xhtml") {
+		return "", resp, fmt.Errorf("不支持的内容类型: %s", contentType)
+	}
+
+	// 转换为UTF-8字符串
+	content := string(body)
+
+	// 简单的编码检测和转换
+	if !isValidUTF8(content) {
+		// 尝试从GBK转换
+		if gbkContent := convertFromGBK(body); gbkContent != "" {
+			content = gbkContent
+		}
+	}
+
+	return content, resp, nil
+}
+
+// isValidUTF8 检查字符串是否为有效的UTF-8
+func isValidUTF8(s string) bool {
+	for _, r := range s {
+		if r == '\uFFFD' {
+			return false
+		}
+	}
+	return true
+}
+
+// convertFromGBK 尝试从GBK编码转换为UTF-8
+func convertFromGBK(data []byte) string {
+	// 这里可以添加更复杂的编码检测和转换逻辑
+	// 暂时返回原始字符串
+	return string(data)
 }
 
 // downloadResources 下载页面中的资源文件

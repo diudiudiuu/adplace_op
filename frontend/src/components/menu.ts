@@ -174,7 +174,7 @@ class MenuManager {
                 id: 'page-capture',
                 title: '抓页面',
                 index: '/page-capture',
-                icon: 'Camera',
+                icon: 'CloudDownload',
             };
             this.menus = [...baseMenus, ...serverMenus, pageCaptureMenu];
 
@@ -217,7 +217,7 @@ class MenuManager {
             id: 'page-capture',
             title: '抓页面',
             index: '/page-capture',
-            icon: 'Camera',
+            icon: 'CloudDownload',
         };
         this.menus = [...baseMenus, pageCaptureMenu];
         this.hasLoaded = false;

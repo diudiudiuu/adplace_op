@@ -1679,13 +1679,37 @@ func (a *App) CapturePage(targetURL, optionsJson string) string {
 		options.MaxFiles = 1000
 	}
 
+	// 强制启用ZIP创建
+	options.CreateZip = true
+
 	log.Printf("Using options: %+v", options)
 
 	// 执行页面抓取
 	result, err := a.pageCaptureService.CapturePage(targetURL, options)
 	if err != nil {
 		log.Printf("Failed to capture page: %v", err)
-		response := ApiResponse{Code: 500, Msg: fmt.Sprintf("页面抓取失败: %v", err)}
+
+		// 根据错误类型返回更具体的错误信息
+		var errorMsg string
+		if strings.Contains(err.Error(), "HTTP错误") {
+			errorMsg = fmt.Sprintf("无法访问页面: %v", err)
+		} else if strings.Contains(err.Error(), "不支持的内容类型") {
+			errorMsg = fmt.Sprintf("页面类型不支持: %v", err)
+		} else if strings.Contains(err.Error(), "请求失败") {
+			errorMsg = fmt.Sprintf("网络请求失败: %v", err)
+		} else {
+			errorMsg = fmt.Sprintf("页面抓取失败: %v", err)
+		}
+
+		response := ApiResponse{Code: 500, Msg: errorMsg}
+		responseResult, _ := json.Marshal(response)
+		return string(responseResult)
+	}
+
+	// 检查结果是否有效
+	if result == nil {
+		log.Printf("Page capture returned nil result")
+		response := ApiResponse{Code: 500, Msg: "页面抓取返回空结果"}
 		responseResult, _ := json.Marshal(response)
 		return string(responseResult)
 	}
@@ -1693,26 +1717,40 @@ func (a *App) CapturePage(targetURL, optionsJson string) string {
 	log.Printf("Page captured successfully: status=%d, contentLength=%d, duration=%dms",
 		result.StatusCode, result.ContentLength, result.Duration)
 
+	// 检查内容是否为空或乱码
+	if result.Content == "" {
+		log.Printf("Warning: Captured content is empty")
+		result.Content = "<html><body><h1>页面内容为空</h1></body></html>"
+	}
+
 	response := ApiResponse{Code: 200, Msg: "页面抓取成功", Data: result}
 	responseResult, _ := json.Marshal(response)
 	return string(responseResult)
 }
 
-// DownloadFile 下载文件
-func (a *App) DownloadFile(filePath string) ([]byte, error) {
+// DownloadFile 下载文件并返回API响应格式
+func (a *App) DownloadFile(filePath string) string {
 	log.Printf("DownloadFile called with path: %s", filePath)
 
 	// 检查文件是否存在
 	if _, err := os.Stat(filePath); os.IsNotExist(err) {
-		return nil, fmt.Errorf("文件不存在: %s", filePath)
+		response := ApiResponse{Code: 404, Msg: fmt.Sprintf("文件不存在: %s", filePath)}
+		result, _ := json.Marshal(response)
+		return string(result)
 	}
 
 	// 读取文件内容
 	content, err := os.ReadFile(filePath)
 	if err != nil {
-		return nil, fmt.Errorf("读取文件失败: %v", err)
+		response := ApiResponse{Code: 500, Msg: fmt.Sprintf("读取文件失败: %v", err)}
+		result, _ := json.Marshal(response)
+		return string(result)
 	}
 
 	log.Printf("File downloaded successfully, size: %d bytes", len(content))
-	return content, nil
+
+	// 返回成功响应，包含文件内容
+	response := ApiResponse{Code: 200, Msg: "文件下载成功", Data: content}
+	result, _ := json.Marshal(response)
+	return string(result)
 }

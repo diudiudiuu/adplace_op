@@ -180,41 +180,6 @@ const api = async (uri: string, data: any) => {
     }
 }
 
-// 测试 401 处理的函数
-const test401 = async () => {
-    console.log('Testing 401 handling...');
-    const result = await api('test_401', {});
-    console.log('Test result:', result);
-};
-
-// 测试 loading 效果的函数
-const testLoading = async () => {
-    console.log('Testing loading effect...');
-    // 模拟一个延迟的 API 调用
-    if (globalLoading) {
-        const loading = globalLoading.create({
-            show: true,
-            description: '测试全屏加载中...'
-        });
-        setTimeout(() => {
-            loading.destroy();
-            if (globalMessage) {
-                globalMessage.success('Loading 测试完成');
-            }
-        }, 2000);
-    }
-};
-
-// 在开发环境暴露测试函数
-if (typeof window !== 'undefined') {
-    (window as any).test401 = test401;
-    (window as any).testLoading = testLoading;
-    (window as any).testMessage = () => {
-        if (globalMessage) {
-            globalMessage.info('这是一个测试消息');
-        }
-    };
-}
 
 // 导出未授权处理函数，供其他地方使用
 export { handleUnauthorized };

@@ -20,7 +20,7 @@
                     </n-tooltip>
                     <n-tooltip>
                         <template #trigger>
-                            <n-button type="error" @click="handleDelete" :loading="deleteLoading">
+                            <n-button type="error" @click="handleDelete">
                                 <template #icon>
                                     <n-icon>
                                         <TrashOutline />
@@ -78,7 +78,7 @@
                     </n-tooltip>
                     <n-tooltip>
                         <template #trigger>
-                            <n-button type="primary" @click="batchConfigureDNS" :loading="dnsLoading">
+                            <n-button type="primary" @click="batchConfigureDNS">
                                 <template #icon>
                                     <n-icon>
                                         <CloudOutline />
@@ -171,8 +171,7 @@
                                         </n-icon>
                                         <span style="font-weight: 600;">生成配置</span>
                                     </n-space>
-                                    <n-button size="small" type="success" @click="generateCurrentProjectConfig"
-                                        :loading="configLoading">
+                                    <n-button size="small" type="success" @click="generateCurrentProjectConfig">
                                         执行
                                     </n-button>
                                 </n-space>
@@ -195,8 +194,7 @@
                                         </n-icon>
                                         <span style="font-weight: 600;">初始化项目</span>
                                     </n-space>
-                                    <n-button size="small" type="primary" @click="executeInitCurrentProject"
-                                        :loading="initLoading">
+                                    <n-button size="small" type="primary" @click="executeInitCurrentProject">
                                         执行
                                     </n-button>
                                 </n-space>
@@ -219,8 +217,7 @@
                                         </n-icon>
                                         <span style="font-weight: 600;">更新项目</span>
                                     </n-space>
-                                    <n-button size="small" type="warning" @click="executeUpdateCurrentProject"
-                                        :loading="updateLoading">
+                                    <n-button size="small" type="warning" @click="executeUpdateCurrentProject">
                                         执行
                                     </n-button>
                                 </n-space>
@@ -274,7 +271,7 @@
             <template #action>
                 <n-space>
                     <n-button @click="showInitProjectModal = false">取消</n-button>
-                    <n-button type="primary" @click="executeInitProject" :loading="initLoading"
+                    <n-button type="primary" @click="executeInitProject"
                         :disabled="!selectedInitProjectId">
                         开始初始化
                     </n-button>
@@ -296,7 +293,7 @@
             <template #action>
                 <n-space>
                     <n-button @click="showUpdateProjectModal = false">取消</n-button>
-                    <n-button type="warning" @click="executeUpdateProject" :loading="updateLoading"
+                    <n-button type="warning" @click="executeUpdateProject"
                         :disabled="!selectedUpdateProjectId">
                         开始更新
                     </n-button>
@@ -348,7 +345,6 @@ interface ProjectInfo {
 }
 
 const projectInfo = ref<ProjectInfo>({})
-const dnsLoading = ref(false)
 const dnsStatus = ref<any[]>([])
 const showConfigModal = ref(false)
 const cloudflareConfig = ref({
@@ -357,10 +353,6 @@ const cloudflareConfig = ref({
 })
 
 // 项目部署相关状态
-const configLoading = ref(false)
-const initLoading = ref(false)
-const updateLoading = ref(false)
-const deleteLoading = ref(false)
 const projectConfigPreview = ref('')
 const deploymentStatus = ref<{
     type: 'success' | 'warning' | 'error' | 'info'
@@ -458,7 +450,6 @@ const dnsColumns = computed(() => [
                         trigger: () => h(NButton, {
                             size: 'small',
                             type: row.status === 'active' ? 'info' : 'primary',
-                            loading: row.loading,
                             onClick: () => configureSingleDNS(row)
                         }, {
                             icon: () => h(NIcon, {}, { default: () => h(row.status === 'active' ? RefreshOutline : PlayOutline) }),
@@ -471,7 +462,6 @@ const dnsColumns = computed(() => [
                         trigger: () => h(NButton, {
                             size: 'small',
                             type: 'error',
-                            loading: row.loading,
                             onClick: () => deleteSingleDNS(row)
                         }, {
                             icon: () => h(NIcon, {}, { default: () => h(TrashBinOutline) })
@@ -560,7 +550,7 @@ const batchConfigureDNS = async () => {
         return
     }
 
-    dnsLoading.value = true
+    globalLoading.show('正在批量配置 Cloudflare DNS 记录...')
 
     try {
         // 获取服务器信息以获取IP地址
@@ -680,7 +670,7 @@ const batchConfigureDNS = async () => {
         console.error('DNS batch configuration error:', error)
         message.error('DNS 配置失败：' + (error as Error).message)
     } finally {
-        dnsLoading.value = false
+        globalLoading.hide()
     }
 }
 
@@ -743,6 +733,7 @@ const checkDNSStatus = async () => {
     }
 
     try {
+        globalLoading.show('正在检查 DNS 记录状态...')
         // 查询现有 DNS 记录 - 管理端CNAME，API端A记录
         const [manageResult, apiResult] = await Promise.all([
             api('cloudflare_get_dns', {
@@ -788,6 +779,7 @@ const checkDNSStatus = async () => {
         })
 
         dnsStatus.value = status
+        globalLoading.hide()
 
     } catch (error) {
         console.error('Failed to check DNS status:', error)
@@ -812,6 +804,7 @@ const checkDNSStatus = async () => {
                 error: (error as Error).message
             }
         ]
+        globalLoading.hide()
     }
 }
 
@@ -835,8 +828,7 @@ const configureSingleDNS = async (record: any) => {
         return
     }
 
-    // 设置单个记录的加载状态
-    record.loading = true
+    globalLoading.show(`正在配置 ${record.name} 的 ${record.type} 记录...`)
 
     try {
         let content = record.content
@@ -919,7 +911,7 @@ const configureSingleDNS = async (record: any) => {
             error: (error as Error).message
         })
     } finally {
-        record.loading = false
+        globalLoading.hide()
     }
 }
 
@@ -944,7 +936,7 @@ const deleteSingleDNS = async (record: any) => {
                 return
             }
 
-            record.loading = true
+            globalLoading.show(`正在删除 ${record.name} 的 ${record.type} 记录...`)
 
             try {
                 // 调用后端 API 删除记录
@@ -996,7 +988,7 @@ const deleteSingleDNS = async (record: any) => {
                 console.error('Single DNS deletion error:', error)
                 message.error(`删除失败：${(error as Error).message}`)
             } finally {
-                record.loading = false
+                globalLoading.hide()
             }
         }
     })
@@ -1010,7 +1002,7 @@ const handleDelete = () => {
         positiveText: '确定',
         negativeText: '取消',
         onPositiveClick: async () => {
-            deleteLoading.value = true
+            globalLoading.show('正在删除项目...')
             try {
                 const res = await api('project_delete', {
                     serverId: props.serverId,
@@ -1032,7 +1024,7 @@ const handleDelete = () => {
                 console.error('Project deletion error:', error)
                 message.error('删除失败')
             } finally {
-                deleteLoading.value = false
+                globalLoading.hide()
             }
         }
     })
@@ -1040,8 +1032,8 @@ const handleDelete = () => {
 
 // 生成当前项目配置文件 - 前端生成JSON，后端只负责上传
 const generateCurrentProjectConfig = async () => {
-    configLoading.value = true
     deploymentStatus.value = null
+    globalLoading.show('正在生成项目配置并上传到服务器...')
 
     try {
         // 获取当前服务器的完整数据
@@ -1128,7 +1120,7 @@ const generateCurrentProjectConfig = async () => {
         }
         message.error('上传配置文件失败：' + (error as Error).message)
     } finally {
-        configLoading.value = false
+        globalLoading.hide()
     }
 }
 
@@ -1139,13 +1131,13 @@ const initProject = async () => {
         return
     }
 
-    initLoading.value = true
     deploymentStatus.value = {
         type: 'info',
         title: '正在初始化项目',
         message: `正在为项目 ${projectInfo.value.project_id} 执行初始化操作...`,
         icon: TimeOutline
     }
+    globalLoading.show(`正在初始化项目 ${projectInfo.value.project_id}...`)
 
     try {
         const result = await api('project_init', {
@@ -1180,20 +1172,19 @@ const initProject = async () => {
         }
         message.error('项目初始化失败：' + (error as Error).message)
     } finally {
-        initLoading.value = false
+        globalLoading.hide()
     }
 }
 
 // 执行初始化当前项目 - 使用前端当前数据
 const executeInitCurrentProject = async () => {
-    initLoading.value = true
-
     deploymentStatus.value = {
         type: 'info',
         title: '正在初始化项目',
         message: `正在为当前项目 ${projectInfo.value.project_name} (${props.projectId}) 执行初始化操作...`,
         icon: TimeOutline
     }
+    globalLoading.show(`正在初始化当前项目 ${projectInfo.value.project_name}...`)
 
     try {
         // 获取当前服务器的完整数据
@@ -1246,20 +1237,19 @@ const executeInitCurrentProject = async () => {
         }
         message.error('项目初始化失败：' + (error as Error).message)
     } finally {
-        initLoading.value = false
+        globalLoading.hide()
     }
 }
 
 // 执行更新当前项目 - 使用前端当前数据
 const executeUpdateCurrentProject = async () => {
-    updateLoading.value = true
-
     deploymentStatus.value = {
         type: 'info',
         title: '正在更新项目',
         message: `正在为当前项目 ${projectInfo.value.project_name} (${props.projectId}) 执行更新操作...`,
         icon: TimeOutline
     }
+    globalLoading.show(`正在更新当前项目 ${projectInfo.value.project_name}...`)
 
     try {
         // 获取当前服务器的完整数据
@@ -1312,7 +1302,7 @@ const executeUpdateCurrentProject = async () => {
         }
         message.error('项目更新失败：' + (error as Error).message)
     } finally {
-        updateLoading.value = false
+        globalLoading.hide()
     }
 }
 
@@ -1323,7 +1313,6 @@ const executeInitProject = async () => {
         return
     }
 
-    initLoading.value = true
     showInitProjectModal.value = false
 
     const selectedProject = serverProjects.value.find(p => p.project_id === selectedInitProjectId.value)
@@ -1335,6 +1324,7 @@ const executeInitProject = async () => {
         message: `正在为项目 ${projectName} (${selectedInitProjectId.value}) 执行初始化操作...`,
         icon: TimeOutline
     }
+    globalLoading.show(`正在初始化项目 ${projectName}...`)
 
     try {
         // 获取当前服务器的完整数据
@@ -1387,7 +1377,7 @@ const executeInitProject = async () => {
         }
         message.error('项目初始化失败：' + (error as Error).message)
     } finally {
-        initLoading.value = false
+        globalLoading.hide()
         selectedInitProjectId.value = ''
     }
 }
@@ -1399,13 +1389,13 @@ const updateProject = async () => {
         return
     }
 
-    updateLoading.value = true
     deploymentStatus.value = {
         type: 'info',
         title: '正在更新项目',
         message: `正在为项目 ${projectInfo.value.project_id} 执行更新操作...`,
         icon: TimeOutline
     }
+    globalLoading.show(`正在更新项目 ${projectInfo.value.project_id}...`)
 
     try {
         const result = await api('project_update', {
@@ -1440,7 +1430,7 @@ const updateProject = async () => {
         }
         message.error('项目更新失败：' + (error as Error).message)
     } finally {
-        updateLoading.value = false
+        globalLoading.hide()
     }
 }
 
@@ -1451,7 +1441,6 @@ const executeUpdateProject = async () => {
         return
     }
 
-    updateLoading.value = true
     showUpdateProjectModal.value = false
 
     const selectedProject = serverProjects.value.find(p => p.project_id === selectedUpdateProjectId.value)
@@ -1463,6 +1452,7 @@ const executeUpdateProject = async () => {
         message: `正在为项目 ${projectName} (${selectedUpdateProjectId.value}) 执行更新操作...`,
         icon: TimeOutline
     }
+    globalLoading.show(`正在更新项目 ${projectName}...`)
 
     try {
         // 获取当前服务器的完整数据
@@ -1515,7 +1505,7 @@ const executeUpdateProject = async () => {
         }
         message.error('项目更新失败：' + (error as Error).message)
     } finally {
-        updateLoading.value = false
+        globalLoading.hide()
         selectedUpdateProjectId.value = ''
     }
 }

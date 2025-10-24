@@ -146,7 +146,7 @@
                                 <span class="progress-label">{{ getPhaseText(captureProgress.phase) }}</span>
                                 <span class="progress-count">{{ captureProgress.completedFiles }}/{{
                                     captureProgress.totalFiles
-                                }}</span>
+                                    }}</span>
                             </div>
                             <n-progress type="line"
                                 :percentage="Math.round((captureProgress.completedFiles / Math.max(captureProgress.totalFiles, 1)) * 100)"
@@ -158,15 +158,19 @@
                             </n-text>
                         </div>
 
-                        <!-- 文件列表 -->
+                        <!-- 文件列表 - 可折叠 -->
                         <div v-if="captureProgress.fileList.length > 0" class="file-list-section">
-                            <n-divider title-placement="left">
-                                <n-text strong>文件下载详情 ({{ captureProgress.fileList.length }})</n-text>
-                            </n-divider>
+                            <n-collapse :default-expanded-names="['fileList']">
+                                <n-collapse-item title="" name="fileList">
+                                    <template #header>
+                                        <n-text strong>文件下载详情 ({{ captureProgress.fileList.length }})</n-text>
+                                    </template>
 
-                            <n-data-table :columns="fileTableColumns" :data="sortedFileList" :pagination="false"
-                                :max-height="120" size="small" striped
-                                :row-props="() => ({ style: 'height: 32px;' })" />
+                                    <n-data-table :columns="fileTableColumns" :data="sortedFileList" :pagination="false"
+                                        size="small" striped
+                                        :row-props="() => ({ style: 'height: 32px;' })" />
+                                </n-collapse-item>
+                            </n-collapse>
                         </div>
                     </n-space>
                 </n-card>
@@ -209,7 +213,7 @@
                             <n-space>
                                 <n-tag type="success">成功: {{ getFileStats().completed }}</n-tag>
                                 <n-tag v-if="getFileStats().failed > 0" type="error">失败: {{ getFileStats().failed
-                                }}</n-tag>
+                                    }}</n-tag>
                                 <n-tag type="info">总计: {{ captureProgress.fileList.length }}</n-tag>
                             </n-space>
                         </div>
@@ -219,15 +223,19 @@
                             <n-text>完整的网页已备份并保存到：{{ saveDirectory }}</n-text>
                         </n-alert>
 
-                        <!-- 文件列表 (结果页面也显示) -->
+                        <!-- 文件列表 (结果页面也显示) - 可折叠 -->
                         <div v-if="captureProgress.fileList.length > 0" class="file-list-section">
-                            <n-divider title-placement="left">
-                                <n-text strong>文件下载详情 ({{ captureProgress.fileList.length }})</n-text>
-                            </n-divider>
+                            <n-collapse :default-expanded-names="['resultFileList']">
+                                <n-collapse-item title="" name="resultFileList">
+                                    <template #header>
+                                        <n-text strong>文件下载详情 ({{ captureProgress.fileList.length }})</n-text>
+                                    </template>
 
-                            <n-data-table :columns="fileTableColumns" :data="sortedFileList" :pagination="false"
-                                :max-height="120" size="small" striped
-                                :row-props="() => ({ style: 'height: 32px;' })" />
+                                    <n-data-table :columns="fileTableColumns" :data="sortedFileList" :pagination="false"
+                                        size="small" striped
+                                        :row-props="() => ({ style: 'height: 32px;' })" />
+                                </n-collapse-item>
+                            </n-collapse>
                         </div>
                     </n-space>
                 </n-card>

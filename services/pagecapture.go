@@ -231,24 +231,27 @@ func (s *PageCaptureService) formatFileSize(bytes int64) string {
 		return fmt.Sprintf("%d B", bytes)
 	}
 
-	div, exp := int64(unit), 0
-	for n := bytes / unit; n >= unit; n /= unit {
-		div *= unit
+	sizes := []string{"B", "KB", "MB", "GB", "TB"}
+
+	originalBytes := float64(bytes)
+	exp := 0
+
+	// 找到合适的单位
+	for originalBytes >= unit && exp < len(sizes)-1 {
+		originalBytes /= unit
 		exp++
 	}
-
-	sizes := []string{"B", "KB", "MB", "GB", "TB"}
 
 	// 防护性检查
 	if exp >= len(sizes) {
 		exp = len(sizes) - 1
 	}
 
-	result := fmt.Sprintf("%.1f %s", float64(bytes)/float64(div), sizes[exp])
+	result := fmt.Sprintf("%.1f %s", originalBytes, sizes[exp])
 
 	// 调试信息 - 添加防护性检查
 	if s != nil {
-		s.debugPrintf("格式化文件大小: %d 字节 -> %s (div=%d, exp=%d)\n", bytes, result, div, exp)
+		s.debugPrintf("格式化文件大小: 原始字节数 -> %s (exp=%d)\n", result, exp)
 	}
 
 	return result

@@ -62,6 +62,13 @@ func NewPageCaptureService() *PageCaptureService {
 				if len(via) >= 10 {
 					return fmt.Errorf("重定向次数过多")
 				}
+
+				// 添加调试信息
+				if len(via) > 0 {
+					fmt.Printf("重定向检测: 从 %s 重定向到 %s (第 %d 次重定向)\n",
+						via[len(via)-1].URL.String(), req.URL.String(), len(via))
+				}
+
 				// 保持请求头
 				for key, val := range via[0].Header {
 					req.Header[key] = val
@@ -491,6 +498,14 @@ func (s *PageCaptureService) CapturePage(targetURL string, options CaptureOption
 		return nil, fmt.Errorf("下载主页面失败: %v", err)
 	}
 
+	// 检查是否发生了重定向，如果是则更新 baseURL
+	finalURL := resp.Request.URL
+	if finalURL.String() != targetURL {
+		s.debugPrintf("检测到重定向: %s -> %s\n", targetURL, finalURL.String())
+		s.baseURL = finalURL
+		s.debugPrintf("已更新 baseURL 为: %s\n", s.baseURL.String())
+	}
+
 	// 解析HTML并下载资源
 	s.debugPrintf("开始处理HTML和下载资源...\n")
 	modifiedHTML, err := s.processHTMLAndDownloadResources(htmlContent, options)
@@ -583,6 +598,10 @@ func (s *PageCaptureService) downloadPage(targetURL string) (string, *http.Respo
 		return "", nil, fmt.Errorf("请求失败: %v", err)
 	}
 	defer resp.Body.Close()
+
+	// 添加调试信息：显示最终请求的URL和状态码
+	s.debugPrintf("HTTP请求完成: 原始URL=%s, 最终URL=%s, 状态码=%d\n",
+		targetURL, resp.Request.URL.String(), resp.StatusCode)
 
 	// 检查状态码
 	if resp.StatusCode < 200 || resp.StatusCode >= 400 {

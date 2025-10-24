@@ -785,6 +785,8 @@ func (s *PageCaptureService) downloadLargeFileInChunks(url string, totalSize int
 
 			req.Header.Set("Range", fmt.Sprintf("bytes=%d-%d", start, end))
 			req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
+			req.Header.Set("Accept", "video/*,*/*;q=0.8")
+			req.Header.Set("Accept-Encoding", "identity") // 禁用压缩
 
 			resp, err := client.Do(req)
 			if err != nil {
@@ -810,12 +812,24 @@ func (s *PageCaptureService) downloadLargeFileInChunks(url string, totalSize int
 		close(resultChan)
 	}()
 
-	// 收集结果
+	// 收集结果并更新进度
+	completedChunks := 0
+	var totalDownloaded int64 = 0
+
 	for result := range resultChan {
 		if result.err != nil {
 			return nil, fmt.Errorf("块 %d 下载失败: %v", result.index, result.err)
 		}
 		chunks[result.index] = result.data
+		completedChunks++
+		totalDownloaded += int64(len(result.data))
+
+		// 更新下载进度
+		progress := int(completedChunks * 100 / int(numChunks))
+		s.updateFileDownloadProgress(url, totalDownloaded, totalSize, "downloading", progress)
+
+		s.debugPrintf("分块下载进度: %d/%d 块完成 (%d%%), 已下载: %.2f MB\n",
+			completedChunks, numChunks, progress, float64(totalDownloaded)/(1024*1024))
 	}
 
 	// 合并所有块
@@ -1712,17 +1726,40 @@ func (s *PageCaptureService) downloadResourceSync(resourceURL, resourceType stri
 		s.debugPrintf("使用扩展超时(10分钟)下载视频文件\n")
 	}
 
-	resp, err := client.Get(resourceURL)
+	// 创建请求并设置合适的请求头
+	req, err := http.NewRequest("GET", resourceURL, nil)
+	if err != nil {
+		s.debugPrintf("创建请求失败: %s - %v\n", resourceURL, err)
+		return ""
+	}
+
+	// 根据资源类型设置不同的请求头
+	if resourceType == "videos" {
+		// 视频文件使用专门的请求头
+		req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+		req.Header.Set("Accept", "video/webm,video/ogg,video/*;q=0.9,application/ogg;q=0.7,audio/*;q=0.6,*/*;q=0.5")
+		req.Header.Set("Accept-Encoding", "identity") // 禁用压缩，保持原始二进制数据
+		req.Header.Set("Range", "bytes=0-")           // 支持断点续传
+	} else {
+		// 其他资源使用通用请求头
+		req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+		req.Header.Set("Accept", "*/*")
+	}
+
+	resp, err := client.Do(req)
 	if err != nil {
 		s.debugPrintf("下载失败: %s - %v\n", resourceURL, err)
 		return ""
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode != http.StatusOK {
+	// 检查状态码，支持200和206（部分内容）
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusPartialContent {
 		s.debugPrintf("HTTP错误: %s - %d\n", resourceURL, resp.StatusCode)
 		return ""
 	}
+
+	s.debugPrintf("HTTP响应状态: %d %s\n", resp.StatusCode, resp.Status)
 
 	// 获取文件大小信息
 	contentLength := resp.ContentLength
@@ -1739,16 +1776,24 @@ func (s *PageCaptureService) downloadResourceSync(resourceURL, resourceType stri
 
 	// 为大文件添加分块并发下载
 	var content []byte
-	if contentLength > 10*1024*1024 && resourceType == "videos" {
-		s.debugPrintf("大视频文件，启用分块并发下载...\n")
+	if resourceType == "videos" && contentLength > 5*1024*1024 {
+		// 视频文件超过5MB就使用分块下载，提高成功率
+		s.debugPrintf("视频文件，启用分块并发下载...\n")
 		resp.Body.Close() // 关闭当前连接
 		content, err = s.downloadLargeFileInChunks(resourceURL, contentLength, client)
-	} else if contentLength > 5*1024*1024 {
+	} else if contentLength > 10*1024*1024 {
 		s.debugPrintf("大文件下载，启用进度监控...\n")
 		content, err = s.readWithProgress(resp.Body, contentLength, resourceURL)
 	} else {
-		// 小文件直接读取，进度由worker管理
+		// 小文件直接读取，但仍需更新进度
+		s.debugPrintf("小文件直接下载...\n")
 		content, err = io.ReadAll(resp.Body)
+
+		// 小文件下载完成后立即更新进度为100%
+		if err == nil && len(content) > 0 {
+			actualSize := int64(len(content))
+			s.updateFileDownloadProgress(resourceURL, actualSize, actualSize, "downloading", 100)
+		}
 	}
 
 	if err != nil {
@@ -1763,7 +1808,23 @@ func (s *PageCaptureService) downloadResourceSync(resourceURL, resourceType stri
 	actualSize := int64(len(content))
 	if actualSize > 0 {
 		s.debugPrintf("实际文件大小: %d 字节 (%.2f MB)\n", actualSize, float64(actualSize)/(1024*1024))
+
+		// 如果原来没有总大小信息（Content-Length无效），现在更新完整的进度信息
+		if contentLength <= 0 {
+			s.debugPrintf("更新无Content-Length文件的完整进度信息\n")
+			s.updateFileDownloadProgress(resourceURL, actualSize, actualSize, "downloading", 100)
+		}
+
 		s.updateFileSize(resourceURL, actualSize)
+	}
+
+	// 对视频文件进行完整性检查
+	if resourceType == "videos" && len(content) > 0 {
+		if s.validateVideoFile(content, resourceURL) {
+			s.debugPrintf("视频文件完整性验证通过: %s\n", resourceURL)
+		} else {
+			s.debugPrintf("警告: 视频文件可能不完整或损坏: %s\n", resourceURL)
+		}
 	}
 
 	// 对于CSS和JS文件，尝试处理编码问题
@@ -2646,4 +2707,113 @@ func (s *PageCaptureService) resetStopFlag() {
 	s.stopMutex.Lock()
 	defer s.stopMutex.Unlock()
 	s.stopRequested = false
+}
+
+// validateVideoFile 验证视频文件的完整性
+func (s *PageCaptureService) validateVideoFile(content []byte, url string) bool {
+	if len(content) < 12 {
+		s.debugPrintf("视频文件太小，可能不完整: %s (大小: %d 字节)\n", url, len(content))
+		return false
+	}
+
+	// 检查常见视频文件的魔数（文件头）
+	// header := content[:12] // 暂时不需要，直接使用content
+
+	// MP4 文件检查
+	if len(content) >= 8 {
+		// MP4 文件通常以 "ftyp" 开头（在偏移4处）
+		if string(content[4:8]) == "ftyp" {
+			s.debugPrintf("检测到 MP4 文件格式: %s\n", url)
+			return s.validateMP4File(content)
+		}
+	}
+
+	// WebM 文件检查
+	if len(content) >= 4 {
+		// WebM 文件以 EBML 头开始
+		if content[0] == 0x1A && content[1] == 0x45 && content[2] == 0xDF && content[3] == 0xA3 {
+			s.debugPrintf("检测到 WebM 文件格式: %s\n", url)
+			return true
+		}
+	}
+
+	// AVI 文件检查
+	if len(content) >= 12 {
+		// AVI 文件以 "RIFF" 开头，"AVI " 在偏移8处
+		if string(content[0:4]) == "RIFF" && string(content[8:12]) == "AVI " {
+			s.debugPrintf("检测到 AVI 文件格式: %s\n", url)
+			return true
+		}
+	}
+
+	// MOV/QuickTime 文件检查
+	if len(content) >= 8 {
+		// MOV 文件可能有多种 ftyp
+		if string(content[4:8]) == "ftyp" {
+			// 检查 MOV 特定的品牌
+			if len(content) >= 12 {
+				brand := string(content[8:12])
+				if brand == "qt  " || brand == "mov " {
+					s.debugPrintf("检测到 MOV 文件格式: %s\n", url)
+					return true
+				}
+			}
+		}
+	}
+
+	// 如果无法识别格式，但文件大小合理，认为可能是有效的
+	if len(content) > 1024 {
+		s.debugPrintf("无法识别视频格式，但文件大小合理: %s (大小: %d 字节)\n", url, len(content))
+		return true
+	}
+
+	s.debugPrintf("视频文件格式验证失败: %s\n", url)
+	return false
+}
+
+// validateMP4File 验证MP4文件的完整性
+func (s *PageCaptureService) validateMP4File(content []byte) bool {
+	if len(content) < 32 {
+		return false
+	}
+
+	// 检查是否有基本的MP4盒子结构
+	offset := 0
+	boxCount := 0
+
+	for offset < len(content)-8 && boxCount < 10 { // 最多检查10个盒子
+		// 读取盒子大小（前4字节）
+		if offset+8 > len(content) {
+			break
+		}
+
+		boxSize := int(content[offset])<<24 | int(content[offset+1])<<16 | int(content[offset+2])<<8 | int(content[offset+3])
+		boxType := string(content[offset+4 : offset+8])
+
+		s.debugPrintf("MP4 盒子: %s, 大小: %d\n", boxType, boxSize)
+
+		// 检查盒子大小是否合理
+		if boxSize < 8 || boxSize > len(content) {
+			if boxSize == 0 {
+				// 盒子大小为0表示延伸到文件末尾
+				break
+			} else if boxSize == 1 {
+				// 64位大小，跳过这种复杂情况
+				break
+			} else {
+				s.debugPrintf("MP4 盒子大小异常: %d\n", boxSize)
+				return false
+			}
+		}
+
+		// 检查常见的MP4盒子类型
+		switch boxType {
+		case "ftyp", "moov", "mdat", "free", "skip", "wide":
+			boxCount++
+		}
+
+		offset += boxSize
+	}
+
+	return boxCount > 0
 }

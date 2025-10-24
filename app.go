@@ -1952,35 +1952,79 @@ func (a *App) StopCapture() string {
 // OpenDirectory 打开指定目录
 func (a *App) OpenDirectory(directoryPath string) string {
 	log.Printf("OpenDirectory called with path: %s", directoryPath)
+	log.Printf("Current OS: %s", runtime.GOOS)
+
+	// 清理和标准化路径
+	cleanPath := filepath.Clean(directoryPath)
+	log.Printf("Cleaned path: %s", cleanPath)
 
 	// 检查目录是否存在
-	if _, err := os.Stat(directoryPath); os.IsNotExist(err) {
-		response := ApiResponse{Code: 404, Msg: fmt.Sprintf("目录不存在: %s", directoryPath)}
+	if stat, err := os.Stat(cleanPath); os.IsNotExist(err) {
+		log.Printf("Directory does not exist: %s", cleanPath)
+		response := ApiResponse{Code: 404, Msg: fmt.Sprintf("目录不存在: %s", cleanPath)}
+		result, _ := json.Marshal(response)
+		return string(result)
+	} else if err != nil {
+		log.Printf("Error checking directory: %v", err)
+		response := ApiResponse{Code: 500, Msg: fmt.Sprintf("检查目录失败: %v", err)}
+		result, _ := json.Marshal(response)
+		return string(result)
+	} else if !stat.IsDir() {
+		log.Printf("Path is not a directory: %s", cleanPath)
+		response := ApiResponse{Code: 400, Msg: fmt.Sprintf("路径不是目录: %s", cleanPath)}
 		result, _ := json.Marshal(response)
 		return string(result)
 	}
 
 	// 使用系统默认程序打开目录
+	var cmd *exec.Cmd
 	var err error
+
 	switch runtime.GOOS {
 	case "windows":
-		err = exec.Command("explorer", directoryPath).Start()
+		// Windows: 使用 explorer 命令
+		cmd = exec.Command("explorer", cleanPath)
+		log.Printf("Executing: explorer %s", cleanPath)
 	case "darwin":
-		err = exec.Command("open", directoryPath).Start()
+		// macOS: 使用 open 命令
+		cmd = exec.Command("open", cleanPath)
+		log.Printf("Executing: open %s", cleanPath)
 	case "linux":
-		err = exec.Command("xdg-open", directoryPath).Start()
+		// Linux: 使用 xdg-open 命令
+		cmd = exec.Command("xdg-open", cleanPath)
+		log.Printf("Executing: xdg-open %s", cleanPath)
 	default:
 		err = fmt.Errorf("不支持的操作系统: %s", runtime.GOOS)
 	}
 
+	if err == nil {
+		err = cmd.Start()
+	}
+
 	if err != nil {
 		log.Printf("Failed to open directory: %v", err)
+
+		// 尝试备用方法
+		if runtime.GOOS == "windows" {
+			log.Printf("Trying alternative method for Windows...")
+			// 尝试使用 cmd /c start 命令
+			altCmd := exec.Command("cmd", "/c", "start", "", cleanPath)
+			altErr := altCmd.Start()
+			if altErr == nil {
+				log.Printf("Directory opened successfully using alternative method: %s", cleanPath)
+				response := ApiResponse{Code: 200, Msg: "目录已打开"}
+				result, _ := json.Marshal(response)
+				return string(result)
+			}
+			log.Printf("Alternative method also failed: %v", altErr)
+		}
+
 		response := ApiResponse{Code: 500, Msg: fmt.Sprintf("打开目录失败: %v", err)}
 		result, _ := json.Marshal(response)
 		return string(result)
 	}
 
-	log.Printf("Directory opened successfully: %s", directoryPath)
+	log.Printf("Directory opened successfully: %s", cleanPath)
 	response := ApiResponse{Code: 200, Msg: "目录已打开"}
 	result, _ := json.Marshal(response)
 	return string(result)

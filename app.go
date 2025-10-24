@@ -11,11 +11,13 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"time"
 
-	"github.com/wailsapp/wails/v2/pkg/runtime"
+	wailsruntime "github.com/wailsapp/wails/v2/pkg/runtime"
 	"golang.org/x/crypto/ssh"
 )
 
@@ -44,6 +46,45 @@ func NewApp() *App {
 // so we can call the runtime methods
 func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
+}
+
+// beforeClose is called when the application is about to quit,
+// either by clicking the window close button or calling runtime.Quit.
+// Returning true will cause the application to continue, false will continue shutdown as normal.
+func (a *App) beforeClose(ctx context.Context) (prevent bool) {
+	// 检查是否有正在进行的页面抓取
+	progress := a.pageCaptureService.GetCurrentProgress()
+
+	// 如果正在备份，询问用户是否确定要退出
+	if progress.Phase == "analyzing" || progress.Phase == "downloading" || progress.Phase == "saving" {
+		log.Printf("Application closing while capture in progress, phase: %s", progress.Phase)
+
+		// 使用 Wails 的对话框询问用户
+		selection, err := wailsruntime.MessageDialog(ctx, wailsruntime.MessageDialogOptions{
+			Type:          wailsruntime.QuestionDialog,
+			Title:         "确认退出",
+			Message:       "正在进行网页备份，确定要退出吗？\n\n退出将停止当前的备份任务。",
+			Buttons:       []string{"继续备份", "停止并退出"},
+			DefaultButton: "继续备份",
+			CancelButton:  "继续备份",
+		})
+
+		if err != nil {
+			log.Printf("Error showing dialog: %v", err)
+			return false // 出错时允许退出
+		}
+
+		// 如果用户选择继续备份，阻止关闭
+		if selection == "继续备份" {
+			return true // 阻止关闭
+		}
+
+		// 用户选择退出，停止备份
+		log.Printf("User chose to exit, stopping capture")
+		a.pageCaptureService.StopCapture()
+	}
+
+	return false // 允许关闭
 }
 
 // ApiResponse 通用API响应结构
@@ -311,8 +352,8 @@ func (a *App) Exec(projectID, sql, sqlType, authorization, clientJson string) st
 
 // ShowMessage 显示消息对话框
 func (a *App) ShowMessage(title, message string) {
-	runtime.MessageDialog(a.ctx, runtime.MessageDialogOptions{
-		Type:    runtime.InfoDialog,
+	wailsruntime.MessageDialog(a.ctx, wailsruntime.MessageDialogOptions{
+		Type:    wailsruntime.InfoDialog,
 		Title:   title,
 		Message: message,
 	})
@@ -1689,19 +1730,19 @@ func (a *App) CapturePage(targetURL, optionsJson string) string {
 
 	// 设置进度回调 - 使用Wails事件系统发送到前端
 	a.pageCaptureService.SetProgressCallback(func(progress services.ProgressInfo) {
-		log.Printf("Progress: %s - %d/%d files, current: %s", 
+		log.Printf("Progress: %s - %d/%d files, current: %s",
 			progress.Phase, progress.CompletedFiles, progress.TotalFiles, progress.CurrentFile)
-		
+
 		// 发送进度事件到前端
-		runtime.EventsEmit(a.ctx, "capture_progress", progress)
-		
+		wailsruntime.EventsEmit(a.ctx, "capture_progress", progress)
+
 		// 打印文件列表状态（调试用）
 		if len(progress.FileList) > 0 {
 			completed := 0
 			downloading := 0
 			pending := 0
 			failed := 0
-			
+
 			for _, file := range progress.FileList {
 				switch file.Status {
 				case "completed":
@@ -1714,8 +1755,8 @@ func (a *App) CapturePage(targetURL, optionsJson string) string {
 					failed++
 				}
 			}
-			
-			log.Printf("File status: completed=%d, downloading=%d, pending=%d, failed=%d", 
+
+			log.Printf("File status: completed=%d, downloading=%d, pending=%d, failed=%d",
 				completed, downloading, pending, failed)
 		}
 	})
@@ -1768,13 +1809,13 @@ func (a *App) CapturePage(targetURL, optionsJson string) string {
 func (a *App) GetCaptureProgress() string {
 	// 从页面抓取服务获取当前进度
 	progress := a.pageCaptureService.GetCurrentProgress()
-	
+
 	response := ApiResponse{
 		Code: 200,
 		Msg:  "success",
 		Data: progress,
 	}
-	
+
 	result, _ := json.Marshal(response)
 	return string(result)
 }
@@ -1814,7 +1855,7 @@ func (a *App) SelectDirectory() string {
 	log.Printf("SelectDirectory called")
 
 	// 使用Wails的目录选择对话框
-	selectedDir, err := runtime.OpenDirectoryDialog(a.ctx, runtime.OpenDialogOptions{
+	selectedDir, err := wailsruntime.OpenDirectoryDialog(a.ctx, wailsruntime.OpenDialogOptions{
 		Title: "选择保存目录",
 	})
 
@@ -1885,6 +1926,62 @@ func (a *App) SaveZipToDirectory(sourcePath, targetDirectory, fileName string) s
 
 	log.Printf("File saved successfully to: %s", targetPath)
 	response := ApiResponse{Code: 200, Msg: "文件保存成功", Data: targetPath}
+	result, _ := json.Marshal(response)
+	return string(result)
+}
+
+// StopCapture 停止页面抓取
+func (a *App) StopCapture() string {
+	log.Printf("StopCapture called")
+
+	// 调用页面抓取服务的停止方法
+	err := a.pageCaptureService.StopCapture()
+	if err != nil {
+		log.Printf("Failed to stop capture: %v", err)
+		response := ApiResponse{Code: 500, Msg: fmt.Sprintf("停止备份失败: %v", err)}
+		result, _ := json.Marshal(response)
+		return string(result)
+	}
+
+	log.Printf("Capture stopped successfully")
+	response := ApiResponse{Code: 200, Msg: "备份已停止"}
+	result, _ := json.Marshal(response)
+	return string(result)
+}
+
+// OpenDirectory 打开指定目录
+func (a *App) OpenDirectory(directoryPath string) string {
+	log.Printf("OpenDirectory called with path: %s", directoryPath)
+
+	// 检查目录是否存在
+	if _, err := os.Stat(directoryPath); os.IsNotExist(err) {
+		response := ApiResponse{Code: 404, Msg: fmt.Sprintf("目录不存在: %s", directoryPath)}
+		result, _ := json.Marshal(response)
+		return string(result)
+	}
+
+	// 使用系统默认程序打开目录
+	var err error
+	switch runtime.GOOS {
+	case "windows":
+		err = exec.Command("explorer", directoryPath).Start()
+	case "darwin":
+		err = exec.Command("open", directoryPath).Start()
+	case "linux":
+		err = exec.Command("xdg-open", directoryPath).Start()
+	default:
+		err = fmt.Errorf("不支持的操作系统: %s", runtime.GOOS)
+	}
+
+	if err != nil {
+		log.Printf("Failed to open directory: %v", err)
+		response := ApiResponse{Code: 500, Msg: fmt.Sprintf("打开目录失败: %v", err)}
+		result, _ := json.Marshal(response)
+		return string(result)
+	}
+
+	log.Printf("Directory opened successfully: %s", directoryPath)
+	response := ApiResponse{Code: 200, Msg: "目录已打开"}
 	result, _ := json.Marshal(response)
 	return string(result)
 }

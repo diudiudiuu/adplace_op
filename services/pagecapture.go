@@ -41,6 +41,8 @@ type PageCaptureService struct {
 	progressCallback ProgressCallback
 	progressInfo     ProgressInfo
 	progressMutex    sync.RWMutex
+	stopRequested    bool         // 停止请求标志
+	stopMutex        sync.RWMutex // 保护停止标志的互斥锁
 }
 
 // NewPageCaptureService 创建新的页面抓取服务
@@ -322,6 +324,9 @@ func (s *PageCaptureService) resetState() {
 	defer s.progressMutex.Unlock()
 
 	s.debugPrintf("=== 重置所有状态 ===\n")
+
+	// 重置停止标志
+	s.resetStopFlag()
 
 	// 清空资源映射
 	oldResourceCount := len(s.resources)
@@ -1613,6 +1618,16 @@ func (s *PageCaptureService) downloadWorker(taskChan <-chan DownloadTask, result
 	defer wg.Done()
 
 	for task := range taskChan {
+		// 检查是否收到停止请求
+		if s.isStopRequested() {
+			resultChan <- DownloadResult{
+				Task:    task,
+				Success: false,
+				Error:   fmt.Errorf("备份已停止"),
+			}
+			continue
+		}
+
 		// 检查文件数量限制
 		s.mutex.RLock()
 		currentCount := s.fileCount
@@ -2595,4 +2610,40 @@ func containsMaliciousCode(content string) bool {
 	}
 
 	return false
+}
+
+// StopCapture 停止页面抓取
+func (s *PageCaptureService) StopCapture() error {
+	s.stopMutex.Lock()
+	defer s.stopMutex.Unlock()
+
+	s.stopRequested = true
+	s.debugPrintf("收到停止请求\n")
+
+	// 更新进度状态
+	s.progressMutex.Lock()
+	s.progressInfo.Phase = "stopped"
+	s.progressInfo.CurrentFile = "备份已停止"
+	s.progressMutex.Unlock()
+
+	// 触发进度回调
+	if s.progressCallback != nil {
+		s.progressCallback(s.progressInfo)
+	}
+
+	return nil
+}
+
+// isStopRequested 检查是否收到停止请求
+func (s *PageCaptureService) isStopRequested() bool {
+	s.stopMutex.RLock()
+	defer s.stopMutex.RUnlock()
+	return s.stopRequested
+}
+
+// resetStopFlag 重置停止标志
+func (s *PageCaptureService) resetStopFlag() {
+	s.stopMutex.Lock()
+	defer s.stopMutex.Unlock()
+	s.stopRequested = false
 }

@@ -62,6 +62,10 @@ export function List(arg1, arg2) {
   return window['go']['main']['App']['List'](arg1, arg2);
 }
 
+export function OpenDirectory(arg1) {
+  return window['go']['main']['App']['OpenDirectory'](arg1);
+}
+
 export function ProjectDelete(arg1, arg2, arg3, arg4) {
   return window['go']['main']['App']['ProjectDelete'](arg1, arg2, arg3, arg4);
 }
@@ -120,6 +124,10 @@ export function ServerUpdate(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg
 
 export function ShowMessage(arg1, arg2) {
   return window['go']['main']['App']['ShowMessage'](arg1, arg2);
+}
+
+export function StopCapture() {
+  return window['go']['main']['App']['StopCapture']();
 }
 
 export function TestSSHConnection(arg1, arg2, arg3, arg4) {

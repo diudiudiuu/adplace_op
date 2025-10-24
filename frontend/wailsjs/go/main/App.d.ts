@@ -31,6 +31,8 @@ export function Greet(arg1:string):Promise<string>;
 
 export function List(arg1:string,arg2:string):Promise<string>;
 
+export function OpenDirectory(arg1:string):Promise<string>;
+
 export function ProjectDelete(arg1:string,arg2:string,arg3:string,arg4:string):Promise<string>;
 
 export function ProjectForm(arg1:string,arg2:string,arg3:string,arg4:string):Promise<string>;
@@ -60,6 +62,8 @@ export function ServerInfo(arg1:string,arg2:string,arg3:string):Promise<string>;
 export function ServerUpdate(arg1:string,arg2:string,arg3:string,arg4:string,arg5:string,arg6:string,arg7:string,arg8:string,arg9:string,arg10:string):Promise<string>;
 
 export function ShowMessage(arg1:string,arg2:string):Promise<void>;
+
+export function StopCapture():Promise<string>;
 
 export function TestSSHConnection(arg1:string,arg2:string,arg3:string,arg4:string):Promise<string>;
 

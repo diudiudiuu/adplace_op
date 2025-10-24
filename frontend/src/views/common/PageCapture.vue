@@ -21,13 +21,7 @@
                     <n-form :model="form" label-placement="top">
                         <n-form-item label="目标网址" required>
                             <n-input v-model:value="form.url" placeholder="请输入要备份的网页 URL，如：https://example.com"
-                                size="large" @keyup.enter="captureUrl">
-                                <template #suffix>
-                                    <n-button text type="primary" @click="testConnection" :disabled="!form.url.trim()">
-                                        测试
-                                    </n-button>
-                                </template>
-                            </n-input>
+                                size="large" @keyup.enter="captureUrl" />
                         </n-form-item>
 
                         <n-form-item label="保存目录" required>
@@ -88,14 +82,23 @@
                     <!-- 备份按钮 -->
                     <n-divider />
                     <div class="action-buttons">
-                        <n-button type="primary" size="large" block @click="captureUrl"
-                            :disabled="!form.url.trim() || !saveDirectory.trim() || isCapturing" :loading="isCapturing">
+                        <n-button v-if="!isCapturing" type="primary" size="large" block @click="captureUrl"
+                            :disabled="!form.url.trim() || !saveDirectory.trim()">
                             <template #icon>
                                 <n-icon>
                                     <CameraOutline />
                                 </n-icon>
                             </template>
-                            {{ isCapturing ? '备份中...' : '开始备份' }}
+                            开始备份
+                        </n-button>
+
+                        <n-button v-if="isCapturing" type="error" size="large" block @click="stopCapture">
+                            <template #icon>
+                                <n-icon>
+                                    <StopOutline />
+                                </n-icon>
+                            </template>
+                            停止备份
                         </n-button>
 
                         <n-space justify="space-between" style="margin-top: 12px;">
@@ -146,7 +149,7 @@
                                 <span class="progress-label">{{ getPhaseText(captureProgress.phase) }}</span>
                                 <span class="progress-count">{{ captureProgress.completedFiles }}/{{
                                     captureProgress.totalFiles
-                                    }}</span>
+                                }}</span>
                             </div>
                             <n-progress type="line"
                                 :percentage="Math.round((captureProgress.completedFiles / Math.max(captureProgress.totalFiles, 1)) * 100)"
@@ -167,8 +170,7 @@
                                     </template>
 
                                     <n-data-table :columns="fileTableColumns" :data="sortedFileList" :pagination="false"
-                                        size="small" striped
-                                        :row-props="() => ({ style: 'height: 32px;' })" />
+                                        size="small" striped :row-props="() => ({ style: 'height: 32px;' })" />
                                 </n-collapse-item>
                             </n-collapse>
                         </div>
@@ -213,14 +215,34 @@
                             <n-space>
                                 <n-tag type="success">成功: {{ getFileStats().completed }}</n-tag>
                                 <n-tag v-if="getFileStats().failed > 0" type="error">失败: {{ getFileStats().failed
-                                    }}</n-tag>
+                                }}</n-tag>
                                 <n-tag type="info">总计: {{ captureProgress.fileList.length }}</n-tag>
                             </n-space>
                         </div>
 
                         <!-- 保存状态 -->
                         <n-alert v-if="captureResult.success" type="success" title="备份文件已保存">
-                            <n-text>完整的网页已备份并保存到：{{ saveDirectory }}</n-text>
+                            <n-space vertical>
+                                <n-text>完整的网页已备份并保存到：{{ saveDirectory }}</n-text>
+                                <n-space>
+                                    <n-button type="primary" size="small" @click="openSaveDirectory">
+                                        <template #icon>
+                                            <n-icon>
+                                                <FolderOpenOutline />
+                                            </n-icon>
+                                        </template>
+                                        打开文件夹
+                                    </n-button>
+                                    <n-button type="info" size="small" @click="copyDirectoryPath">
+                                        <template #icon>
+                                            <n-icon>
+                                                <CopyOutline />
+                                            </n-icon>
+                                        </template>
+                                        复制路径
+                                    </n-button>
+                                </n-space>
+                            </n-space>
                         </n-alert>
 
                         <!-- 文件列表 (结果页面也显示) - 可折叠 -->
@@ -232,8 +254,7 @@
                                     </template>
 
                                     <n-data-table :columns="fileTableColumns" :data="sortedFileList" :pagination="false"
-                                        size="small" striped
-                                        :row-props="() => ({ style: 'height: 32px;' })" />
+                                        size="small" striped :row-props="() => ({ style: 'height: 32px;' })" />
                                 </n-collapse-item>
                             </n-collapse>
                         </div>
@@ -262,8 +283,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, inject, onMounted, onUnmounted, h, watch, computed, nextTick } from 'vue'
-import { useMessage } from 'naive-ui'
+import { ref, inject, onMounted, onUnmounted, h, watch, computed, nextTick, onBeforeUnmount } from 'vue'
+import { useMessage, useDialog } from 'naive-ui'
+import { onBeforeRouteLeave } from 'vue-router'
 import {
     RefreshOutline,
     ArchiveOutline,
@@ -280,11 +302,15 @@ import {
     ColorPaletteOutline,
     ChevronUpOutline,
     ChevronDownOutline,
-    CameraOutline
+    CameraOutline,
+    StopOutline,
+    FolderOpenOutline,
+    CopyOutline
 } from '@vicons/ionicons5'
 import api from '@/api'
 
 const message = useMessage()
+const dialog = useDialog()
 
 // 注入全局 loading
 const globalLoading = inject('globalLoading') as any
@@ -540,12 +566,12 @@ const fileTableColumns = [
             const isDownloading = row.status === 'downloading'
             const isCompleted = row.status === 'completed'
             const hasSizeInfo = row.totalSize > 0 || row.downloadedSize > 0
-            
+
             // 如果有详细的大小信息，显示已下载/总大小
             if (hasSizeInfo && (isDownloading || isCompleted)) {
                 const downloadedText = formatBytes(row.downloadedSize || 0)
                 const totalText = row.totalSize > 0 ? formatBytes(row.totalSize) : '未知'
-                
+
                 return h('div', {
                     style: {
                         fontSize: '11px',
@@ -560,7 +586,7 @@ const fileTableColumns = [
                     }, `${row.progress}%`) : null
                 ].filter(Boolean))
             }
-            
+
             // 否则显示原来的格式
             return h('span', {
                 style: {
@@ -973,30 +999,6 @@ const selectDirectory = async () => {
     }
 }
 
-// 测试连接
-const testConnection = async () => {
-    if (!form.value.url.trim()) {
-        message.error('请先输入URL')
-        return
-    }
-
-    let testUrl = form.value.url.trim()
-    if (!testUrl.startsWith('http://') && !testUrl.startsWith('https://')) {
-        testUrl = 'https://' + testUrl
-    }
-
-    try {
-        const url = new URL(testUrl)
-        message.info(`正在测试连接到: ${url.hostname}`)
-
-        // 这里可以添加一个简单的连接测试
-        // 暂时只显示URL解析结果
-        message.success(`URL解析成功: ${url.protocol}//${url.hostname}${url.pathname}`)
-    } catch (error) {
-        message.error('URL格式错误: ' + (error as Error).message)
-    }
-}
-
 // 格式化文件路径显示
 const formatFilePath = (filePath: string): string => {
     // 如果是index.html，显示为根文件
@@ -1213,9 +1215,108 @@ onMounted(() => {
     }
 })
 
-// 组件卸载时清理轮询
+// 停止备份
+const stopCapture = async () => {
+    try {
+        // 调用后端停止备份的API
+        await api('stop_capture', {})
+
+        // 停止轮询
+        stopProgressPolling()
+
+        // 重置状态
+        isCapturing.value = false
+        captureProgress.value.phase = 'stopped'
+        captureProgress.value.currentFile = '备份已停止'
+
+        message.warning('备份已停止')
+    } catch (error) {
+        console.error('停止备份失败:', error)
+        message.error('停止备份失败')
+    }
+}
+
+// 打开保存目录
+const openSaveDirectory = async () => {
+    try {
+        // 调用后端打开文件夹的API
+        await api('open_directory', { path: saveDirectory.value })
+        message.success('已打开文件夹')
+    } catch (error) {
+        console.error('打开文件夹失败:', error)
+        message.error('打开文件夹失败')
+    }
+}
+
+// 复制目录路径
+const copyDirectoryPath = async () => {
+    try {
+        // 使用浏览器的剪贴板API
+        await navigator.clipboard.writeText(saveDirectory.value)
+        message.success('路径已复制到剪贴板')
+    } catch (error) {
+        console.error('复制路径失败:', error)
+        message.error('复制路径失败')
+    }
+}
+
+// Vue 路由离开守卫
+onBeforeRouteLeave((to, from, next) => {
+    if (isCapturing.value) {
+        // 显示确认对话框
+        dialog.warning({
+            title: '确认离开',
+            content: '正在进行网页备份，离开页面将停止当前的备份任务。确定要离开吗？',
+            positiveText: '停止并离开',
+            negativeText: '继续备份',
+            onPositiveClick: () => {
+                // 用户选择离开，停止备份
+                stopCapture().then(() => {
+                    next() // 允许路由跳转
+                })
+            },
+            onNegativeClick: () => {
+                // 用户选择继续备份，阻止路由跳转
+                next(false)
+            },
+            onClose: () => {
+                // 用户关闭对话框，阻止路由跳转
+                next(false)
+            }
+        })
+    } else {
+        // 没有正在进行的备份，直接允许离开
+        next()
+    }
+})
+
+// 页面离开前的确认（浏览器刷新/关闭标签页时的备用处理）
+const beforeUnloadHandler = (event: BeforeUnloadEvent) => {
+    if (isCapturing.value) {
+        event.preventDefault()
+        event.returnValue = '正在进行备份，确定要离开吗？'
+        return '正在进行备份，确定要离开吗？'
+    }
+}
+
+// 组件挂载时初始化
+onMounted(() => {
+    // 确保保存目录正确加载
+    const savedDir = localStorage.getItem('pageCapture_saveDirectory')
+    if (savedDir && savedDir !== saveDirectory.value) {
+        saveDirectory.value = savedDir
+        console.log('从本地存储加载保存目录:', savedDir)
+    }
+
+    // 添加浏览器页面刷新/关闭的监听（作为备用）
+    window.addEventListener('beforeunload', beforeUnloadHandler)
+})
+
+// 组件卸载时清理轮询和监听器
 onUnmounted(() => {
     stopProgressPolling()
+    // 清理浏览器事件监听
+    window.removeEventListener('beforeunload', beforeUnloadHandler)
 })
 
 

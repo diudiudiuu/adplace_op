@@ -333,7 +333,10 @@ func (s *PageCaptureService) resetState() {
 
 	// 重置context（如果之前有的话，先取消）
 	if s.cancelFunc != nil {
+		s.debugPrintf("取消之前的context\n")
 		s.cancelFunc()
+		// 给协程一点时间来响应取消信号
+		time.Sleep(100 * time.Millisecond)
 	}
 	s.ctx = nil
 	s.cancelFunc = nil
@@ -792,15 +795,22 @@ func (s *PageCaptureService) downloadLargeFileInChunks(url string, totalSize int
 				end = totalSize - 1
 			}
 
-			// 检查是否被取消
-			select {
-			case <-s.ctx.Done():
-				resultChan <- chunkResult{int(chunkIndex), nil, fmt.Errorf("分块下载被取消: %v", s.ctx.Err())}
-				return
-			default:
+			// 检查是否被取消（安全检查，避免nil指针）
+			if s.ctx != nil {
+				select {
+				case <-s.ctx.Done():
+					resultChan <- chunkResult{int(chunkIndex), nil, fmt.Errorf("分块下载被取消: %v", s.ctx.Err())}
+					return
+				default:
+				}
 			}
 
-			req, err := http.NewRequestWithContext(s.ctx, "GET", url, nil)
+			// 创建请求时使用安全的context
+			ctx := s.ctx
+			if ctx == nil {
+				ctx = context.Background()
+			}
+			req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
 			if err != nil {
 				resultChan <- chunkResult{int(chunkIndex), nil, err}
 				return
@@ -1655,18 +1665,20 @@ func (s *PageCaptureService) downloadWorker(taskChan <-chan DownloadTask, result
 	defer wg.Done()
 
 	for task := range taskChan {
-		// 检查context是否被取消
-		select {
-		case <-s.ctx.Done():
-			s.debugPrintf("下载工作协程收到取消信号: %v\n", s.ctx.Err())
-			resultChan <- DownloadResult{
-				Task:    task,
-				Success: false,
-				Error:   fmt.Errorf("备份已停止: %v", s.ctx.Err()),
+		// 检查context是否被取消（安全检查，避免nil指针）
+		if s.ctx != nil {
+			select {
+			case <-s.ctx.Done():
+				s.debugPrintf("下载工作协程收到取消信号: %v\n", s.ctx.Err())
+				resultChan <- DownloadResult{
+					Task:    task,
+					Success: false,
+					Error:   fmt.Errorf("备份已停止: %v", s.ctx.Err()),
+				}
+				return // 直接退出协程
+			default:
+				// 继续执行
 			}
-			return // 直接退出协程
-		default:
-			// 继续执行
 		}
 
 		// 检查是否收到停止请求（双重保护）
@@ -1763,8 +1775,12 @@ func (s *PageCaptureService) downloadResourceSync(resourceURL, resourceType stri
 		s.debugPrintf("使用扩展超时(10分钟)下载视频文件\n")
 	}
 
-	// 创建带context的请求
-	req, err := http.NewRequestWithContext(s.ctx, "GET", resourceURL, nil)
+	// 创建带context的请求（安全检查）
+	ctx := s.ctx
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	req, err := http.NewRequestWithContext(ctx, "GET", resourceURL, nil)
 	if err != nil {
 		s.debugPrintf("创建请求失败: %s - %v\n", resourceURL, err)
 		return ""
@@ -1772,11 +1788,14 @@ func (s *PageCaptureService) downloadResourceSync(resourceURL, resourceType stri
 
 	// 根据资源类型设置不同的请求头
 	if resourceType == "videos" {
-		// 视频文件使用专门的请求头
+		// 视频文件使用专门的请求头，确保获取完整文件
 		req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
 		req.Header.Set("Accept", "video/webm,video/ogg,video/*;q=0.9,application/ogg;q=0.7,audio/*;q=0.6,*/*;q=0.5")
 		req.Header.Set("Accept-Encoding", "identity") // 禁用压缩，保持原始二进制数据
-		req.Header.Set("Range", "bytes=0-")           // 支持断点续传
+		req.Header.Set("Accept-Language", "zh-CN,zh;q=0.9,en;q=0.8")
+		req.Header.Set("Cache-Control", "no-cache")
+		req.Header.Set("Connection", "keep-alive")
+		// 重要：不设置Range头，让服务器返回完整文件（200 OK而不是206 Partial Content）
 	} else {
 		// 其他资源使用通用请求头
 		req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
@@ -1790,13 +1809,30 @@ func (s *PageCaptureService) downloadResourceSync(resourceURL, resourceType stri
 	}
 	defer resp.Body.Close()
 
-	// 检查状态码，支持200和206（部分内容）
-	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusPartialContent {
+	// 检查状态码
+	if resp.StatusCode == http.StatusPartialContent {
+		// 206 Partial Content - 这意味着我们收到的是部分内容
+		// 对于视频文件，我们需要完整的文件，所以重新请求完整内容
+		if resourceType == "videos" {
+			s.debugPrintf("检测到206部分内容响应，重新请求完整视频文件: %s\n", resourceURL)
+			resp.Body.Close()
+			return s.downloadCompleteVideoFile(resourceURL, client)
+		}
+	} else if resp.StatusCode != http.StatusOK {
 		s.debugPrintf("HTTP错误: %s - %d\n", resourceURL, resp.StatusCode)
 		return ""
 	}
 
 	s.debugPrintf("HTTP响应状态: %d %s\n", resp.StatusCode, resp.Status)
+
+	// 对于视频文件，输出详细的响应头信息
+	if resourceType == "videos" {
+		s.debugPrintf("=== 视频文件响应头详情 ===\n")
+		for key, values := range resp.Header {
+			s.debugPrintf("  %s: %s\n", key, strings.Join(values, ", "))
+		}
+		s.debugPrintf("=== 响应头详情结束 ===\n")
+	}
 
 	// 获取文件大小信息
 	contentLength := resp.ContentLength
@@ -2937,4 +2973,110 @@ func (s *PageCaptureService) validateMP4File(content []byte) bool {
 	}
 
 	return boxCount > 0
+}
+
+// downloadCompleteVideoFile 下载完整的视频文件（不使用Range请求）
+func (s *PageCaptureService) downloadCompleteVideoFile(resourceURL string, client *http.Client) string {
+	s.debugPrintf("开始下载完整视频文件: %s\n", resourceURL)
+
+	// 创建新的请求，确保不包含Range头（安全检查）
+	ctx := s.ctx
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	req, err := http.NewRequestWithContext(ctx, "GET", resourceURL, nil)
+	if err != nil {
+		s.debugPrintf("创建完整视频请求失败: %v\n", err)
+		return ""
+	}
+
+	// 设置请求头，明确不要Range请求
+	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+	req.Header.Set("Accept", "video/webm,video/ogg,video/*;q=0.9,application/ogg;q=0.7,audio/*;q=0.6,*/*;q=0.5")
+	req.Header.Set("Accept-Encoding", "identity") // 禁用压缩
+	req.Header.Set("Accept-Language", "zh-CN,zh;q=0.9,en;q=0.8")
+	req.Header.Set("Cache-Control", "no-cache")
+	req.Header.Set("Connection", "keep-alive")
+	// 明确不设置Range头
+
+	resp, err := client.Do(req)
+	if err != nil {
+		s.debugPrintf("完整视频请求失败: %v\n", err)
+		return ""
+	}
+	defer resp.Body.Close()
+
+	// 这次我们只接受200 OK
+	if resp.StatusCode != http.StatusOK {
+		s.debugPrintf("完整视频请求HTTP错误: %d %s\n", resp.StatusCode, resp.Status)
+		return ""
+	}
+
+	s.debugPrintf("完整视频请求成功: %d %s\n", resp.StatusCode, resp.Status)
+
+	// 获取完整文件大小
+	contentLength := resp.ContentLength
+	s.debugPrintf("完整视频文件大小: %d 字节 (%.2f MB)\n", contentLength, float64(contentLength)/(1024*1024))
+
+	// 更新进度信息
+	if contentLength > 0 {
+		s.updateFileDownloadProgress(resourceURL, 0, contentLength, "downloading", 0)
+	}
+
+	// 读取完整内容
+	var content []byte
+	if contentLength > 10*1024*1024 { // 大于10MB使用进度监控
+		content, err = s.readWithProgress(resp.Body, contentLength, resourceURL)
+	} else {
+		content, err = io.ReadAll(resp.Body)
+		if err == nil && len(content) > 0 {
+			actualSize := int64(len(content))
+			s.updateFileDownloadProgress(resourceURL, actualSize, actualSize, "downloading", 100)
+		}
+	}
+
+	if err != nil {
+		s.debugPrintf("读取完整视频内容失败: %v\n", err)
+		return ""
+	}
+
+	if len(content) == 0 {
+		s.debugPrintf("完整视频内容为空\n")
+		return ""
+	}
+
+	s.debugPrintf("完整视频下载成功: %s - 实际大小: %.2f MB\n", resourceURL, float64(len(content))/(1024*1024))
+
+	// 验证视频文件
+	if !s.validateVideoFile(content, resourceURL) {
+		s.debugPrintf("完整视频文件验证失败: %s\n", resourceURL)
+		return ""
+	}
+
+	// 更新文件大小
+	actualSize := int64(len(content))
+	s.updateFileSize(resourceURL, actualSize)
+
+	// 生成本地路径并保存到资源映射
+	localPath := s.generateLocalPath(resourceURL, "videos")
+
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+
+	// 检查文件数量限制
+	if s.fileCount >= s.maxFiles {
+		return ""
+	}
+
+	// 存储资源信息
+	s.resources[resourceURL] = &ResourceInfo{
+		URL:       resourceURL,
+		LocalPath: localPath,
+		Type:      "videos",
+		Content:   content,
+	}
+
+	s.fileCount++
+	s.debugPrintf("完整视频文件保存成功: %s -> %s\n", resourceURL, localPath)
+	return localPath
 }

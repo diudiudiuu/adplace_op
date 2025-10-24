@@ -3,6 +3,7 @@ package services
 import (
 	"archive/zip"
 	"compress/gzip"
+	"context"
 	"crypto/md5"
 	"fmt"
 	"io"
@@ -41,8 +42,10 @@ type PageCaptureService struct {
 	progressCallback ProgressCallback
 	progressInfo     ProgressInfo
 	progressMutex    sync.RWMutex
-	stopRequested    bool         // 停止请求标志
-	stopMutex        sync.RWMutex // 保护停止标志的互斥锁
+	stopRequested    bool               // 停止请求标志
+	stopMutex        sync.RWMutex       // 保护停止标志的互斥锁
+	cancelFunc       context.CancelFunc // 用于取消操作的函数
+	ctx              context.Context    // 上下文，用于协程间通信
 }
 
 // NewPageCaptureService 创建新的页面抓取服务
@@ -328,6 +331,13 @@ func (s *PageCaptureService) resetState() {
 	// 重置停止标志
 	s.resetStopFlag()
 
+	// 重置context（如果之前有的话，先取消）
+	if s.cancelFunc != nil {
+		s.cancelFunc()
+	}
+	s.ctx = nil
+	s.cancelFunc = nil
+
 	// 清空资源映射
 	oldResourceCount := len(s.resources)
 	s.resources = make(map[string]*ResourceInfo)
@@ -454,6 +464,11 @@ type DownloadResult struct {
 // CapturePage 抓取页面内容
 func (s *PageCaptureService) CapturePage(targetURL string, options CaptureOptions) (*CaptureResult, error) {
 	startTime := time.Now()
+
+	// 创建可取消的上下文
+	ctx, cancel := context.WithCancel(context.Background())
+	s.ctx = ctx
+	s.cancelFunc = cancel
 
 	// 验证URL
 	parsedURL, err := url.Parse(targetURL)
@@ -777,7 +792,15 @@ func (s *PageCaptureService) downloadLargeFileInChunks(url string, totalSize int
 				end = totalSize - 1
 			}
 
-			req, err := http.NewRequest("GET", url, nil)
+			// 检查是否被取消
+			select {
+			case <-s.ctx.Done():
+				resultChan <- chunkResult{int(chunkIndex), nil, fmt.Errorf("分块下载被取消: %v", s.ctx.Err())}
+				return
+			default:
+			}
+
+			req, err := http.NewRequestWithContext(s.ctx, "GET", url, nil)
 			if err != nil {
 				resultChan <- chunkResult{int(chunkIndex), nil, err}
 				return
@@ -1632,7 +1655,21 @@ func (s *PageCaptureService) downloadWorker(taskChan <-chan DownloadTask, result
 	defer wg.Done()
 
 	for task := range taskChan {
-		// 检查是否收到停止请求
+		// 检查context是否被取消
+		select {
+		case <-s.ctx.Done():
+			s.debugPrintf("下载工作协程收到取消信号: %v\n", s.ctx.Err())
+			resultChan <- DownloadResult{
+				Task:    task,
+				Success: false,
+				Error:   fmt.Errorf("备份已停止: %v", s.ctx.Err()),
+			}
+			return // 直接退出协程
+		default:
+			// 继续执行
+		}
+
+		// 检查是否收到停止请求（双重保护）
 		if s.isStopRequested() {
 			resultChan <- DownloadResult{
 				Task:    task,
@@ -1726,8 +1763,8 @@ func (s *PageCaptureService) downloadResourceSync(resourceURL, resourceType stri
 		s.debugPrintf("使用扩展超时(10分钟)下载视频文件\n")
 	}
 
-	// 创建请求并设置合适的请求头
-	req, err := http.NewRequest("GET", resourceURL, nil)
+	// 创建带context的请求
+	req, err := http.NewRequestWithContext(s.ctx, "GET", resourceURL, nil)
 	if err != nil {
 		s.debugPrintf("创建请求失败: %s - %v\n", resourceURL, err)
 		return ""
@@ -2756,7 +2793,13 @@ func (s *PageCaptureService) StopCapture() error {
 	defer s.stopMutex.Unlock()
 
 	s.stopRequested = true
-	s.debugPrintf("收到停止请求\n")
+	s.debugPrintf("收到停止请求，开始取消所有操作\n")
+
+	// 取消所有正在进行的操作
+	if s.cancelFunc != nil {
+		s.debugPrintf("调用context取消函数\n")
+		s.cancelFunc()
+	}
 
 	// 更新进度状态
 	s.progressMutex.Lock()
@@ -2769,6 +2812,7 @@ func (s *PageCaptureService) StopCapture() error {
 		s.progressCallback(s.progressInfo)
 	}
 
+	s.debugPrintf("停止请求处理完成\n")
 	return nil
 }
 

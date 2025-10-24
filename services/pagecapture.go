@@ -1818,12 +1818,22 @@ func (s *PageCaptureService) downloadResourceSync(resourceURL, resourceType stri
 		s.updateFileSize(resourceURL, actualSize)
 	}
 
-	// 对视频文件进行完整性检查
+	// 对视频文件进行完整性检查（仅用于调试，不影响保存）
 	if resourceType == "videos" && len(content) > 0 {
+		s.debugPrintf("开始验证视频文件: %s (大小: %d 字节)\n", resourceURL, len(content))
+
+		// 输出文件头信息用于调试
+		if len(content) >= 16 {
+			s.debugPrintf("视频文件头16字节: %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x\n",
+				content[0], content[1], content[2], content[3], content[4], content[5], content[6], content[7],
+				content[8], content[9], content[10], content[11], content[12], content[13], content[14], content[15])
+		}
+
 		if s.validateVideoFile(content, resourceURL) {
 			s.debugPrintf("视频文件完整性验证通过: %s\n", resourceURL)
 		} else {
-			s.debugPrintf("警告: 视频文件可能不完整或损坏: %s\n", resourceURL)
+			s.debugPrintf("警告: 视频文件格式验证失败，但仍会保存: %s\n", resourceURL)
+			// 注意：验证失败不阻止文件保存，因为可能是新格式或特殊编码
 		}
 	}
 
@@ -1945,9 +1955,24 @@ func (s *PageCaptureService) generateLocalPath(resourceURL, resourceType string)
 		filename = hash + s.getExtensionByType(resourceType)
 	}
 
-	// 确保有扩展名
-	if !strings.Contains(filename, ".") {
-		filename += s.getExtensionByType(resourceType)
+	// 对于视频文件，尝试保持原始扩展名
+	if resourceType == "videos" {
+		originalExt := strings.ToLower(path.Ext(filename))
+		if s.isValidVideoExtension(originalExt) {
+			// 如果已有有效的视频扩展名，保持不变
+			s.debugPrintf("保持原始视频扩展名: %s\n", originalExt)
+		} else {
+			// 如果没有扩展名或扩展名无效，添加默认扩展名
+			if !strings.Contains(filename, ".") {
+				filename += s.getExtensionByType(resourceType)
+				s.debugPrintf("添加默认视频扩展名: %s\n", filename)
+			}
+		}
+	} else {
+		// 非视频文件，确保有扩展名
+		if !strings.Contains(filename, ".") {
+			filename += s.getExtensionByType(resourceType)
+		}
 	}
 
 	return fmt.Sprintf("static/%s/%s", resourceType, filename)
@@ -1969,6 +1994,27 @@ func (s *PageCaptureService) getExtensionByType(resourceType string) string {
 	default:
 		return ".txt"
 	}
+}
+
+// isValidVideoExtension 检查是否是有效的视频扩展名
+func (s *PageCaptureService) isValidVideoExtension(ext string) bool {
+	validExtensions := []string{
+		".mp4", ".avi", ".mov", ".wmv", ".flv", ".webm",
+		".mkv", ".m4v", ".3gp", ".ogv", ".ts", ".m3u8",
+		".f4v", ".asf", ".rm", ".rmvb", ".vob", ".mpg",
+		".mpeg", ".m2v", ".divx", ".xvid",
+	}
+
+	ext = strings.ToLower(ext)
+	for _, validExt := range validExtensions {
+		if ext == validExt {
+			s.debugPrintf("识别到有效视频扩展名: %s\n", ext)
+			return true
+		}
+	}
+
+	s.debugPrintf("无效或未知视频扩展名: %s\n", ext)
+	return false
 }
 
 // processCSSContent 处理CSS内容中的URL
@@ -2131,6 +2177,37 @@ func (s *PageCaptureService) saveAllFiles(htmlContent string) error {
 		// 验证文件是否成功保存
 		if info, err := os.Stat(fullPath); err == nil {
 			s.debugPrintf("保存资源成功: %s (大小: %d 字节)\n", fullPath, info.Size())
+
+			// 对视频文件进行额外的完整性检查
+			if resource.Type == "videos" {
+				// 读取保存的文件并与原始内容比较
+				savedContent, readErr := os.ReadFile(fullPath)
+				if readErr != nil {
+					s.debugPrintf("警告: 无法读取已保存的视频文件进行验证: %v\n", readErr)
+				} else if len(savedContent) != len(resource.Content) {
+					s.debugPrintf("错误: 保存的视频文件大小不匹配! 原始: %d, 保存: %d\n",
+						len(resource.Content), len(savedContent))
+				} else {
+					// 比较文件头
+					if len(savedContent) >= 16 && len(resource.Content) >= 16 {
+						originalHeader := resource.Content[:16]
+						savedHeader := savedContent[:16]
+						headerMatch := true
+						for i := 0; i < 16; i++ {
+							if originalHeader[i] != savedHeader[i] {
+								headerMatch = false
+								break
+							}
+						}
+						if headerMatch {
+							s.debugPrintf("视频文件保存验证通过: %s\n", fullPath)
+						} else {
+							s.debugPrintf("警告: 视频文件头不匹配，可能已损坏: %s\n", fullPath)
+						}
+					}
+				}
+			}
+
 			savedCount++
 		} else {
 			s.debugPrintf("警告: 无法验证资源文件: %s - %v\n", fullPath, err)

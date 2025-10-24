@@ -50,7 +50,7 @@ func NewPageCaptureService() *PageCaptureService {
 		MaxIdleConns:        100,
 		MaxIdleConnsPerHost: 10,
 		IdleConnTimeout:     90 * time.Second,
-		DisableCompression:  false, // 启用压缩
+		DisableCompression:  true, // 禁用自动压缩处理，我们手动处理
 	}
 
 	return &PageCaptureService{
@@ -71,6 +71,14 @@ func NewPageCaptureService() *PageCaptureService {
 		},
 		resources: make(map[string]*ResourceInfo),
 		debug:     false, // 默认关闭调试
+		progressInfo: ProgressInfo{
+			Phase:          "idle",
+			TotalFiles:     0,
+			CompletedFiles: 0,
+			CurrentFile:    "",
+			FileProgress:   0,
+			FileList:       make([]FileInfo, 0),
+		},
 	}
 }
 
@@ -88,10 +96,10 @@ func (s *PageCaptureService) SetProgressCallback(callback ProgressCallback) {
 func (s *PageCaptureService) GetCurrentProgress() ProgressInfo {
 	s.progressMutex.RLock()
 	defer s.progressMutex.RUnlock()
-	
+
 	s.debugPrintf("GetCurrentProgress调用: Phase=%s, TotalFiles=%d, CompletedFiles=%d, FileListLen=%d\n",
 		s.progressInfo.Phase, s.progressInfo.TotalFiles, s.progressInfo.CompletedFiles, len(s.progressInfo.FileList))
-	
+
 	// 返回进度信息的副本
 	progress := ProgressInfo{
 		Phase:          s.progressInfo.Phase,
@@ -101,68 +109,91 @@ func (s *PageCaptureService) GetCurrentProgress() ProgressInfo {
 		FileProgress:   s.progressInfo.FileProgress,
 		FileList:       make([]FileInfo, len(s.progressInfo.FileList)),
 	}
-	
+
 	// 复制文件列表
 	copy(progress.FileList, s.progressInfo.FileList)
-	
+
 	// 打印前几个文件的状态
 	for i, file := range progress.FileList {
 		if i < 3 {
 			s.debugPrintf("文件 %d: %s - %s\n", i, file.Name, file.Status)
 		}
 	}
-	
+
 	return progress
 }
 
-// updateProgress 更新进度信息
+// updateProgress 更新进度信息 - 改进版本
 func (s *PageCaptureService) updateProgress(phase string, currentFile string, fileProgress int) {
 	s.progressMutex.Lock()
 	defer s.progressMutex.Unlock()
-	
+
 	s.progressInfo.Phase = phase
 	s.progressInfo.CurrentFile = currentFile
 	s.progressInfo.FileProgress = fileProgress
-	
+
+	s.debugPrintf("进度更新: Phase=%s, CurrentFile=%s, FileProgress=%d%%\n", phase, currentFile, fileProgress)
+
 	if s.progressCallback != nil {
 		s.progressCallback(s.progressInfo)
 	}
 }
 
-// updateFileStatus 更新文件状态
+// updateFileStatus 更新文件状态 - 线程安全版本
 func (s *PageCaptureService) updateFileStatus(url, status string, progress int) {
 	s.progressMutex.Lock()
 	defer s.progressMutex.Unlock()
-	
+
 	found := false
 	for i := range s.progressInfo.FileList {
 		if s.progressInfo.FileList[i].URL == url {
 			oldStatus := s.progressInfo.FileList[i].Status
 			s.progressInfo.FileList[i].Status = status
 			s.progressInfo.FileList[i].Progress = progress
-			s.debugPrintf("更新文件状态: %s %s -> %s\n", s.progressInfo.FileList[i].Name, oldStatus, status)
+			s.debugPrintf("更新文件状态: %s %s -> %s (进度: %d%%)\n", s.progressInfo.FileList[i].Name, oldStatus, status, progress)
 			found = true
 			break
 		}
 	}
-	
+
 	if !found {
 		s.debugPrintf("警告: 未找到要更新的文件 URL: %s\n", url)
+		return // 如果找不到文件，直接返回，不更新统计
 	}
-	
-	// 更新完成文件数
+
+	// 重新计算完成文件数 - 确保准确性
 	completed := 0
 	failed := 0
+	downloading := 0
+	pending := 0
+
 	for _, file := range s.progressInfo.FileList {
-		if file.Status == "completed" {
+		switch file.Status {
+		case "completed":
 			completed++
-		} else if file.Status == "failed" {
+		case "failed":
 			failed++
+		case "downloading":
+			downloading++
+		case "pending":
+			pending++
 		}
 	}
+
 	s.progressInfo.CompletedFiles = completed
-	s.debugPrintf("状态统计: 完成=%d, 失败=%d, 总数=%d\n", completed, failed, len(s.progressInfo.FileList))
-	
+	s.debugPrintf("状态统计更新: 完成=%d, 失败=%d, 下载中=%d, 等待=%d, 总数=%d\n",
+		completed, failed, downloading, pending, len(s.progressInfo.FileList))
+
+	// 更新阶段状态
+	if completed+failed == len(s.progressInfo.FileList) && len(s.progressInfo.FileList) > 0 {
+		if s.progressInfo.Phase == "downloading" {
+			s.progressInfo.Phase = "saving"
+			s.progressInfo.CurrentFile = "保存文件中..."
+			s.debugPrintf("所有文件下载完成，切换到保存阶段\n")
+		}
+	}
+
+	// 触发进度回调
 	if s.progressCallback != nil {
 		s.progressCallback(s.progressInfo)
 	}
@@ -172,10 +203,10 @@ func (s *PageCaptureService) updateFileStatus(url, status string, progress int) 
 func (s *PageCaptureService) updateFileSize(url string, size int64) {
 	s.progressMutex.Lock()
 	defer s.progressMutex.Unlock()
-	
+
 	formattedSize := s.formatFileSize(size)
 	s.debugPrintf("更新文件大小: %s -> %d 字节 -> %s\n", url, size, formattedSize)
-	
+
 	for i := range s.progressInfo.FileList {
 		if s.progressInfo.FileList[i].URL == url {
 			s.progressInfo.FileList[i].Size = formattedSize
@@ -183,7 +214,7 @@ func (s *PageCaptureService) updateFileSize(url string, size int64) {
 			break
 		}
 	}
-	
+
 	if s.progressCallback != nil {
 		s.progressCallback(s.progressInfo)
 	}
@@ -194,24 +225,32 @@ func (s *PageCaptureService) formatFileSize(bytes int64) string {
 	if bytes == 0 {
 		return "0 B"
 	}
-	
+
 	const unit = 1024
 	if bytes < unit {
 		return fmt.Sprintf("%d B", bytes)
 	}
-	
+
 	div, exp := int64(unit), 0
 	for n := bytes / unit; n >= unit; n /= unit {
 		div *= unit
 		exp++
 	}
-	
+
 	sizes := []string{"B", "KB", "MB", "GB", "TB"}
+
+	// 防护性检查
+	if exp >= len(sizes) {
+		exp = len(sizes) - 1
+	}
+
 	result := fmt.Sprintf("%.1f %s", float64(bytes)/float64(div), sizes[exp])
-	
-	// 调试信息
-	s.debugPrintf("格式化文件大小: %d 字节 -> %s (div=%d, exp=%d)\n", bytes, result, div, exp)
-	
+
+	// 调试信息 - 添加防护性检查
+	if s != nil {
+		s.debugPrintf("格式化文件大小: %d 字节 -> %s (div=%d, exp=%d)\n", bytes, result, div, exp)
+	}
+
 	return result
 }
 
@@ -221,29 +260,34 @@ func (s *PageCaptureService) resetState() {
 	s.progressMutex.Lock()
 	defer s.mutex.Unlock()
 	defer s.progressMutex.Unlock()
-	
+
 	s.debugPrintf("=== 重置所有状态 ===\n")
-	
+
 	// 清空资源映射
 	oldResourceCount := len(s.resources)
 	s.resources = make(map[string]*ResourceInfo)
 	s.fileCount = 0
-	
-	// 重置进度信息
+
+	// 重置进度信息 - 确保完全清空
 	oldFileListCount := len(s.progressInfo.FileList)
 	s.progressInfo = ProgressInfo{
 		Phase:          "analyzing",
 		TotalFiles:     0,
 		CompletedFiles: 0,
-		CurrentFile:    "",
+		CurrentFile:    "准备开始...",
 		FileProgress:   0,
-		FileList:       []FileInfo{},
+		FileList:       make([]FileInfo, 0), // 使用make确保是新的slice
 	}
-	
+
+	// 清理临时目录（如果存在）
+	if s.tempDir != "" {
+		os.RemoveAll(s.tempDir)
+	}
+
 	// 重置其他可能的状态
-	s.baseURL = nil
+	// 注意：不重置baseURL，因为它在整个抓取过程中都需要使用
 	s.tempDir = ""
-	
+
 	s.debugPrintf("状态重置完成: 清理了 %d 个资源, %d 个文件记录\n", oldResourceCount, oldFileListCount)
 	s.debugPrintf("=== 状态重置完成 ===\n")
 }
@@ -260,12 +304,12 @@ type ProgressCallback func(progress ProgressInfo)
 
 // ProgressInfo 进度信息
 type ProgressInfo struct {
-	Phase         string     `json:"phase"`         // analyzing, downloading, saving, complete
-	TotalFiles    int        `json:"totalFiles"`    
-	CompletedFiles int       `json:"completedFiles"`
-	CurrentFile   string     `json:"currentFile"`   
-	FileProgress  int        `json:"fileProgress"`  // 0-100
-	FileList      []FileInfo `json:"fileList"`      
+	Phase          string     `json:"phase"` // analyzing, downloading, saving, complete
+	TotalFiles     int        `json:"totalFiles"`
+	CompletedFiles int        `json:"completedFiles"`
+	CurrentFile    string     `json:"currentFile"`
+	FileProgress   int        `json:"fileProgress"` // 0-100
+	FileList       []FileInfo `json:"fileList"`
 }
 
 // FileInfo 文件信息
@@ -360,12 +404,15 @@ func (s *PageCaptureService) CapturePage(targetURL string, options CaptureOption
 	if s.maxFiles <= 0 {
 		s.maxFiles = 200
 	}
-	
+
 	// 临时启用调试模式来诊断问题
 	s.debug = true
-	
+
 	// 重置所有状态 - 确保每次下载都是全新开始
 	s.resetState()
+
+	// 立即更新初始进度状态
+	s.updateProgress("analyzing", "开始分析页面...", 0)
 
 	// 设置超时 - 对于大文件需要更长时间
 	timeout := options.Timeout
@@ -404,11 +451,17 @@ func (s *PageCaptureService) CapturePage(targetURL string, options CaptureOption
 		return nil, fmt.Errorf("保存文件失败: %v", err)
 	}
 
+	// 更新进度：保存文件
+	s.updateProgress("saving", "保存文件中...", 90)
+
 	// 创建ZIP
 	zipPath, zipSize, err := s.createZipFile()
 	if err != nil {
 		return nil, fmt.Errorf("创建ZIP失败: %v", err)
 	}
+
+	// 更新进度：完成
+	s.updateProgress("complete", "备份完成", 100)
 
 	// 构建详细的文件信息
 	s.progressMutex.RLock()
@@ -450,7 +503,7 @@ func (s *PageCaptureService) downloadPage(targetURL string) (string, *http.Respo
 	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
 	req.Header.Set("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7")
 	req.Header.Set("Accept-Language", "zh-CN,zh;q=0.9,en;q=0.8,en-GB;q=0.7,en-US;q=0.6")
-	req.Header.Set("Accept-Encoding", "gzip, deflate, br")
+	req.Header.Set("Accept-Encoding", "gzip, deflate")
 	req.Header.Set("Cache-Control", "no-cache")
 	req.Header.Set("Pragma", "no-cache")
 	req.Header.Set("Sec-Ch-Ua", `"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"`)
@@ -506,40 +559,68 @@ func (s *PageCaptureService) downloadPage(targetURL string) (string, *http.Respo
 	return content, resp, nil
 }
 
-// decompressIfNeeded 检查并解压缩内容
+// decompressIfNeeded 检查并解压缩内容 - 修复版本
 func (s *PageCaptureService) decompressIfNeeded(body []byte, contentEncoding string) ([]byte, error) {
 	s.debugPrintf("Content-Encoding: %s\n", contentEncoding)
-	s.debugPrintf("检查是否需要解压缩，前4字节: %v\n", body[:min(len(body), 4)])
-	
+	s.debugPrintf("原始内容长度: %d 字节\n", len(body))
+	if len(body) >= 4 {
+		s.debugPrintf("前4字节: %v (hex: %02x %02x %02x %02x)\n",
+			body[:4], body[0], body[1], body[2], body[3])
+	}
+
 	// 检查 GZIP 魔数 (0x1f 0x8b)
 	if len(body) >= 2 && body[0] == 0x1f && body[1] == 0x8b {
-		s.debugPrintf("检测到GZIP压缩内容，开始解压缩\n")
-		
-		reader, err := gzip.NewReader(strings.NewReader(string(body)))
-		if err != nil {
-			s.debugPrintf("创建GZIP读取器失败: %v\n", err)
-			return body, err
-		}
-		defer reader.Close()
-		
-		decompressed, err := io.ReadAll(reader)
-		if err != nil {
-			s.debugPrintf("GZIP解压缩失败: %v\n", err)
-			return body, err
-		}
-		
-		s.debugPrintf("GZIP解压缩成功，原始大小: %d，解压后大小: %d\n", len(body), len(decompressed))
-		s.debugPrintf("解压后前200字符: %s\n", string(decompressed[:min(len(decompressed), 200)]))
-		return decompressed, nil
+		s.debugPrintf("检测到GZIP魔数，开始解压缩\n")
+		return s.decompressGzip(body)
 	}
-	
-	// 如果Content-Encoding指示了压缩但没有检测到魔数
+
+	// 如果Content-Encoding明确指示了gzip，即使没有魔数也尝试解压
 	if strings.Contains(strings.ToLower(contentEncoding), "gzip") {
-		s.debugPrintf("Content-Encoding指示GZIP但未检测到魔数\n")
+		s.debugPrintf("Content-Encoding指示GZIP，尝试强制解压缩\n")
+		if decompressed, err := s.decompressGzip(body); err == nil {
+			return decompressed, nil
+		} else {
+			s.debugPrintf("强制GZIP解压缩失败: %v\n", err)
+		}
 	}
-	
-	s.debugPrintf("内容未压缩或不是GZIP格式\n")
+
+	// 检查 Deflate 压缩
+	if strings.Contains(strings.ToLower(contentEncoding), "deflate") {
+		s.debugPrintf("Content-Encoding指示Deflate，尝试解压缩\n")
+		// TODO: 实现deflate解压缩
+	}
+
+	// 检查 Brotli 压缩
+	if strings.Contains(strings.ToLower(contentEncoding), "br") {
+		s.debugPrintf("Content-Encoding指示Brotli，但暂不支持，返回原始内容\n")
+		// Brotli压缩暂不支持，建议不请求br编码
+		return body, fmt.Errorf("不支持Brotli压缩，请移除br编码请求")
+	}
+
+	s.debugPrintf("内容未压缩或不支持的压缩格式\n")
 	return body, nil
+}
+
+// decompressGzip GZIP解压缩辅助函数
+func (s *PageCaptureService) decompressGzip(body []byte) ([]byte, error) {
+	reader, err := gzip.NewReader(strings.NewReader(string(body)))
+	if err != nil {
+		s.debugPrintf("创建GZIP读取器失败: %v\n", err)
+		return body, err
+	}
+	defer reader.Close()
+
+	decompressed, err := io.ReadAll(reader)
+	if err != nil {
+		s.debugPrintf("GZIP解压缩失败: %v\n", err)
+		return body, err
+	}
+
+	s.debugPrintf("GZIP解压缩成功，原始大小: %d，解压后大小: %d\n", len(body), len(decompressed))
+	if len(decompressed) > 0 {
+		s.debugPrintf("解压后前200字符: %s\n", string(decompressed[:min(len(decompressed), 200)]))
+	}
+	return decompressed, nil
 }
 
 // readWithProgress 带进度监控的读取函数
@@ -548,27 +629,27 @@ func (s *PageCaptureService) readWithProgress(reader io.Reader, totalSize int64,
 	var result []byte
 	var downloaded int64
 	lastProgress := 0
-	
+
 	for {
 		n, err := reader.Read(buffer)
 		if n > 0 {
 			result = append(result, buffer[:n]...)
 			downloaded += int64(n)
-			
+
 			// 每下载5%更新一次进度
 			if totalSize > 0 {
 				progress := int(downloaded * 100 / totalSize)
 				if progress >= lastProgress+5 || progress == 100 {
-					s.debugPrintf("下载进度: %s - %d%% (%.2f/%.2f MB)\n", 
-						url, progress, 
-						float64(downloaded)/(1024*1024), 
+					s.debugPrintf("下载进度: %s - %d%% (%.2f/%.2f MB)\n",
+						url, progress,
+						float64(downloaded)/(1024*1024),
 						float64(totalSize)/(1024*1024))
 					s.updateFileStatus(url, "downloading", progress)
 					lastProgress = progress
 				}
 			}
 		}
-		
+
 		if err == io.EOF {
 			break
 		}
@@ -576,7 +657,7 @@ func (s *PageCaptureService) readWithProgress(reader io.Reader, totalSize int64,
 			return nil, err
 		}
 	}
-	
+
 	return result, nil
 }
 
@@ -584,69 +665,69 @@ func (s *PageCaptureService) readWithProgress(reader io.Reader, totalSize int64,
 func (s *PageCaptureService) downloadLargeFileInChunks(url string, totalSize int64, client *http.Client) ([]byte, error) {
 	const chunkSize = 2 * 1024 * 1024 // 2MB per chunk
 	const maxConcurrency = 4          // 最多4个并发
-	
+
 	numChunks := (totalSize + chunkSize - 1) / chunkSize
 	s.debugPrintf("分块下载: %d 个块，每块 %.2f MB\n", numChunks, float64(chunkSize)/(1024*1024))
-	
+
 	type chunkResult struct {
 		index int
 		data  []byte
 		err   error
 	}
-	
+
 	chunks := make([][]byte, numChunks)
 	resultChan := make(chan chunkResult, numChunks)
 	semaphore := make(chan struct{}, maxConcurrency)
-	
+
 	var wg sync.WaitGroup
-	
+
 	// 启动下载协程
 	for i := int64(0); i < numChunks; i++ {
 		wg.Add(1)
 		go func(chunkIndex int64) {
 			defer wg.Done()
-			semaphore <- struct{}{} // 获取信号量
+			semaphore <- struct{}{}        // 获取信号量
 			defer func() { <-semaphore }() // 释放信号量
-			
+
 			start := chunkIndex * chunkSize
 			end := start + chunkSize - 1
 			if end >= totalSize {
 				end = totalSize - 1
 			}
-			
+
 			req, err := http.NewRequest("GET", url, nil)
 			if err != nil {
 				resultChan <- chunkResult{int(chunkIndex), nil, err}
 				return
 			}
-			
+
 			req.Header.Set("Range", fmt.Sprintf("bytes=%d-%d", start, end))
 			req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
-			
+
 			resp, err := client.Do(req)
 			if err != nil {
 				resultChan <- chunkResult{int(chunkIndex), nil, err}
 				return
 			}
 			defer resp.Body.Close()
-			
+
 			data, err := io.ReadAll(resp.Body)
 			if err != nil {
 				resultChan <- chunkResult{int(chunkIndex), nil, err}
 				return
 			}
-			
+
 			s.debugPrintf("块 %d/%d 下载完成 (%.2f MB)\n", chunkIndex+1, numChunks, float64(len(data))/(1024*1024))
 			resultChan <- chunkResult{int(chunkIndex), data, nil}
 		}(i)
 	}
-	
+
 	// 等待所有下载完成
 	go func() {
 		wg.Wait()
 		close(resultChan)
 	}()
-	
+
 	// 收集结果
 	for result := range resultChan {
 		if result.err != nil {
@@ -654,13 +735,13 @@ func (s *PageCaptureService) downloadLargeFileInChunks(url string, totalSize int
 		}
 		chunks[result.index] = result.data
 	}
-	
+
 	// 合并所有块
 	var finalData []byte
 	for _, chunk := range chunks {
 		finalData = append(finalData, chunk...)
 	}
-	
+
 	s.debugPrintf("分块下载完成，总大小: %.2f MB\n", float64(len(finalData))/(1024*1024))
 	return finalData, nil
 }
@@ -671,19 +752,19 @@ func (s *PageCaptureService) getFileNameFromURL(urlStr string) string {
 	if err != nil {
 		return "unknown"
 	}
-	
+
 	fileName := path.Base(parsedURL.Path)
 	if fileName == "" || fileName == "." || fileName == "/" {
 		return "index"
 	}
-	
+
 	return fileName
 }
 
 // getEncodingByName 根据编码名称获取编码
 func (s *PageCaptureService) getEncodingByName(name string) encoding.Encoding {
 	name = strings.ToLower(strings.TrimSpace(name))
-	
+
 	switch name {
 	case "utf-8", "utf8":
 		return unicode.UTF8
@@ -706,8 +787,6 @@ func (s *PageCaptureService) getEncodingByName(name string) encoding.Encoding {
 	}
 }
 
-
-
 // min 辅助函数
 func min(a, b int) int {
 	if a < b {
@@ -716,24 +795,35 @@ func min(a, b int) int {
 	return b
 }
 
-// simpleEncodingDetection 简化的编码检测
+// simpleEncodingDetection 简化的编码检测 - 修复版本
 func (s *PageCaptureService) simpleEncodingDetection(body []byte, contentType string) string {
 	s.debugPrintf("开始编码检测，Content-Type: %s\n", contentType)
-	s.debugPrintf("原始内容前100字节: %v\n", body[:min(len(body), 100)])
-	
-	// 首先尝试直接转换为字符串，看看是否包含HTML标签
-	directStr := string(body)
-	if strings.Contains(strings.ToLower(directStr), "<html") || 
-	   strings.Contains(strings.ToLower(directStr), "<head") || 
-	   strings.Contains(strings.ToLower(directStr), "<body") {
-		s.debugPrintf("直接字符串转换包含HTML标签，使用原始内容\n")
-		return directStr
+	s.debugPrintf("原始内容长度: %d 字节\n", len(body))
+
+	if len(body) == 0 {
+		s.debugPrintf("内容为空，返回空字符串\n")
+		return ""
 	}
 
 	// 检查是否已经是有效的UTF-8
 	if utf8.Valid(body) {
-		s.debugPrintf("内容已经是有效的UTF-8\n")
-		return string(body)
+		result := string(body)
+		s.debugPrintf("内容是有效的UTF-8\n")
+
+		// 检查是否看起来像HTML内容
+		lowerResult := strings.ToLower(result)
+		if strings.Contains(lowerResult, "<html") ||
+			strings.Contains(lowerResult, "<head") ||
+			strings.Contains(lowerResult, "<body") ||
+			strings.Contains(lowerResult, "<!doctype") {
+			s.debugPrintf("UTF-8内容包含HTML标签，使用UTF-8\n")
+			s.debugPrintf("UTF-8内容前200字符: %s\n", result[:min(len(result), 200)])
+			return result
+		} else {
+			s.debugPrintf("UTF-8内容不包含HTML标签，可能是压缩数据或其他格式\n")
+			s.debugPrintf("内容前100字符: %s\n", result[:min(len(result), 100)])
+			// 继续尝试其他编码
+		}
 	}
 
 	s.debugPrintf("内容不是有效的UTF-8，开始编码转换\n")
@@ -747,21 +837,20 @@ func (s *PageCaptureService) simpleEncodingDetection(body []byte, contentType st
 				s.debugPrintf("从Content-Type检测到编码: %s\n", charset)
 				if encoding := s.getEncodingByName(charset); encoding != nil {
 					decoder := encoding.NewDecoder()
-					if result, _, err := transform.Bytes(decoder, body); err == nil && utf8.Valid(result) {
+					if result, _, err := transform.Bytes(decoder, body); err == nil {
 						resultStr := string(result)
-						if strings.Contains(strings.ToLower(resultStr), "<html") || 
-						   strings.Contains(strings.ToLower(resultStr), "<head") || 
-						   strings.Contains(strings.ToLower(resultStr), "<body") {
-							s.debugPrintf("使用%s编码转换成功\n", charset)
-							return resultStr
-						}
+						s.debugPrintf("使用%s编码转换成功，长度: %d\n", charset, len(resultStr))
+						s.debugPrintf("转换后前200字符: %s\n", resultStr[:min(len(resultStr), 200)])
+						return resultStr
+					} else {
+						s.debugPrintf("使用%s编码转换失败: %v\n", charset, err)
 					}
 				}
 			}
 		}
 	}
 
-	// 尝试从HTML内容中检测编码（使用原始字节）
+	// 尝试从HTML内容中检测编码（使用原始字节的字符串表示）
 	bodyStr := string(body[:min(len(body), 2048)])
 	if strings.Contains(strings.ToLower(bodyStr), "charset=") {
 		re := regexp.MustCompile(`charset\s*=\s*["']?([^"'\s>]+)`)
@@ -771,14 +860,13 @@ func (s *PageCaptureService) simpleEncodingDetection(body []byte, contentType st
 			s.debugPrintf("从HTML meta标签检测到编码: %s\n", charset)
 			if encoding := s.getEncodingByName(charset); encoding != nil {
 				decoder := encoding.NewDecoder()
-				if result, _, err := transform.Bytes(decoder, body); err == nil && utf8.Valid(result) {
+				if result, _, err := transform.Bytes(decoder, body); err == nil {
 					resultStr := string(result)
-					if strings.Contains(strings.ToLower(resultStr), "<html") || 
-					   strings.Contains(strings.ToLower(resultStr), "<head") || 
-					   strings.Contains(strings.ToLower(resultStr), "<body") {
-						s.debugPrintf("使用%s编码转换成功\n", charset)
-						return resultStr
-					}
+					s.debugPrintf("使用%s编码转换成功，长度: %d\n", charset, len(resultStr))
+					s.debugPrintf("转换后前200字符: %s\n", resultStr[:min(len(resultStr), 200)])
+					return resultStr
+				} else {
+					s.debugPrintf("使用%s编码转换失败: %v\n", charset, err)
 				}
 			}
 		}
@@ -789,23 +877,29 @@ func (s *PageCaptureService) simpleEncodingDetection(body []byte, contentType st
 		name string
 		enc  encoding.Encoding
 	}{
+		{"UTF-8", unicode.UTF8},
 		{"GBK", simplifiedchinese.GBK},
+		{"GB18030", simplifiedchinese.GB18030},
 		{"Big5", traditionalchinese.Big5},
-		{"ISO-8859-1", charmap.ISO8859_1},
 		{"Windows-1252", charmap.Windows1252},
+		{"ISO-8859-1", charmap.ISO8859_1},
 	}
 
 	for _, item := range encodings {
 		s.debugPrintf("尝试%s编码...\n", item.name)
 		decoder := item.enc.NewDecoder()
-		if result, _, err := transform.Bytes(decoder, body); err == nil && utf8.Valid(result) {
+		if result, _, err := transform.Bytes(decoder, body); err == nil {
 			resultStr := string(result)
-			s.debugPrintf("%s编码转换后前200字符: %s\n", item.name, resultStr[:min(len(resultStr), 200)])
-			// 检查转换后的内容是否包含合理的HTML标签
-			if strings.Contains(strings.ToLower(resultStr), "<html") || 
-			   strings.Contains(strings.ToLower(resultStr), "<head") || 
-			   strings.Contains(strings.ToLower(resultStr), "<body") {
-				s.debugPrintf("使用%s编码转换成功\n", item.name)
+			s.debugPrintf("%s编码转换成功，长度: %d\n", item.name, len(resultStr))
+			s.debugPrintf("转换后前200字符: %s\n", resultStr[:min(len(resultStr), 200)])
+
+			// 检查转换后的内容是否看起来像HTML
+			lowerResult := strings.ToLower(resultStr)
+			if strings.Contains(lowerResult, "<html") ||
+				strings.Contains(lowerResult, "<head") ||
+				strings.Contains(lowerResult, "<body") ||
+				strings.Contains(lowerResult, "<!doctype") {
+				s.debugPrintf("使用%s编码转换成功，包含HTML标签\n", item.name)
 				return resultStr
 			}
 		} else {
@@ -815,6 +909,8 @@ func (s *PageCaptureService) simpleEncodingDetection(body []byte, contentType st
 
 	// 最后降级为直接字符串转换
 	s.debugPrintf("所有编码转换都失败，使用原始字符串\n")
+	directStr := string(body)
+	s.debugPrintf("原始字符串长度: %d\n", len(directStr))
 	s.debugPrintf("原始字符串前200字符: %s\n", directStr[:min(len(directStr), 200)])
 	return directStr
 }
@@ -822,21 +918,21 @@ func (s *PageCaptureService) simpleEncodingDetection(body []byte, contentType st
 // downloadPageWithRetry 带重试机制的页面下载
 func (s *PageCaptureService) downloadPageWithRetry(targetURL string, maxRetries int) (string, *http.Response, error) {
 	var lastErr error
-	
+
 	for i := 0; i <= maxRetries; i++ {
 		if i > 0 {
 			// 重试前等待一段时间
 			waitTime := time.Duration(i) * time.Second
 			time.Sleep(waitTime)
 		}
-		
+
 		content, resp, err := s.downloadPage(targetURL)
 		if err == nil {
 			return content, resp, nil
 		}
-		
+
 		lastErr = err
-		
+
 		// 如果是某些特定错误，不进行重试
 		if strings.Contains(err.Error(), "access denied") ||
 			strings.Contains(err.Error(), "forbidden") ||
@@ -844,28 +940,28 @@ func (s *PageCaptureService) downloadPageWithRetry(targetURL string, maxRetries 
 			break
 		}
 	}
-	
+
 	return "", nil, fmt.Errorf("重试%d次后仍然失败: %v", maxRetries, lastErr)
 }
 
 // downloadPageWithRetryAndEncoding 带重试机制和编码选项的页面下载
 func (s *PageCaptureService) downloadPageWithRetryAndEncoding(targetURL string, maxRetries int, forceEncoding string) (string, *http.Response, error) {
 	var lastErr error
-	
+
 	for i := 0; i <= maxRetries; i++ {
 		if i > 0 {
 			// 重试前等待一段时间
 			waitTime := time.Duration(i) * time.Second
 			time.Sleep(waitTime)
 		}
-		
+
 		content, resp, err := s.downloadPageWithEncoding(targetURL, forceEncoding)
 		if err == nil {
 			return content, resp, nil
 		}
-		
+
 		lastErr = err
-		
+
 		// 如果是某些特定错误，不进行重试
 		if strings.Contains(err.Error(), "access denied") ||
 			strings.Contains(err.Error(), "forbidden") ||
@@ -873,7 +969,7 @@ func (s *PageCaptureService) downloadPageWithRetryAndEncoding(targetURL string, 
 			break
 		}
 	}
-	
+
 	return "", nil, fmt.Errorf("重试%d次后仍然失败: %v", maxRetries, lastErr)
 }
 
@@ -889,7 +985,7 @@ func (s *PageCaptureService) downloadPageWithEncoding(targetURL string, forceEnc
 	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
 	req.Header.Set("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7")
 	req.Header.Set("Accept-Language", "zh-CN,zh;q=0.9,en;q=0.8,en-GB;q=0.7,en-US;q=0.6")
-	req.Header.Set("Accept-Encoding", "gzip, deflate, br")
+	req.Header.Set("Accept-Encoding", "gzip, deflate")
 	req.Header.Set("Cache-Control", "no-cache")
 	req.Header.Set("Pragma", "no-cache")
 	req.Header.Set("Sec-Ch-Ua", `"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"`)
@@ -930,10 +1026,27 @@ func (s *PageCaptureService) downloadPageWithEncoding(targetURL string, forceEnc
 		return "", resp, fmt.Errorf("响应内容为空")
 	}
 
-	// 检查并解压缩 GZIP 内容
+	// 输出响应头信息用于调试
+	s.debugPrintf("响应头信息:\n")
+	for key, values := range resp.Header {
+		s.debugPrintf("  %s: %s\n", key, strings.Join(values, ", "))
+	}
+
+	s.debugPrintf("原始响应体长度: %d 字节\n", len(body))
+	if len(body) >= 10 {
+		s.debugPrintf("原始响应体前10字节: %v\n", body[:10])
+		s.debugPrintf("原始响应体前10字节(hex): %02x\n", body[:10])
+	}
+
+	// 检查并解压缩内容
 	body, err = s.decompressIfNeeded(body, resp.Header.Get("Content-Encoding"))
 	if err != nil {
 		return "", resp, fmt.Errorf("解压缩失败: %v", err)
+	}
+
+	s.debugPrintf("解压缩后内容长度: %d 字节\n", len(body))
+	if len(body) >= 200 {
+		s.debugPrintf("解压缩后内容前200字符: %s\n", string(body[:200]))
 	}
 
 	// 简化的编码处理
@@ -971,10 +1084,10 @@ func (s *PageCaptureService) processHTMLAndDownloadResources(htmlContent string,
 	s.debugPrintf("=== 开始处理HTML和下载资源 ===\n")
 	s.debugPrintf("HTML内容长度: %d 字符\n", len(htmlContent))
 	s.debugPrintf("HTML前500字符: %s\n", htmlContent[:min(len(htmlContent), 500)])
-	
+
 	// 更新进度
 	s.updateProgress("analyzing", "解析HTML文档...", 0)
-	
+
 	doc, err := goquery.NewDocumentFromReader(strings.NewReader(htmlContent))
 	if err != nil {
 		s.debugPrintf("HTML解析失败: %v\n", err)
@@ -982,13 +1095,31 @@ func (s *PageCaptureService) processHTMLAndDownloadResources(htmlContent string,
 	}
 
 	s.debugPrintf("HTML解析成功\n")
+
+	// 验证HTML内容的有效性
+	title := doc.Find("title").Text()
+	s.debugPrintf("页面标题: %s\n", title)
+
+	// 检查基本HTML结构
+	htmlTag := doc.Find("html")
+	headTag := doc.Find("head")
+	bodyTag := doc.Find("body")
+	s.debugPrintf("HTML结构检查: html标签=%d, head标签=%d, body标签=%d\n",
+		htmlTag.Length(), headTag.Length(), bodyTag.Length())
+
+	// 检查是否有基本的HTML内容
+	if htmlTag.Length() == 0 && headTag.Length() == 0 && bodyTag.Length() == 0 {
+		s.debugPrintf("警告: 没有找到基本的HTML结构，可能是编码问题\n")
+		s.debugPrintf("原始HTML内容前1000字符: %s\n", htmlContent[:min(len(htmlContent), 1000)])
+	}
+
 	s.updateProgress("analyzing", "收集资源列表...", 10)
 
 	// 收集所有下载任务
 	var tasks []DownloadTask
 
 	s.debugPrintf("开始收集资源任务...\n")
-	s.debugPrintf("选项: IncludeStyles=%v, IncludeScripts=%v, IncludeImages=%v, IncludeVideos=%v\n", 
+	s.debugPrintf("选项: IncludeStyles=%v, IncludeScripts=%v, IncludeImages=%v, IncludeVideos=%v\n",
 		options.IncludeStyles, options.IncludeScripts, options.IncludeImages, options.IncludeVideos)
 	s.debugPrintf("HTML文档解析成功，开始查找资源...\n")
 
@@ -997,7 +1128,7 @@ func (s *PageCaptureService) processHTMLAndDownloadResources(htmlContent string,
 		s.debugPrintf("收集CSS文件...\n")
 		cssLinks := doc.Find("link[rel=stylesheet]")
 		s.debugPrintf("找到 %d 个CSS link标签\n", cssLinks.Length())
-		
+
 		cssLinks.Each(func(i int, sel *goquery.Selection) {
 			if href, exists := sel.Attr("href"); exists {
 				// 清理URL中的空白字符
@@ -1019,7 +1150,7 @@ func (s *PageCaptureService) processHTMLAndDownloadResources(htmlContent string,
 				s.debugPrintf("CSS link标签没有href属性\n")
 			}
 		})
-		
+
 		// 也检查所有link标签
 		allLinks := doc.Find("link")
 		s.debugPrintf("总共找到 %d 个link标签\n", allLinks.Length())
@@ -1032,7 +1163,7 @@ func (s *PageCaptureService) processHTMLAndDownloadResources(htmlContent string,
 		s.debugPrintf("收集JavaScript文件...\n")
 		jsScripts := doc.Find("script[src]")
 		s.debugPrintf("找到 %d 个带src的script标签\n", jsScripts.Length())
-		
+
 		jsScripts.Each(func(i int, sel *goquery.Selection) {
 			if src, exists := sel.Attr("src"); exists {
 				// 清理URL中的空白字符
@@ -1052,7 +1183,7 @@ func (s *PageCaptureService) processHTMLAndDownloadResources(htmlContent string,
 				}
 			}
 		})
-		
+
 		// 也检查所有script标签
 		allScripts := doc.Find("script")
 		s.debugPrintf("总共找到 %d 个script标签\n", allScripts.Length())
@@ -1065,7 +1196,7 @@ func (s *PageCaptureService) processHTMLAndDownloadResources(htmlContent string,
 		s.debugPrintf("收集图片文件...\n")
 		imgTags := doc.Find("img[src]")
 		s.debugPrintf("找到 %d 个带src的img标签\n", imgTags.Length())
-		
+
 		imgTags.Each(func(i int, sel *goquery.Selection) {
 			if src, exists := sel.Attr("src"); exists {
 				// 清理URL中的空白字符
@@ -1085,7 +1216,7 @@ func (s *PageCaptureService) processHTMLAndDownloadResources(htmlContent string,
 				}
 			}
 		})
-		
+
 		// 也检查所有img标签
 		allImages := doc.Find("img")
 		s.debugPrintf("总共找到 %d 个img标签\n", allImages.Length())
@@ -1096,7 +1227,7 @@ func (s *PageCaptureService) processHTMLAndDownloadResources(htmlContent string,
 	// 收集视频下载任务
 	if options.IncludeVideos {
 		s.debugPrintf("收集视频文件...\n")
-		
+
 		// video[src]
 		videoTags := doc.Find("video[src]")
 		s.debugPrintf("找到 %d 个带src的video标签\n", videoTags.Length())
@@ -1219,25 +1350,29 @@ func (s *PageCaptureService) processHTMLAndDownloadResources(htmlContent string,
 	if len(tasks) > 5 {
 		s.debugPrintf("... 还有 %d 个任务\n", len(tasks)-5)
 	}
-	
+
 	// 并发下载所有资源
 	maxConcurrency := options.MaxConcurrency
 	if maxConcurrency <= 0 {
 		maxConcurrency = 10 // 默认10个并发
 	}
-	
+
 	s.debugPrintf("准备开始下载，最大并发数: %d\n", maxConcurrency)
-	
-	// 初始化进度信息
+
+	// 初始化进度信息 - 确保状态正确
 	s.progressMutex.Lock()
 	s.progressInfo.Phase = "downloading"
 	s.progressInfo.TotalFiles = len(tasks)
 	s.progressInfo.CompletedFiles = 0
-	s.progressInfo.FileList = make([]FileInfo, len(tasks))
-	
+	s.progressInfo.CurrentFile = "准备下载资源文件..."
+	s.progressInfo.FileProgress = 0
+
+	// 重新创建文件列表，确保没有残留数据
+	s.progressInfo.FileList = make([]FileInfo, 0, len(tasks))
+
 	for i, task := range tasks {
 		fileName := s.getFileNameFromURL(task.URL)
-		s.progressInfo.FileList[i] = FileInfo{
+		fileInfo := FileInfo{
 			Name:     fileName,
 			Type:     task.ResourceType,
 			Size:     "等待下载...",
@@ -1245,15 +1380,29 @@ func (s *PageCaptureService) processHTMLAndDownloadResources(htmlContent string,
 			Progress: 0,
 			URL:      task.URL,
 		}
+		s.progressInfo.FileList = append(s.progressInfo.FileList, fileInfo)
 		s.debugPrintf("初始化文件 %d: %s -> URL: %s\n", i, fileName, task.URL)
 	}
+
+	// 立即触发一次进度回调，确保前端能看到初始状态
+	if s.progressCallback != nil {
+		s.progressCallback(s.progressInfo)
+	}
 	s.progressMutex.Unlock()
-	
+
 	s.debugPrintf("初始化文件列表完成，共 %d 个文件\n", len(tasks))
-	
+
 	// 如果没有找到任何资源文件，至少添加主页面到文件列表
 	if len(tasks) == 0 {
 		s.debugPrintf("没有找到资源文件，添加主页面到文件列表\n")
+		s.progressMutex.Lock()
+
+		// 安全获取baseURL字符串
+		baseURLStr := ""
+		if s.baseURL != nil {
+			baseURLStr = s.baseURL.String()
+		}
+
 		s.progressInfo.FileList = []FileInfo{
 			{
 				Name:     "index.html",
@@ -1261,28 +1410,40 @@ func (s *PageCaptureService) processHTMLAndDownloadResources(htmlContent string,
 				Size:     s.formatFileSize(int64(len(htmlContent))),
 				Status:   "completed",
 				Progress: 100,
-				URL:      s.baseURL.String(),
+				URL:      baseURLStr,
 			},
 		}
 		s.progressInfo.TotalFiles = 1
 		s.progressInfo.CompletedFiles = 1
-	}
-	
-	s.updateProgress("downloading", "开始下载资源文件...", 0)
-	
-	s.debugPrintf("开始并发下载 %d 个资源，并发数: %d\n", len(tasks), maxConcurrency)
-	results := s.downloadResourcesConcurrently(tasks, maxConcurrency)
+		s.progressInfo.Phase = "saving"
+		s.progressInfo.CurrentFile = "保存主页面..."
 
-	// 统计结果
-	successCount := 0
-	for _, result := range results {
-		if result.Success && result.LocalPath != "" {
-			result.Task.Element.SetAttr(result.Task.AttrName, result.LocalPath)
-			successCount++
+		// 触发进度回调
+		if s.progressCallback != nil {
+			s.progressCallback(s.progressInfo)
 		}
+		s.progressMutex.Unlock()
+
+		// 没有资源文件需要下载，直接跳过下载阶段
+		s.debugPrintf("没有资源文件需要下载，跳过下载阶段\n")
+	} else {
+		// 有资源文件需要下载
+		s.updateProgress("downloading", "开始下载资源文件...", 0)
+
+		s.debugPrintf("开始并发下载 %d 个资源，并发数: %d\n", len(tasks), maxConcurrency)
+		results := s.downloadResourcesConcurrently(tasks, maxConcurrency)
+
+		// 统计结果
+		successCount := 0
+		for _, result := range results {
+			if result.Success && result.LocalPath != "" {
+				result.Task.Element.SetAttr(result.Task.AttrName, result.LocalPath)
+				successCount++
+			}
+		}
+
+		s.debugPrintf("资源下载完成: 成功 %d/%d 个\n", successCount, len(tasks))
 	}
-	
-	s.debugPrintf("资源下载完成: 成功 %d/%d 个\n", successCount, len(tasks))
 
 	// 处理CSS中的背景图片和字体（这些需要特殊处理，暂时保持同步）
 	if options.IncludeImages || options.IncludeFonts {
@@ -1290,12 +1451,12 @@ func (s *PageCaptureService) processHTMLAndDownloadResources(htmlContent string,
 		s.debugPrintf("开始处理内联CSS样式...\n")
 		styleElements := doc.Find("style")
 		s.debugPrintf("找到 %d 个style标签\n", styleElements.Length())
-		
+
 		styleElements.Each(func(i int, sel *goquery.Selection) {
 			s.debugPrintf("处理第 %d 个style标签\n", i+1)
 			cssContent := sel.Text()
 			s.debugPrintf("CSS内容长度: %d 字符\n", len(cssContent))
-			
+
 			if options.IncludeImages {
 				s.debugPrintf("处理CSS中的图片...\n")
 				cssContent = s.processCSSContent(cssContent)
@@ -1402,17 +1563,23 @@ func (s *PageCaptureService) downloadWorker(taskChan <-chan DownloadTask, result
 
 		// 更新状态为下载中
 		s.updateFileStatus(task.URL, "downloading", 0)
-		
+
+		// 更新当前文件信息
+		fileName := s.getFileNameFromURL(task.URL)
+		s.updateProgress("downloading", fmt.Sprintf("正在下载: %s", fileName), 0)
+
 		// 下载资源
 		localPath := s.downloadResourceSync(task.URL, task.ResourceType)
-		
+
 		// 更新最终状态
 		if localPath != "" {
 			s.updateFileStatus(task.URL, "completed", 100)
+			s.debugPrintf("文件下载成功: %s -> %s\n", task.URL, localPath)
 		} else {
 			s.updateFileStatus(task.URL, "failed", 0)
+			s.debugPrintf("文件下载失败: %s\n", task.URL)
 		}
-		
+
 		resultChan <- DownloadResult{
 			Task:      task,
 			LocalPath: localPath,
@@ -1429,7 +1596,7 @@ func (s *PageCaptureService) downloadResourceSync(resourceURL, resourceType stri
 		s.mutex.RUnlock()
 		return resource.LocalPath
 	}
-	
+
 	// 检查文件数量限制
 	if s.fileCount >= s.maxFiles {
 		s.mutex.RUnlock()
@@ -1439,7 +1606,7 @@ func (s *PageCaptureService) downloadResourceSync(resourceURL, resourceType stri
 
 	// 在锁外进行网络下载（这是耗时操作）
 	s.debugPrintf("开始下载: %s (%s)\n", resourceURL, resourceType)
-	
+
 	// 为大文件创建更长超时的客户端
 	client := s.client
 	if resourceType == "videos" {
@@ -1450,7 +1617,7 @@ func (s *PageCaptureService) downloadResourceSync(resourceURL, resourceType stri
 		}
 		s.debugPrintf("使用扩展超时(10分钟)下载视频文件\n")
 	}
-	
+
 	resp, err := client.Get(resourceURL)
 	if err != nil {
 		s.debugPrintf("下载失败: %s - %v\n", resourceURL, err)
@@ -1487,7 +1654,7 @@ func (s *PageCaptureService) downloadResourceSync(resourceURL, resourceType stri
 		// 小文件直接读取，进度由worker管理
 		content, err = io.ReadAll(resp.Body)
 	}
-	
+
 	if err != nil {
 		s.debugPrintf("读取失败: %s - %v\n", resourceURL, err)
 		return ""
@@ -1495,7 +1662,7 @@ func (s *PageCaptureService) downloadResourceSync(resourceURL, resourceType stri
 
 	s.debugPrintf("下载完成: %s - 实际大小: %.2f MB\n", resourceURL, float64(len(content))/(1024*1024))
 	s.debugPrintf("尝试更新状态，URL: %s\n", resourceURL)
-	
+
 	// 用实际下载的文件大小更新（这样可以处理Content-Length为-1的情况）
 	actualSize := int64(len(content))
 	if actualSize > 0 {
@@ -1550,12 +1717,22 @@ func (s *PageCaptureService) downloadResource(resourceURL, resourceType string) 
 
 // resolveURL 解析URL
 func (s *PageCaptureService) resolveURL(resourceURL string) string {
-	s.debugPrintf("解析URL: %s (基础URL: %s)\n", resourceURL, s.baseURL.String())
-	
+	baseURLStr := ""
+	if s.baseURL != nil {
+		baseURLStr = s.baseURL.String()
+	}
+	s.debugPrintf("解析URL: %s (基础URL: %s)\n", resourceURL, baseURLStr)
+
+	// 如果baseURL为nil，无法解析相对URL
+	if s.baseURL == nil {
+		s.debugPrintf("警告: baseURL为nil，无法解析相对URL: %s\n", resourceURL)
+		return ""
+	}
+
 	// 清理资源URL - 移除所有前后空白字符
 	resourceURL = strings.TrimSpace(resourceURL)
 	s.debugPrintf("清理后的URL: '%s'\n", resourceURL)
-	
+
 	if strings.HasPrefix(resourceURL, "http://") || strings.HasPrefix(resourceURL, "https://") {
 		s.debugPrintf("绝对URL: %s\n", resourceURL)
 		return resourceURL
@@ -1578,12 +1755,12 @@ func (s *PageCaptureService) resolveURL(resourceURL string) string {
 	if baseDir == "." || baseDir == "/" {
 		baseDir = ""
 	}
-	
+
 	// 处理 ./ 开头的相对路径
 	if strings.HasPrefix(resourceURL, "./") {
 		resourceURL = resourceURL[2:] // 移除 "./"
 	}
-	
+
 	// 确保路径正确拼接
 	var result string
 	if baseDir == "" {
@@ -1591,7 +1768,7 @@ func (s *PageCaptureService) resolveURL(resourceURL string) string {
 	} else {
 		result = s.baseURL.Scheme + "://" + s.baseURL.Host + baseDir + "/" + resourceURL
 	}
-	
+
 	s.debugPrintf("相对路径解析: %s -> %s (baseDir: %s)\n", resourceURL, result, baseDir)
 	return result
 }
@@ -1640,7 +1817,7 @@ func (s *PageCaptureService) getExtensionByType(resourceType string) string {
 // processCSSContent 处理CSS内容中的URL
 func (s *PageCaptureService) processCSSContent(cssContent string) string {
 	s.debugPrintf("开始处理CSS内容，长度: %d\n", len(cssContent))
-	
+
 	if s.fileCount >= s.maxFiles {
 		s.debugPrintf("已达到最大文件数限制，跳过CSS处理\n")
 		return cssContent
@@ -1658,7 +1835,7 @@ func (s *PageCaptureService) processCSSContent(cssContent string) string {
 			absoluteURL := s.resolveURL(resourceURL)
 			if absoluteURL != "" {
 				s.debugPrintf("解析后的绝对URL: '%s'\n", absoluteURL)
-				
+
 				// 检查是否已经下载过
 				s.mutex.RLock()
 				if resource, exists := s.resources[absoluteURL]; exists {
@@ -1667,7 +1844,7 @@ func (s *PageCaptureService) processCSSContent(cssContent string) string {
 					return strings.Replace(match, resourceURL, resource.LocalPath, 1)
 				}
 				s.mutex.RUnlock()
-				
+
 				// 生成本地路径（不立即下载，等待统一的下载任务处理）
 				localPath := s.generateLocalPath(absoluteURL, "images")
 				s.debugPrintf("生成的本地路径: '%s'\n", localPath)
@@ -1676,7 +1853,7 @@ func (s *PageCaptureService) processCSSContent(cssContent string) string {
 		}
 		return match
 	})
-	
+
 	s.debugPrintf("CSS内容处理完成\n")
 	return result
 }
@@ -1684,7 +1861,7 @@ func (s *PageCaptureService) processCSSContent(cssContent string) string {
 // processFontContent 处理CSS内容中的字体文件URL
 func (s *PageCaptureService) processFontContent(cssContent string) string {
 	s.debugPrintf("开始处理CSS字体内容，长度: %d\n", len(cssContent))
-	
+
 	if s.fileCount >= s.maxFiles {
 		s.debugPrintf("已达到最大文件数限制，跳过字体处理\n")
 		return cssContent
@@ -1693,7 +1870,7 @@ func (s *PageCaptureService) processFontContent(cssContent string) string {
 	// 处理 @font-face 规则中的 src 属性
 	fontFaceRegex := regexp.MustCompile(`@font-face\s*\{[^}]*src\s*:\s*([^;}]+)[;}]`)
 	urlRegex := regexp.MustCompile(`url\s*\(\s*['"]?([^'")]+)['"]?\s*\)`)
-	
+
 	fontFaceMatches := fontFaceRegex.FindAllString(cssContent, -1)
 	s.debugPrintf("在CSS中找到 %d 个@font-face规则\n", len(fontFaceMatches))
 
@@ -1713,7 +1890,7 @@ func (s *PageCaptureService) processFontContent(cssContent string) string {
 							return strings.Replace(urlMatch, resourceURL, resource.LocalPath, 1)
 						}
 						s.mutex.RUnlock()
-						
+
 						// 生成本地路径（不立即下载）
 						localPath := s.generateLocalPath(absoluteURL, "fonts")
 						return strings.Replace(urlMatch, resourceURL, localPath, 1)
@@ -1723,7 +1900,7 @@ func (s *PageCaptureService) processFontContent(cssContent string) string {
 			return urlMatch
 		})
 	})
-	
+
 	s.debugPrintf("CSS字体处理完成\n")
 	return result
 }
@@ -1740,24 +1917,44 @@ func (s *PageCaptureService) isFontFile(url string) bool {
 	return false
 }
 
-// saveAllFiles 保存所有文件
+// saveAllFiles 保存所有文件 - 改进版本
 func (s *PageCaptureService) saveAllFiles(htmlContent string) error {
 	s.debugPrintf("开始保存文件到: %s\n", s.tempDir)
-	
+
+	// 检查临时目录是否存在
+	if s.tempDir == "" {
+		return fmt.Errorf("临时目录为空")
+	}
+
+	// 确保临时目录存在
+	if err := os.MkdirAll(s.tempDir, 0755); err != nil {
+		return fmt.Errorf("创建临时目录失败: %v", err)
+	}
+
 	// 保存index.html
 	indexPath := filepath.Join(s.tempDir, "index.html")
+	s.debugPrintf("保存index.html到: %s\n", indexPath)
+	s.debugPrintf("HTML内容长度: %d 字符\n", len(htmlContent))
+	s.debugPrintf("HTML内容前200字符: %s\n", htmlContent[:min(len(htmlContent), 200)])
+
 	err := os.WriteFile(indexPath, []byte(htmlContent), 0644)
 	if err != nil {
 		return fmt.Errorf("保存index.html失败: %v", err)
 	}
-	s.debugPrintf("保存index.html成功: %s\n", indexPath)
+
+	// 验证文件是否成功保存
+	if info, err := os.Stat(indexPath); err == nil {
+		s.debugPrintf("保存index.html成功: %s (大小: %d 字节)\n", indexPath, info.Size())
+	} else {
+		s.debugPrintf("警告: 无法验证index.html文件: %v\n", err)
+	}
 
 	// 保存资源文件
 	s.debugPrintf("开始保存 %d 个资源文件\n", len(s.resources))
 	savedCount := 0
 	for url, resource := range s.resources {
 		fullPath := filepath.Join(s.tempDir, resource.LocalPath)
-		s.debugPrintf("保存资源: %s -> %s\n", url, fullPath)
+		s.debugPrintf("保存资源: %s -> %s (大小: %d 字节)\n", url, fullPath, len(resource.Content))
 
 		// 创建目录
 		dir := filepath.Dir(fullPath)
@@ -1773,63 +1970,131 @@ func (s *PageCaptureService) saveAllFiles(htmlContent string) error {
 			s.debugPrintf("保存文件失败: %s - %v\n", fullPath, err)
 			continue // 跳过无法保存的文件
 		}
-		savedCount++
+
+		// 验证文件是否成功保存
+		if info, err := os.Stat(fullPath); err == nil {
+			s.debugPrintf("保存资源成功: %s (大小: %d 字节)\n", fullPath, info.Size())
+			savedCount++
+		} else {
+			s.debugPrintf("警告: 无法验证资源文件: %s - %v\n", fullPath, err)
+		}
 	}
-	
+
 	s.debugPrintf("资源文件保存完成: %d/%d 个成功\n", savedCount, len(s.resources))
+
+	// 列出临时目录中的所有文件
+	s.debugPrintf("临时目录内容:\n")
+	filepath.Walk(s.tempDir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if !info.IsDir() {
+			relPath, _ := filepath.Rel(s.tempDir, path)
+			s.debugPrintf("  文件: %s (大小: %d 字节)\n", relPath, info.Size())
+		}
+		return nil
+	})
+
 	return nil
 }
 
-// createZipFile 创建ZIP文件
+// createZipFile 创建ZIP文件 - 改进版本
 func (s *PageCaptureService) createZipFile() (string, int64, error) {
 	zipFileName := fmt.Sprintf("webpage_%d.zip", time.Now().Unix())
 	zipPath := filepath.Join(os.TempDir(), zipFileName)
 
+	s.debugPrintf("开始创建ZIP文件: %s\n", zipPath)
+	s.debugPrintf("源目录: %s\n", s.tempDir)
+
+	// 检查源目录是否存在
+	if _, err := os.Stat(s.tempDir); os.IsNotExist(err) {
+		return "", 0, fmt.Errorf("源目录不存在: %s", s.tempDir)
+	}
+
 	zipFile, err := os.Create(zipPath)
 	if err != nil {
-		return "", 0, err
+		return "", 0, fmt.Errorf("创建ZIP文件失败: %v", err)
 	}
 	defer zipFile.Close()
 
 	zipWriter := zip.NewWriter(zipFile)
 	defer zipWriter.Close()
 
+	fileCount := 0
+	totalSize := int64(0)
+
 	err = filepath.Walk(s.tempDir, func(filePath string, info os.FileInfo, err error) error {
 		if err != nil {
+			s.debugPrintf("遍历文件时出错: %s - %v\n", filePath, err)
 			return err
 		}
 
 		if info.IsDir() {
+			s.debugPrintf("跳过目录: %s\n", filePath)
 			return nil
 		}
 
 		relPath, err := filepath.Rel(s.tempDir, filePath)
 		if err != nil {
+			s.debugPrintf("获取相对路径失败: %s - %v\n", filePath, err)
 			return err
 		}
 
+		s.debugPrintf("添加文件到ZIP: %s (大小: %d 字节)\n", relPath, info.Size())
+
 		zipFileWriter, err := zipWriter.Create(relPath)
 		if err != nil {
+			s.debugPrintf("在ZIP中创建文件失败: %s - %v\n", relPath, err)
 			return err
 		}
 
 		fileContent, err := os.ReadFile(filePath)
 		if err != nil {
+			s.debugPrintf("读取文件失败: %s - %v\n", filePath, err)
 			return err
 		}
 
-		_, err = zipFileWriter.Write(fileContent)
-		return err
+		written, err := zipFileWriter.Write(fileContent)
+		if err != nil {
+			s.debugPrintf("写入ZIP文件失败: %s - %v\n", relPath, err)
+			return err
+		}
+
+		s.debugPrintf("成功写入文件: %s (%d 字节)\n", relPath, written)
+		fileCount++
+		totalSize += int64(written)
+		return nil
 	})
 
 	if err != nil {
+		s.debugPrintf("创建ZIP过程中出错: %v\n", err)
 		return "", 0, err
 	}
 
-	zipInfo, err := zipFile.Stat()
+	// 确保所有数据都写入
+	err = zipWriter.Close()
 	if err != nil {
+		s.debugPrintf("关闭ZIP写入器失败: %v\n", err)
+		return "", 0, err
+	}
+
+	err = zipFile.Close()
+	if err != nil {
+		s.debugPrintf("关闭ZIP文件失败: %v\n", err)
+		return "", 0, err
+	}
+
+	// 获取最终的ZIP文件大小
+	zipInfo, err := os.Stat(zipPath)
+	if err != nil {
+		s.debugPrintf("获取ZIP文件信息失败: %v\n", err)
 		return zipPath, 0, nil
 	}
+
+	s.debugPrintf("ZIP文件创建完成: %s\n", zipPath)
+	s.debugPrintf("包含文件数: %d\n", fileCount)
+	s.debugPrintf("原始总大小: %d 字节\n", totalSize)
+	s.debugPrintf("ZIP文件大小: %d 字节\n", zipInfo.Size())
 
 	return zipPath, zipInfo.Size(), nil
 }

@@ -20,12 +20,8 @@
                 <n-card title="📝 备份配置" size="small">
                     <n-form :model="form" label-placement="top">
                         <n-form-item label="目标网址" required>
-                            <n-input 
-                                v-model:value="form.url" 
-                                placeholder="请输入要备份的网页 URL，如：https://example.com"
-                                size="large"
-                                @keyup.enter="captureUrl"
-                            >
+                            <n-input v-model:value="form.url" placeholder="请输入要备份的网页 URL，如：https://example.com"
+                                size="large" @keyup.enter="captureUrl">
                                 <template #suffix>
                                     <n-button text type="primary" @click="testConnection" :disabled="!form.url.trim()">
                                         测试
@@ -33,14 +29,9 @@
                                 </template>
                             </n-input>
                         </n-form-item>
-                        
+
                         <n-form-item label="保存目录" required>
-                            <n-input 
-                                v-model:value="saveDirectory" 
-                                placeholder="请选择保存备份文件的目录" 
-                                readonly
-                                size="large"
-                            >
+                            <n-input v-model:value="saveDirectory" placeholder="请选择保存备份文件的目录" readonly size="large">
                                 <template #suffix>
                                     <n-button text type="primary" @click="selectDirectory">
                                         选择目录
@@ -59,7 +50,7 @@
                                 </n-space>
                             </n-checkbox-group>
                         </n-form-item>
-                        
+
                         <n-form-item label="隐私清理">
                             <n-checkbox-group v-model:value="privacyOptions">
                                 <n-space>
@@ -69,39 +60,36 @@
                                 </n-space>
                             </n-checkbox-group>
                         </n-form-item>
-                        
+
                         <!-- 高级选项折叠 -->
                         <n-collapse>
                             <n-collapse-item title="高级选项" name="advanced">
                                 <n-space vertical size="small">
                                     <n-form-item label="超时时间">
-                                        <n-input-number v-model:value="options.timeout" :min="60" :max="300" :step="10" size="small" />
+                                        <n-input-number v-model:value="options.timeout" :min="60" :max="300" :step="10"
+                                            size="small" />
                                         <template #suffix>秒</template>
                                     </n-form-item>
                                     <n-form-item label="最大文件数">
-                                        <n-input-number v-model:value="options.maxFiles" :min="200" :max="1000" :step="50" size="small" />
+                                        <n-input-number v-model:value="options.maxFiles" :min="200" :max="1000"
+                                            :step="50" size="small" />
                                         <template #suffix>个</template>
                                     </n-form-item>
                                     <n-form-item label="并发数">
-                                        <n-input-number v-model:value="options.maxConcurrency" :min="1" :max="20" :step="1" size="small" />
+                                        <n-input-number v-model:value="options.maxConcurrency" :min="1" :max="20"
+                                            :step="1" size="small" />
                                         <template #suffix">个</template>
                                     </n-form-item>
                                 </n-space>
                             </n-collapse-item>
                         </n-collapse>
                     </n-form>
-                    
+
                     <!-- 备份按钮 -->
                     <n-divider />
                     <div class="action-buttons">
-                        <n-button 
-                            type="primary" 
-                            size="large" 
-                            block
-                            @click="captureUrl" 
-                            :disabled="!form.url.trim() || !saveDirectory.trim() || isCapturing"
-                            :loading="isCapturing"
-                        >
+                        <n-button type="primary" size="large" block @click="captureUrl"
+                            :disabled="!form.url.trim() || !saveDirectory.trim() || isCapturing" :loading="isCapturing">
                             <template #icon>
                                 <n-icon>
                                     <CameraOutline />
@@ -109,7 +97,7 @@
                             </template>
                             {{ isCapturing ? '备份中...' : '开始备份' }}
                         </n-button>
-                        
+
                         <n-space justify="space-between" style="margin-top: 12px;">
                             <n-button size="small" @click="clearResults" :disabled="isCapturing">
                                 <template #icon>
@@ -147,25 +135,25 @@
                 <!-- 备份进度 -->
                 <n-card v-if="isCapturing" class="status-card progress" title="🚀 备份进行中">
                     <template #header-extra>
-                        <n-tag type="info">{{ captureProgress.phase === 'analyzing' ? '分析中' : captureProgress.phase === 'downloading' ? '下载中' : '保存中' }}</n-tag>
+                        <n-tag type="info">{{ captureProgress.phase === 'analyzing' ? '分析中' : captureProgress.phase ===
+                            'downloading' ? '下载中' : '保存中' }}</n-tag>
                     </template>
-                    
+
                     <n-space vertical size="large">
                         <!-- 总体进度 -->
                         <div class="overall-progress">
                             <div class="progress-info">
                                 <span class="progress-label">{{ getPhaseText(captureProgress.phase) }}</span>
-                                <span class="progress-count">{{ captureProgress.completedFiles }}/{{ captureProgress.totalFiles }}</span>
+                                <span class="progress-count">{{ captureProgress.completedFiles }}/{{
+                                    captureProgress.totalFiles
+                                }}</span>
                             </div>
-                            <n-progress 
-                                type="line" 
+                            <n-progress type="line"
                                 :percentage="Math.round((captureProgress.completedFiles / Math.max(captureProgress.totalFiles, 1)) * 100)"
-                                :show-indicator="false"
-                                :height="12"
-                                border-radius="6px"
-                                :color="captureProgress.phase === 'complete' ? '#18a058' : '#2080f0'"
-                            />
-                            <n-text v-if="captureProgress.currentFile" depth="3" style="font-size: 12px; margin-top: 8px;">
+                                :show-indicator="false" :height="12" border-radius="6px"
+                                :color="captureProgress.phase === 'complete' ? '#18a058' : '#2080f0'" />
+                            <n-text v-if="captureProgress.currentFile" depth="3"
+                                style="font-size: 12px; margin-top: 8px;">
                                 {{ captureProgress.currentFile }}
                             </n-text>
                         </div>
@@ -175,22 +163,17 @@
                             <n-divider title-placement="left">
                                 <n-text strong>文件下载详情 ({{ captureProgress.fileList.length }})</n-text>
                             </n-divider>
-                            
-                            <n-data-table
-                                :columns="fileTableColumns"
-                                :data="sortedFileList"
-                                :pagination="false"
-                                :max-height="120"
-                                size="small"
-                                striped
-                                :row-props="() => ({ style: 'height: 32px;' })"
-                            />
+
+                            <n-data-table :columns="fileTableColumns" :data="sortedFileList" :pagination="false"
+                                :max-height="120" size="small" striped
+                                :row-props="() => ({ style: 'height: 32px;' })" />
                         </div>
                     </n-space>
                 </n-card>
 
                 <!-- 备份结果 -->
-                <n-card v-if="captureResult && !isCapturing" class="status-card result" :title="captureResult.success ? '✅ 备份完成' : '❌ 备份失败'">
+                <n-card v-if="captureResult && !isCapturing" class="status-card result"
+                    :title="captureResult.success ? '✅ 备份完成' : '❌ 备份失败'">
                     <template #header-extra>
                         <n-tag :type="captureResult.success ? 'success' : 'error'">
                             {{ captureResult.success ? '成功' : '失败' }}
@@ -225,7 +208,8 @@
                         <div v-if="captureProgress.fileList.length > 0" class="file-statistics">
                             <n-space>
                                 <n-tag type="success">成功: {{ getFileStats().completed }}</n-tag>
-                                <n-tag v-if="getFileStats().failed > 0" type="error">失败: {{ getFileStats().failed }}</n-tag>
+                                <n-tag v-if="getFileStats().failed > 0" type="error">失败: {{ getFileStats().failed
+                                }}</n-tag>
                                 <n-tag type="info">总计: {{ captureProgress.fileList.length }}</n-tag>
                             </n-space>
                         </div>
@@ -240,16 +224,10 @@
                             <n-divider title-placement="left">
                                 <n-text strong>文件下载详情 ({{ captureProgress.fileList.length }})</n-text>
                             </n-divider>
-                            
-                            <n-data-table
-                                :columns="fileTableColumns"
-                                :data="sortedFileList"
-                                :pagination="false"
-                                :max-height="120"
-                                size="small"
-                                striped
-                                :row-props="() => ({ style: 'height: 32px;' })"
-                            />
+
+                            <n-data-table :columns="fileTableColumns" :data="sortedFileList" :pagination="false"
+                                :max-height="120" size="small" striped
+                                :row-props="() => ({ style: 'height: 32px;' })" />
                         </div>
                     </n-space>
                 </n-card>
@@ -263,7 +241,8 @@
 
 
         <!-- 功能说明弹窗 -->
-        <n-modal v-model:show="showDocModal" preset="card" title="📖 页面捕获隐私清理功能说明" style="width: 90%; max-width: 1000px;">
+        <n-modal v-model:show="showDocModal" preset="card" title="📖 页面捕获隐私清理功能说明"
+            style="width: 90%; max-width: 1000px;">
             <div v-html="documentationContent" class="documentation-content"></div>
         </n-modal>
 
@@ -275,12 +254,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, inject, onMounted, onUnmounted, h, watch, computed } from 'vue'
+import { ref, inject, onMounted, onUnmounted, h, watch, computed, nextTick } from 'vue'
 import { useMessage } from 'naive-ui'
-import { 
-    RefreshOutline, 
-    ArchiveOutline, 
-    DocumentTextOutline, 
+import {
+    RefreshOutline,
+    ArchiveOutline,
+    DocumentTextOutline,
     CodeOutline,
     CheckmarkCircle,
     CloseCircle,
@@ -361,7 +340,7 @@ const sortedFileList = computed(() => {
     if (!captureProgress.value.fileList || captureProgress.value.fileList.length === 0) {
         return []
     }
-    
+
     // 定义状态优先级
     const statusPriority = {
         'downloading': 1,  // 下载中 - 最高优先级
@@ -369,27 +348,27 @@ const sortedFileList = computed(() => {
         'completed': 3,    // 下载完成 - 再次
         'failed': 0        // 下载失败 - 特殊处理，在所有完成后显示在最上面
     }
-    
+
     // 检查是否所有文件都已完成（completed 或 failed）
-    const allCompleted = captureProgress.value.fileList.every(file => 
+    const allCompleted = captureProgress.value.fileList.every(file =>
         file.status === 'completed' || file.status === 'failed'
     )
-    
+
     return [...captureProgress.value.fileList].sort((a, b) => {
         // 如果所有文件都已完成，失败的文件显示在最上面
         if (allCompleted) {
             if (a.status === 'failed' && b.status !== 'failed') return -1
             if (b.status === 'failed' && a.status !== 'failed') return 1
         }
-        
+
         // 正常情况下按优先级排序
         const priorityA = statusPriority[a.status] || 999
         const priorityB = statusPriority[b.status] || 999
-        
+
         if (priorityA !== priorityB) {
             return priorityA - priorityB
         }
-        
+
         // 相同状态按文件名排序
         return a.name.localeCompare(b.name)
     })
@@ -473,7 +452,7 @@ const getFileStats = () => {
         downloading: 0,
         pending: 0
     }
-    
+
     captureProgress.value.fileList.forEach(file => {
         if (file.status === 'completed') {
             stats.completed++
@@ -485,7 +464,7 @@ const getFileStats = () => {
             stats.pending++
         }
     })
-    
+
     return stats
 }
 
@@ -497,11 +476,11 @@ const fileTableColumns = [
         ellipsis: true,
         render: (row: any) => {
             console.log('渲染文件:', row.name, row.type, 'URL:', row.url)
-            
+
             // 优先显示完整路径，如果没有则显示文件名
             let displayName = row.url || row.name || '未知文件'
             let fullPath = displayName
-            
+
             // 如果是完整URL，提取路径部分进行显示
             if (displayName.startsWith('http')) {
                 try {
@@ -514,7 +493,7 @@ const fileTableColumns = [
                     // URL解析失败，使用原始字符串
                 }
             }
-            
+
             // 如果路径太长，进行省略处理
             const maxLength = 60
             if (displayName.length > maxLength) {
@@ -522,21 +501,21 @@ const fileTableColumns = [
                 const end = displayName.substring(displayName.length - 30)
                 displayName = `${start}...${end}`
             }
-            
-            return h('div', { 
+
+            return h('div', {
                 class: 'file-name-cell',
                 title: fullPath, // 完整路径作为tooltip
                 style: { display: 'flex', alignItems: 'center' }
             }, [
-                h('n-icon', { 
+                h('n-icon', {
                     style: { marginRight: '6px', fontSize: '12px' }
                 }, [
                     h(getFileIcon(row.type))
                 ]),
-                h('span', { 
-                    style: { 
-                        overflow: 'hidden', 
-                        textOverflow: 'ellipsis', 
+                h('span', {
+                    style: {
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
                         whiteSpace: 'nowrap'
                     }
                 }, displayName)
@@ -565,12 +544,12 @@ const fileTableColumns = [
             const isDownloading = row.status === 'downloading'
             const isCompleted = row.status === 'completed'
             const isFailed = row.status === 'failed'
-            
+
             let progressColor = '#70c0e8'
             if (isCompleted) progressColor = '#18a058'
             else if (isFailed) progressColor = '#d03050'
             else if (isDownloading) progressColor = '#f0a020'
-            
+
             return h('div', {
                 style: {
                     display: 'flex',
@@ -612,10 +591,10 @@ const fileTableColumns = [
         width: 100,
         render: (row: any) => {
             console.log('渲染状态:', row.name, row.status)
-            
+
             let statusText = '⏳ 等待'
             let statusColor = '#70c0e8'
-            
+
             switch (row.status) {
                 case 'completed':
                     statusText = '✅ 成功'
@@ -633,22 +612,22 @@ const fileTableColumns = [
                     statusText = '⏳ 等待'
                     statusColor = '#70c0e8'
             }
-            
+
             // 为下载中的状态添加特殊样式
             const isDownloading = row.status === 'downloading'
             const isFailed = row.status === 'failed'
-            
-            return h('span', { 
+
+            return h('span', {
                 style: {
                     fontSize: '12px',
                     color: statusColor,
                     fontWeight: isDownloading ? '600' : '500',
-                    backgroundColor: isDownloading ? 'rgba(240, 160, 32, 0.1)' : 
-                                   isFailed ? 'rgba(208, 48, 80, 0.1)' : 'transparent',
+                    backgroundColor: isDownloading ? 'rgba(240, 160, 32, 0.1)' :
+                        isFailed ? 'rgba(208, 48, 80, 0.1)' : 'transparent',
                     padding: isDownloading || isFailed ? '2px 6px' : '0',
                     borderRadius: isDownloading || isFailed ? '4px' : '0',
-                    border: isDownloading ? '1px solid rgba(240, 160, 32, 0.3)' : 
-                           isFailed ? '1px solid rgba(208, 48, 80, 0.3)' : 'none'
+                    border: isDownloading ? '1px solid rgba(240, 160, 32, 0.3)' :
+                        isFailed ? '1px solid rgba(208, 48, 80, 0.3)' : 'none'
                 }
             }, statusText)
         }
@@ -704,10 +683,10 @@ const captureUrl = async () => {
     // 开始备份流程
     isCapturing.value = true
     captureResult.value = null
-    
+
     // 文件列表默认展开，无需设置
-    
-    // 重置进度状态
+
+    // 完全重置进度状态 - 确保前后两次备份不相互影响
     captureProgress.value = {
         phase: 'analyzing',
         totalFiles: 0,
@@ -716,13 +695,16 @@ const captureUrl = async () => {
         fileProgress: 0,
         downloadSpeed: '',
         estimatedTime: '',
-        fileList: []
+        fileList: [] // 确保是空数组
     }
+
+    // 强制触发界面更新
+    await nextTick()
 
     try {
         // 开始进度轮询
         startProgressPolling()
-        
+
         const result = await api('capture_page', {
             url: processedUrl,
             options: JSON.stringify(options.value)
@@ -731,10 +713,10 @@ const captureUrl = async () => {
         if (result.code === 200) {
             captureProgress.value.phase = 'saving'
             captureProgress.value.currentFile = '保存文件中...'
-            
+
             // 获取最新的进度状态（包含最终的文件状态）
             await getProgress()
-            
+
             // 如果轮询没有获取到文件列表，使用后端返回的数据作为备用
             if (captureProgress.value.fileList.length === 0 && result.data.fileDetails && result.data.fileDetails.length > 0) {
                 console.log('使用后端返回的文件详情作为备用数据')
@@ -749,7 +731,7 @@ const captureUrl = async () => {
                 captureProgress.value.totalFiles = result.data.fileDetails.length
                 captureProgress.value.completedFiles = result.data.successCount || 0
             }
-            
+
             captureResult.value = {
                 success: true,
                 url: processedUrl,
@@ -774,7 +756,7 @@ const captureUrl = async () => {
                     message.warning('未选择保存目录，ZIP文件已生成但未保存')
                 }
             }
-            
+
             captureProgress.value.phase = 'complete'
             message.success(`备份完成！共处理 ${result.data.filesCount} 个文件`)
         } else {
@@ -1091,41 +1073,56 @@ const showTestPage = () => {
         '   - setTimeout 延时跳转\n' +
         '   - 动态创建base标签\n\n' +
         '这些代码在启用隐私清理功能后会被自动删除。'
-    
+
     showTestModal.value = true
 }
 
 // 进度轮询变量
 let progressPollingInterval: NodeJS.Timeout | null = null
 
-// 添加获取进度的API
+// 添加获取进度的API - 改进版本
 const getProgress = async () => {
     try {
         const result = await api('get_capture_progress', {})
         console.log('轮询API响应:', result)
-        
+
         if (result && result.code === 200 && result.data) {
             const data = result.data
             console.log('轮询获取进度详情:', {
                 phase: data.phase,
                 totalFiles: data.totalFiles,
                 completedFiles: data.completedFiles,
+                currentFile: data.currentFile,
                 fileListLength: data.fileList ? data.fileList.length : 0
             })
-            
-            // 如果有文件列表数据，更新进度状态
-            if (data.fileList && data.fileList.length > 0) {
-                captureProgress.value = {
-                    phase: data.phase || captureProgress.value.phase,
-                    totalFiles: data.totalFiles || captureProgress.value.totalFiles,
-                    completedFiles: data.completedFiles || captureProgress.value.completedFiles,
-                    currentFile: data.currentFile || captureProgress.value.currentFile,
-                    fileProgress: data.fileProgress || captureProgress.value.fileProgress,
-                    downloadSpeed: data.downloadSpeed || captureProgress.value.downloadSpeed,
-                    estimatedTime: data.estimatedTime || captureProgress.value.estimatedTime,
-                    fileList: data.fileList
-                }
-                console.log('更新后的文件列表长度:', captureProgress.value.fileList.length)
+
+            // 更新进度状态 - 确保所有字段都正确更新
+            captureProgress.value = {
+                phase: data.phase || 'analyzing',
+                totalFiles: data.totalFiles || 0,
+                completedFiles: data.completedFiles || 0,
+                currentFile: data.currentFile || '处理中...',
+                fileProgress: data.fileProgress || 0,
+                downloadSpeed: data.downloadSpeed || '',
+                estimatedTime: data.estimatedTime || '',
+                fileList: data.fileList || []
+            }
+
+            console.log('更新后的进度状态:', {
+                phase: captureProgress.value.phase,
+                totalFiles: captureProgress.value.totalFiles,
+                completedFiles: captureProgress.value.completedFiles,
+                fileListLength: captureProgress.value.fileList.length
+            })
+
+            // 如果阶段是complete，停止轮询
+            if (data.phase === 'complete') {
+                console.log('检测到完成状态，准备停止轮询')
+                setTimeout(() => {
+                    if (!isCapturing.value) {
+                        stopProgressPolling()
+                    }
+                }, 1000) // 延迟1秒停止，确保最后的状态更新完成
             }
         } else {
             console.log('轮询API无数据或失败:', result)
@@ -1135,26 +1132,39 @@ const getProgress = async () => {
     }
 }
 
-// 开始进度轮询
+// 开始进度轮询 - 改进版本
 const startProgressPolling = () => {
+    console.log('开始进度轮询')
+
+    // 清理之前的轮询
     if (progressPollingInterval) {
         clearInterval(progressPollingInterval)
+        progressPollingInterval = null
     }
-    
+
+    // 立即获取一次进度
+    getProgress()
+
+    // 设置定时轮询
     progressPollingInterval = setInterval(async () => {
         if (isCapturing.value) {
             await getProgress()
         } else {
+            console.log('备份已完成，停止轮询')
             stopProgressPolling()
         }
-    }, 500) // 每500ms轮询一次
+    }, 800) // 每800ms轮询一次，避免过于频繁
+
+    console.log('进度轮询已启动')
 }
 
-// 停止进度轮询
+// 停止进度轮询 - 改进版本
 const stopProgressPolling = () => {
+    console.log('停止进度轮询')
     if (progressPollingInterval) {
         clearInterval(progressPollingInterval)
         progressPollingInterval = null
+        console.log('进度轮询已停止')
     }
 }
 
@@ -1213,7 +1223,8 @@ onUnmounted(() => {
     margin-bottom: 8px;
 }
 
-.documentation-content ul, .documentation-content ol {
+.documentation-content ul,
+.documentation-content ol {
     margin-left: 20px;
     margin-bottom: 12px;
 }

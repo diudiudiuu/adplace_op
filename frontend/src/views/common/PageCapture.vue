@@ -329,6 +329,8 @@ const captureProgress = ref({
         name: string,
         type: string,
         size: string,
+        totalSize: number,
+        downloadedSize: number,
         status: 'pending' | 'downloading' | 'completed' | 'failed',
         progress: number,
         url: string
@@ -533,14 +535,39 @@ const fileTableColumns = [
     {
         title: '大小',
         key: 'size',
-        width: 80,
+        width: 120,
         render: (row: any) => {
+            const isDownloading = row.status === 'downloading'
+            const isCompleted = row.status === 'completed'
+            const hasSizeInfo = row.totalSize > 0 || row.downloadedSize > 0
+            
+            // 如果有详细的大小信息，显示已下载/总大小
+            if (hasSizeInfo && (isDownloading || isCompleted)) {
+                const downloadedText = formatBytes(row.downloadedSize || 0)
+                const totalText = row.totalSize > 0 ? formatBytes(row.totalSize) : '未知'
+                
+                return h('div', {
+                    style: {
+                        fontSize: '11px',
+                        color: isDownloading ? '#f0a020' : '#666',
+                        lineHeight: '1.2'
+                    }
+                }, [
+                    h('div', {}, `${downloadedText}/${totalText}`),
+                    // 如果是下载中且有总大小，显示百分比
+                    isDownloading && row.totalSize > 0 ? h('div', {
+                        style: { color: '#999', fontSize: '10px' }
+                    }, `${row.progress}%`) : null
+                ].filter(Boolean))
+            }
+            
+            // 否则显示原来的格式
             return h('span', {
                 style: {
                     fontSize: '11px',
                     color: '#666'
                 }
-            }, row.size || '未知')
+            }, row.size || '等待下载...')
         }
     },
     {

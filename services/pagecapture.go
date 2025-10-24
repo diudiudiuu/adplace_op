@@ -210,10 +210,61 @@ func (s *PageCaptureService) updateFileSize(url string, size int64) {
 	for i := range s.progressInfo.FileList {
 		if s.progressInfo.FileList[i].URL == url {
 			s.progressInfo.FileList[i].Size = formattedSize
-			s.debugPrintf("文件大小已更新: %s = %s\n", s.progressInfo.FileList[i].Name, formattedSize)
+			s.progressInfo.FileList[i].TotalSize = size
+			// 如果是完成状态，设置已下载大小等于总大小
+			if s.progressInfo.FileList[i].Status == "completed" {
+				s.progressInfo.FileList[i].DownloadedSize = size
+			}
+			s.debugPrintf("文件大小已更新: %s = %s (总大小: %d 字节)\n", s.progressInfo.FileList[i].Name, formattedSize, size)
 			break
 		}
 	}
+
+	if s.progressCallback != nil {
+		s.progressCallback(s.progressInfo)
+	}
+}
+
+// updateFileDownloadProgress 更新文件下载进度（包括已下载大小）
+func (s *PageCaptureService) updateFileDownloadProgress(url string, downloadedSize, totalSize int64, status string, progress int) {
+	s.progressMutex.Lock()
+	defer s.progressMutex.Unlock()
+
+	for i := range s.progressInfo.FileList {
+		if s.progressInfo.FileList[i].URL == url {
+			oldStatus := s.progressInfo.FileList[i].Status
+			s.progressInfo.FileList[i].Status = status
+			s.progressInfo.FileList[i].Progress = progress
+			s.progressInfo.FileList[i].DownloadedSize = downloadedSize
+			if totalSize > 0 {
+				s.progressInfo.FileList[i].TotalSize = totalSize
+			}
+			s.debugPrintf("更新下载进度: %s %s -> %s (进度: %d%%, 已下载: %d/%d 字节)\n",
+				s.progressInfo.FileList[i].Name, oldStatus, status, progress, downloadedSize, totalSize)
+			break
+		}
+	}
+
+	// 更新统计信息（重用现有逻辑）
+	completed := 0
+	failed := 0
+	downloading := 0
+	pending := 0
+
+	for _, file := range s.progressInfo.FileList {
+		switch file.Status {
+		case "completed":
+			completed++
+		case "failed":
+			failed++
+		case "downloading":
+			downloading++
+		default:
+			pending++
+		}
+	}
+
+	s.progressInfo.CompletedFiles = completed
 
 	if s.progressCallback != nil {
 		s.progressCallback(s.progressInfo)
@@ -317,12 +368,14 @@ type ProgressInfo struct {
 
 // FileInfo 文件信息
 type FileInfo struct {
-	Name     string `json:"name"`
-	Type     string `json:"type"`
-	Size     string `json:"size"`
-	Status   string `json:"status"`   // pending, downloading, completed, failed
-	Progress int    `json:"progress"` // 0-100
-	URL      string `json:"url"`
+	Name           string `json:"name"`
+	Type           string `json:"type"`
+	Size           string `json:"size"`           // 格式化后的大小显示
+	TotalSize      int64  `json:"totalSize"`      // 总大小（字节）
+	DownloadedSize int64  `json:"downloadedSize"` // 已下载大小（字节）
+	Status         string `json:"status"`         // pending, downloading, completed, failed
+	Progress       int    `json:"progress"`       // 0-100
+	URL            string `json:"url"`
 }
 
 // CaptureOptions 抓取选项
@@ -647,9 +700,12 @@ func (s *PageCaptureService) readWithProgress(reader io.Reader, totalSize int64,
 						url, progress,
 						float64(downloaded)/(1024*1024),
 						float64(totalSize)/(1024*1024))
-					s.updateFileStatus(url, "downloading", progress)
+					s.updateFileDownloadProgress(url, downloaded, totalSize, "downloading", progress)
 					lastProgress = progress
 				}
+			} else {
+				// 如果没有总大小信息，仍然更新已下载大小
+				s.updateFileDownloadProgress(url, downloaded, 0, "downloading", 0)
 			}
 		}
 
@@ -1376,12 +1432,14 @@ func (s *PageCaptureService) processHTMLAndDownloadResources(htmlContent string,
 	for i, task := range tasks {
 		fileName := s.getFileNameFromURL(task.URL)
 		fileInfo := FileInfo{
-			Name:     fileName,
-			Type:     task.ResourceType,
-			Size:     "等待下载...",
-			Status:   "pending",
-			Progress: 0,
-			URL:      task.URL,
+			Name:           fileName,
+			Type:           task.ResourceType,
+			Size:           "等待下载...",
+			TotalSize:      0,
+			DownloadedSize: 0,
+			Status:         "pending",
+			Progress:       0,
+			URL:            task.URL,
 		}
 		s.progressInfo.FileList = append(s.progressInfo.FileList, fileInfo)
 		s.debugPrintf("初始化文件 %d: %s -> URL: %s\n", i, fileName, task.URL)
@@ -1638,10 +1696,12 @@ func (s *PageCaptureService) downloadResourceSync(resourceURL, resourceType stri
 	s.debugPrintf("HTTP响应头 Content-Length: %d 字节\n", contentLength)
 	if contentLength > 0 {
 		s.debugPrintf("下载中: %s - 预期大小: %.2f MB\n", resourceURL, float64(contentLength)/(1024*1024))
-		// 暂时不更新文件大小，等下载完成后用实际大小更新
-		// s.updateFileSize(resourceURL, contentLength)
+		// 设置总大小信息
+		s.updateFileDownloadProgress(resourceURL, 0, contentLength, "downloading", 0)
 	} else {
 		s.debugPrintf("Content-Length无效(%d)，将在下载完成后更新文件大小\n", contentLength)
+		// 即使没有总大小，也要更新状态为下载中
+		s.updateFileDownloadProgress(resourceURL, 0, 0, "downloading", 0)
 	}
 
 	// 为大文件添加分块并发下载

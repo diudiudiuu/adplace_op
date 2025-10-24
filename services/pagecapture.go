@@ -211,11 +211,10 @@ func (s *PageCaptureService) updateFileSize(url string, size int64) {
 		if s.progressInfo.FileList[i].URL == url {
 			s.progressInfo.FileList[i].Size = formattedSize
 			s.progressInfo.FileList[i].TotalSize = size
-			// 如果是完成状态，设置已下载大小等于总大小
-			if s.progressInfo.FileList[i].Status == "completed" {
-				s.progressInfo.FileList[i].DownloadedSize = size
-			}
-			s.debugPrintf("文件大小已更新: %s = %s (总大小: %d 字节)\n", s.progressInfo.FileList[i].Name, formattedSize, size)
+			// 下载完成时，设置已下载大小等于总大小
+			s.progressInfo.FileList[i].DownloadedSize = size
+			s.debugPrintf("文件大小已更新: %s = %s (总大小: %d 字节, 已下载: %d 字节)\n",
+				s.progressInfo.FileList[i].Name, formattedSize, size, size)
 			break
 		}
 	}

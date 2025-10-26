@@ -66,6 +66,10 @@ export function OpenDirectory(arg1) {
   return window['go']['main']['App']['OpenDirectory'](arg1);
 }
 
+export function OpenUrl(arg1) {
+  return window['go']['main']['App']['OpenUrl'](arg1);
+}
+
 export function ProjectDelete(arg1, arg2, arg3, arg4) {
   return window['go']['main']['App']['ProjectDelete'](arg1, arg2, arg3, arg4);
 }

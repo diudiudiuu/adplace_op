@@ -1949,6 +1949,53 @@ func (a *App) StopCapture() string {
 	return string(result)
 }
 
+// OpenUrl 在默认浏览器中打开URL
+func (a *App) OpenUrl(urlStr string) string {
+	log.Printf("OpenUrl called with URL: %s", urlStr)
+
+	// 验证URL格式
+	parsedURL, err := url.Parse(urlStr)
+	if err != nil {
+		response := ApiResponse{Code: 400, Msg: fmt.Sprintf("无效的URL格式: %v", err)}
+		result, _ := json.Marshal(response)
+		return string(result)
+	}
+
+	// 确保URL有协议
+	if parsedURL.Scheme == "" {
+		urlStr = "https://" + urlStr
+	}
+
+	// 根据操作系统选择打开命令
+	var cmd *exec.Cmd
+	switch runtime.GOOS {
+	case "windows":
+		cmd = exec.Command("rundll32", "url.dll,FileProtocolHandler", urlStr)
+	case "darwin": // macOS
+		cmd = exec.Command("open", urlStr)
+	case "linux":
+		cmd = exec.Command("xdg-open", urlStr)
+	default:
+		response := ApiResponse{Code: 500, Msg: fmt.Sprintf("不支持的操作系统: %s", runtime.GOOS)}
+		result, _ := json.Marshal(response)
+		return string(result)
+	}
+
+	// 执行命令
+	err = cmd.Start()
+	if err != nil {
+		log.Printf("Failed to open URL: %v", err)
+		response := ApiResponse{Code: 500, Msg: fmt.Sprintf("打开URL失败: %v", err)}
+		result, _ := json.Marshal(response)
+		return string(result)
+	}
+
+	log.Printf("URL opened successfully: %s", urlStr)
+	response := ApiResponse{Code: 200, Msg: "链接已在默认浏览器中打开"}
+	result, _ := json.Marshal(response)
+	return string(result)
+}
+
 // OpenDirectory 打开指定目录
 func (a *App) OpenDirectory(directoryPath string) string {
 	log.Printf("OpenDirectory called with path: %s", directoryPath)

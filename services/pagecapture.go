@@ -43,6 +43,7 @@ type PageCaptureService struct {
 	progressInfo     ProgressInfo
 	progressMutex    sync.RWMutex
 	stopRequested    bool               // 停止请求标志
+	currentOptions   CaptureOptions     // 当前的抓取选项
 	stopMutex        sync.RWMutex       // 保护停止标志的互斥锁
 	cancelFunc       context.CancelFunc // 用于取消操作的函数
 	ctx              context.Context    // 上下文，用于协程间通信
@@ -415,6 +416,7 @@ type CaptureOptions struct {
 	RemoveAds           bool   `json:"removeAds"`
 	RemoveTagManager    bool   `json:"removeTagManager"`
 	RemoveMaliciousTags bool   `json:"removeMaliciousTags"`
+	CorrectFileNames    bool   `json:"correctFileNames"`
 	Timeout             int    `json:"timeout"`
 	CreateZip           bool   `json:"createZip"`
 	MaxFiles            int    `json:"maxFiles"`
@@ -490,6 +492,9 @@ func (s *PageCaptureService) CapturePage(targetURL string, options CaptureOption
 		s.maxFiles = 200
 	}
 
+	// 保存当前选项
+	s.currentOptions = options
+
 	// 临时启用调试模式来诊断问题
 	s.debug = true
 
@@ -539,21 +544,30 @@ func (s *PageCaptureService) CapturePage(targetURL string, options CaptureOption
 	s.debugPrintf("HTML处理完成\n")
 
 	// 保存文件
+	s.debugPrintf("=== 开始保存所有文件 ===\n")
+	s.updateProgress("saving", "正在保存文件...", 85)
 	err = s.saveAllFiles(modifiedHTML)
 	if err != nil {
+		s.debugPrintf("保存文件失败: %v\n", err)
 		return nil, fmt.Errorf("保存文件失败: %v", err)
 	}
+	s.debugPrintf("所有文件保存完成\n")
 
 	// 更新进度：保存文件
 	s.updateProgress("saving", "保存文件中...", 90)
 
 	// 创建ZIP
+	s.debugPrintf("=== 开始创建ZIP文件 ===\n")
+	s.updateProgress("saving", "正在创建ZIP文件...", 90)
 	zipPath, zipSize, err := s.createZipFile()
 	if err != nil {
+		s.debugPrintf("创建ZIP失败: %v\n", err)
 		return nil, fmt.Errorf("创建ZIP失败: %v", err)
 	}
+	s.debugPrintf("ZIP文件创建完成: %s (大小: %.2f MB)\n", zipPath, float64(zipSize)/(1024*1024))
 
 	// 更新进度：完成
+	s.debugPrintf("=== 备份流程完成 ===\n")
 	s.updateProgress("complete", "备份完成", 100)
 
 	// 构建详细的文件信息
@@ -1921,6 +1935,18 @@ func (s *PageCaptureService) downloadResourceSync(resourceURL, resourceType stri
 
 	// 生成本地路径
 	localPath := s.generateLocalPath(resourceURL, resourceType)
+	
+	// 修正文件扩展名（如果启用了该选项）
+	if s.currentOptions.CorrectFileNames {
+		contentType := resp.Header.Get("Content-Type")
+		correctedLocalPath := s.correctFileExtension(localPath, resourceType, content, contentType)
+		if correctedLocalPath != localPath {
+			s.debugPrintf("文件路径已修正: %s -> %s\n", localPath, correctedLocalPath)
+			localPath = correctedLocalPath
+		}
+	} else {
+		s.debugPrintf("文件名修正功能已禁用，保持原始路径: %s\n", localPath)
+	}
 
 	// 获取写锁来存储结果（只锁定存储操作）
 	s.mutex.Lock()
@@ -2028,6 +2054,11 @@ func (s *PageCaptureService) generateLocalPath(resourceURL, resourceType string)
 		filename = hash + s.getExtensionByType(resourceType)
 	}
 
+	// 预处理文件名：移除查询参数和错误后缀（如果启用了文件名修正）
+	if s.currentOptions.CorrectFileNames {
+		filename = s.removeIncorrectExtensions(filename, resourceType)
+	}
+	
 	// 对于视频文件，尝试保持原始扩展名
 	if resourceType == "videos" {
 		originalExt := strings.ToLower(path.Ext(filename))
@@ -2042,9 +2073,10 @@ func (s *PageCaptureService) generateLocalPath(resourceURL, resourceType string)
 			}
 		}
 	} else {
-		// 非视频文件，确保有扩展名
-		if !strings.Contains(filename, ".") {
-			filename += s.getExtensionByType(resourceType)
+		// 非视频文件，确保有正确的扩展名
+		correctExt := s.getExtensionByType(resourceType)
+		if !strings.HasSuffix(strings.ToLower(filename), correctExt) {
+			filename += correctExt
 		}
 	}
 
@@ -2067,6 +2099,363 @@ func (s *PageCaptureService) getExtensionByType(resourceType string) string {
 	default:
 		return ".txt"
 	}
+}
+
+// correctFileExtension 根据资源类型和内容修正文件扩展名
+func (s *PageCaptureService) correctFileExtension(originalPath string, resourceType string, content []byte, contentType string) string {
+	s.debugPrintf("修正文件扩展名: %s (类型: %s, Content-Type: %s)\n", originalPath, resourceType, contentType)
+	
+	// 获取原始文件名（不含路径）
+	fileName := path.Base(originalPath)
+	dir := path.Dir(originalPath)
+	
+	// 移除查询参数和锚点
+	if idx := strings.Index(fileName, "?"); idx != -1 {
+		fileName = fileName[:idx]
+	}
+	if idx := strings.Index(fileName, "#"); idx != -1 {
+		fileName = fileName[:idx]
+	}
+	
+	// 根据资源类型和内容特征确定正确的扩展名
+	correctExt := s.detectCorrectExtension(resourceType, content, contentType, fileName)
+	
+	// 如果文件名已经有正确的扩展名，直接返回
+	if strings.HasSuffix(strings.ToLower(fileName), correctExt) {
+		correctedPath := path.Join(dir, fileName)
+		s.debugPrintf("文件扩展名已正确: %s\n", correctedPath)
+		return correctedPath
+	}
+	
+	// 移除错误的扩展名并添加正确的扩展名
+	nameWithoutExt := s.removeIncorrectExtensions(fileName, resourceType)
+	correctedFileName := nameWithoutExt + correctExt
+	correctedPath := path.Join(dir, correctedFileName)
+	
+	s.debugPrintf("文件扩展名已修正: %s -> %s\n", originalPath, correctedPath)
+	return correctedPath
+}
+
+// detectCorrectExtension 检测正确的文件扩展名
+func (s *PageCaptureService) detectCorrectExtension(resourceType string, content []byte, contentType string, fileName string) string {
+	s.debugPrintf("检测文件扩展名: 类型=%s, Content-Type=%s, 文件名=%s\n", resourceType, contentType, fileName)
+	
+	// 首先根据Content-Type判断
+	if contentType != "" {
+		contentTypeLower := strings.ToLower(contentType)
+		switch {
+		case strings.Contains(contentTypeLower, "text/css"):
+			s.debugPrintf("根据Content-Type检测为CSS文件\n")
+			return ".css"
+		case strings.Contains(contentTypeLower, "text/javascript") || 
+			 strings.Contains(contentTypeLower, "application/javascript") ||
+			 strings.Contains(contentTypeLower, "application/x-javascript"):
+			s.debugPrintf("根据Content-Type检测为JS文件\n")
+			return ".js"
+		case strings.Contains(contentTypeLower, "image/jpeg"):
+			return ".jpg"
+		case strings.Contains(contentTypeLower, "image/png"):
+			return ".png"
+		case strings.Contains(contentTypeLower, "image/gif"):
+			return ".gif"
+		case strings.Contains(contentTypeLower, "image/webp"):
+			return ".webp"
+		case strings.Contains(contentTypeLower, "image/svg"):
+			return ".svg"
+		case strings.Contains(contentTypeLower, "font/woff2"):
+			return ".woff2"
+		case strings.Contains(contentTypeLower, "font/woff"):
+			return ".woff"
+		case strings.Contains(contentTypeLower, "font/ttf") || strings.Contains(contentTypeLower, "application/x-font-ttf"):
+			return ".ttf"
+		case strings.Contains(contentTypeLower, "video/mp4"):
+			return ".mp4"
+		case strings.Contains(contentTypeLower, "video/webm"):
+			return ".webm"
+		}
+	}
+	
+	// 如果Content-Type不可靠，根据内容特征判断
+	if len(content) > 0 {
+		// 检查更多内容以提高准确性
+		checkLength := min(len(content), 2000)
+		contentStr := string(content[:checkLength])
+		contentLower := strings.ToLower(contentStr)
+		
+		s.debugPrintf("分析文件内容特征 (前%d字节)\n", checkLength)
+		
+		// 优先进行跨类型检测，因为resourceType可能不准确
+		
+		// CSS文件特征检测
+		cssIndicators := []string{
+			"{", "}", "color:", "background:", "font-", "margin:", "padding:",
+			"@import", "@media", "@keyframes", "display:", "position:",
+			"width:", "height:", "border:", "text-", "line-height:",
+		}
+		cssScore := 0
+		for _, indicator := range cssIndicators {
+			if strings.Contains(contentLower, indicator) {
+				cssScore++
+			}
+		}
+		if cssScore >= 3 {
+			s.debugPrintf("内容特征检测为CSS文件 (得分: %d)\n", cssScore)
+			return ".css"
+		}
+		
+		// JavaScript文件特征检测
+		jsIndicators := []string{
+			"function", "var ", "let ", "const ", "return", "if(", "else",
+			"document.", "window.", "console.", "alert(", "typeof",
+			"null", "undefined", "true", "false", "this.", "prototype",
+			"addEventListener", "getElementById", "querySelector",
+		}
+		jsScore := 0
+		for _, indicator := range jsIndicators {
+			if strings.Contains(contentLower, indicator) {
+				jsScore++
+			}
+		}
+		if jsScore >= 3 {
+			s.debugPrintf("内容特征检测为JS文件 (得分: %d)\n", jsScore)
+			return ".js"
+		}
+		
+		// 图片文件头检测
+		if len(content) >= 4 {
+			// JPEG文件头
+			if content[0] == 0xFF && content[1] == 0xD8 {
+				s.debugPrintf("文件头检测为JPEG图片\n")
+				return ".jpg"
+			}
+			// PNG文件头
+			if content[0] == 0x89 && content[1] == 0x50 && content[2] == 0x4E && content[3] == 0x47 {
+				s.debugPrintf("文件头检测为PNG图片\n")
+				return ".png"
+			}
+			// GIF文件头
+			if len(content) >= 3 && string(content[:3]) == "GIF" {
+				s.debugPrintf("文件头检测为GIF图片\n")
+				return ".gif"
+			}
+			// WebP文件头
+			if len(content) >= 12 && string(content[8:12]) == "WEBP" {
+				s.debugPrintf("文件头检测为WebP图片\n")
+				return ".webp"
+			}
+		}
+		
+		// SVG文件特征
+		if strings.Contains(contentLower, "<svg") || strings.Contains(contentLower, "xmlns=\"http://www.w3.org/2000/svg\"") {
+			s.debugPrintf("内容特征检测为SVG图片\n")
+			return ".svg"
+		}
+		
+		// HTML文件特征
+		if strings.Contains(contentLower, "<html") || strings.Contains(contentLower, "<!doctype") {
+			s.debugPrintf("内容特征检测为HTML文件\n")
+			return ".html"
+		}
+		
+		// 根据原始resourceType进行备用检测
+		switch resourceType {
+		case "css":
+			if cssScore > 0 {
+				s.debugPrintf("备用CSS检测 (得分: %d)\n", cssScore)
+				return ".css"
+			}
+		case "js":
+			if jsScore > 0 {
+				s.debugPrintf("备用JS检测 (得分: %d)\n", jsScore)
+				return ".js"
+			}
+		}
+	}
+	
+	// 最后根据原始文件名中的扩展名判断（更智能的检测）
+	lowerFileName := strings.ToLower(fileName)
+	
+	// 按优先级检测文件名中的扩展名
+	extensionMap := map[string]string{
+		".css":   ".css",
+		".js":    ".js",
+		".jpeg":  ".jpg",
+		".jpg":   ".jpg",
+		".png":   ".png",
+		".gif":   ".gif",
+		".webp":  ".webp",
+		".svg":   ".svg",
+		".woff2": ".woff2",
+		".woff":  ".woff",
+		".ttf":   ".ttf",
+		".otf":   ".otf",
+		".eot":   ".eot",
+		".mp4":   ".mp4",
+		".webm":  ".webm",
+		".avi":   ".avi",
+		".mov":   ".mov",
+	}
+	
+	for ext, correctExt := range extensionMap {
+		if strings.Contains(lowerFileName, ext) {
+			s.debugPrintf("文件名中检测到扩展名: %s -> %s\n", ext, correctExt)
+			return correctExt
+		}
+	}
+	
+	// 特殊处理：根据文件名模式推断
+	if strings.Contains(lowerFileName, "jquery") || strings.Contains(lowerFileName, "bootstrap") || 
+	   strings.Contains(lowerFileName, "angular") || strings.Contains(lowerFileName, "react") ||
+	   strings.Contains(lowerFileName, "vue") || strings.Contains(lowerFileName, "lodash") {
+		s.debugPrintf("根据知名库名推断为JS文件\n")
+		return ".js"
+	}
+	
+	if strings.Contains(lowerFileName, "style") || strings.Contains(lowerFileName, "theme") ||
+	   strings.Contains(lowerFileName, "bootstrap") && resourceType == "css" {
+		s.debugPrintf("根据样式文件名推断为CSS文件\n")
+		return ".css"
+	}
+	
+	// 默认根据资源类型返回
+	defaultExt := s.getExtensionByType(resourceType)
+	s.debugPrintf("使用默认扩展名: %s\n", defaultExt)
+	return defaultExt
+}
+
+// removeIncorrectExtensions 移除错误的扩展名
+func (s *PageCaptureService) removeIncorrectExtensions(fileName string, resourceType string) string {
+	s.debugPrintf("清理文件名: '%s' (类型: %s)\n", fileName, resourceType)
+	
+	result := fileName
+	
+	// 移除查询参数和锚点
+	if idx := strings.Index(result, "?"); idx != -1 {
+		result = result[:idx]
+	}
+	if idx := strings.Index(result, "#"); idx != -1 {
+		result = result[:idx]
+	}
+	
+	// 移除常见的错误后缀（包括中文）
+	incorrectSuffixes := []string{
+		// 英文后缀
+		".download", ".tmp", ".temp", ".backup", ".bak", ".old", ".new",
+		".gz", ".zip", ".tar", ".rar", ".7z", ".bz2",
+		".map", ".dev", ".prod", ".test", ".debug", ".release",
+		".cache", ".lock", ".log", ".out", ".err",
+		// 中文后缀
+		".下载", ".临时", ".备份", ".缓存", ".测试",
+		"下载", "临时", "备份", "缓存", "测试", // 没有点的版本
+		// 其他常见后缀
+		".part", ".crdownload", ".downloading",
+		".1", ".2", ".3", ".copy", ".orig",
+	}
+	
+	// 多次清理，直到没有更多后缀可以移除
+	changed := true
+	for changed {
+		changed = false
+		oldResult := result
+		
+		for _, suffix := range incorrectSuffixes {
+			if strings.HasSuffix(result, suffix) {
+				result = result[:len(result)-len(suffix)]
+				changed = true
+				s.debugPrintf("移除后缀 '%s': %s -> %s\n", suffix, oldResult, result)
+				break
+			}
+		}
+		
+		// 移除末尾的点和空格
+		newResult := strings.TrimRight(result, ". ")
+		if newResult != result {
+			result = newResult
+			changed = true
+		}
+	}
+	
+	// 特殊处理：如果文件名包含版本号或哈希，保留主要部分
+	result = s.extractMainFileName(result, resourceType)
+	
+	// 如果结果为空或只有扩展名，生成一个默认名称
+	if result == "" || strings.HasPrefix(result, ".") || len(result) < 2 {
+		hash := fmt.Sprintf("%x", md5.Sum([]byte(fileName)))[:8]
+		result = resourceType + "_" + hash
+		s.debugPrintf("生成默认文件名: %s\n", result)
+	}
+	
+	s.debugPrintf("文件名清理完成: '%s' -> '%s'\n", fileName, result)
+	return result
+}
+
+// extractMainFileName 提取主要文件名部分
+func (s *PageCaptureService) extractMainFileName(fileName string, resourceType string) string {
+	if fileName == "" {
+		return ""
+	}
+	
+	// 对于包含版本号的文件，尝试提取主要名称
+	// 例如: jquery-3.5.1.min -> jquery
+	// 例如: bootstrap.bundle.min -> bootstrap
+	
+	parts := strings.Split(fileName, ".")
+	if len(parts) > 1 {
+		// 移除常见的修饰词
+		mainParts := []string{}
+		for _, part := range parts {
+			lowerPart := strings.ToLower(part)
+			// 跳过版本号、min、bundle等
+			if !s.isVersionOrModifier(lowerPart) {
+				mainParts = append(mainParts, part)
+			}
+		}
+		
+		if len(mainParts) > 0 {
+			result := strings.Join(mainParts, ".")
+			s.debugPrintf("提取主文件名: %s -> %s\n", fileName, result)
+			return result
+		}
+	}
+	
+	// 对于包含连字符的文件名，取第一部分
+	if strings.Contains(fileName, "-") {
+		parts := strings.Split(fileName, "-")
+		if len(parts) > 0 && len(parts[0]) > 2 {
+			s.debugPrintf("提取连字符前的名称: %s -> %s\n", fileName, parts[0])
+			return parts[0]
+		}
+	}
+	
+	return fileName
+}
+
+// isVersionOrModifier 检查是否是版本号或修饰词
+func (s *PageCaptureService) isVersionOrModifier(part string) bool {
+	// 版本号模式 (数字.数字.数字)
+	if matched, _ := regexp.MatchString(`^\d+(\.\d+)*$`, part); matched {
+		return true
+	}
+	
+	// 常见修饰词
+	modifiers := []string{
+		"min", "minified", "compressed",
+		"bundle", "bundled",
+		"dev", "development", "debug",
+		"prod", "production", "release",
+		"latest", "stable", "beta", "alpha",
+		"full", "lite", "slim",
+		"es5", "es6", "es2015", "es2017", "es2018",
+		"umd", "cjs", "esm", "amd",
+	}
+	
+	for _, modifier := range modifiers {
+		if part == modifier {
+			return true
+		}
+	}
+	
+	return false
 }
 
 // isValidVideoExtension 检查是否是有效的视频扩展名
@@ -2228,7 +2617,11 @@ func (s *PageCaptureService) saveAllFiles(htmlContent string) error {
 	// 保存资源文件
 	s.debugPrintf("开始保存 %d 个资源文件\n", len(s.resources))
 	savedCount := 0
+	totalResources := len(s.resources)
+	
 	for url, resource := range s.resources {
+		savedCount++
+		s.debugPrintf("保存资源文件 %d/%d: %s -> %s\n", savedCount, totalResources, url, resource.LocalPath)
 		fullPath := filepath.Join(s.tempDir, resource.LocalPath)
 		s.debugPrintf("保存资源: %s -> %s (大小: %d 字节)\n", url, fullPath, len(resource.Content))
 
@@ -2251,37 +2644,16 @@ func (s *PageCaptureService) saveAllFiles(htmlContent string) error {
 		if info, err := os.Stat(fullPath); err == nil {
 			s.debugPrintf("保存资源成功: %s (大小: %d 字节)\n", fullPath, info.Size())
 
-			// 对视频文件进行额外的完整性检查
+			// 对视频文件进行简化的完整性检查（避免读取整个大文件）
 			if resource.Type == "videos" {
-				// 读取保存的文件并与原始内容比较
-				savedContent, readErr := os.ReadFile(fullPath)
-				if readErr != nil {
-					s.debugPrintf("警告: 无法读取已保存的视频文件进行验证: %v\n", readErr)
-				} else if len(savedContent) != len(resource.Content) {
-					s.debugPrintf("错误: 保存的视频文件大小不匹配! 原始: %d, 保存: %d\n",
-						len(resource.Content), len(savedContent))
+				// 只检查文件大小，不读取内容
+				if info.Size() != int64(len(resource.Content)) {
+					s.debugPrintf("警告: 保存的视频文件大小不匹配! 原始: %d, 保存: %d\n",
+						len(resource.Content), info.Size())
 				} else {
-					// 比较文件头
-					if len(savedContent) >= 16 && len(resource.Content) >= 16 {
-						originalHeader := resource.Content[:16]
-						savedHeader := savedContent[:16]
-						headerMatch := true
-						for i := 0; i < 16; i++ {
-							if originalHeader[i] != savedHeader[i] {
-								headerMatch = false
-								break
-							}
-						}
-						if headerMatch {
-							s.debugPrintf("视频文件保存验证通过: %s\n", fullPath)
-						} else {
-							s.debugPrintf("警告: 视频文件头不匹配，可能已损坏: %s\n", fullPath)
-						}
-					}
+					s.debugPrintf("视频文件大小验证通过: %d 字节\n", info.Size())
 				}
 			}
-
-			savedCount++
 		} else {
 			s.debugPrintf("警告: 无法验证资源文件: %s - %v\n", fullPath, err)
 		}

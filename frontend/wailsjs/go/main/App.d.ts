@@ -33,6 +33,8 @@ export function List(arg1:string,arg2:string):Promise<string>;
 
 export function OpenDirectory(arg1:string):Promise<string>;
 
+export function OpenUrl(arg1:string):Promise<string>;
+
 export function ProjectDelete(arg1:string,arg2:string,arg3:string,arg4:string):Promise<string>;
 
 export function ProjectForm(arg1:string,arg2:string,arg3:string,arg4:string):Promise<string>;

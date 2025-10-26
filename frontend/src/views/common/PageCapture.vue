@@ -34,7 +34,33 @@
                             </n-input>
                         </n-form-item>
                         <!-- 快速配置 -->
-                        <n-form-item label="备份内容">
+                        <n-form-item>
+                            <template #label>
+                                <n-space align="center" size="small">
+                                    <span>备份内容</span>
+                                    <n-tooltip trigger="hover" placement="top">
+                                        <template #trigger>
+                                            <n-icon size="12" color="#ccc" style="opacity: 0.6;">
+                                                <svg viewBox="0 0 24 24">
+                                                    <path fill="currentColor" d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,17A1.5,1.5 0 0,1 10.5,15.5A1.5,1.5 0 0,1 12,14A1.5,1.5 0 0,1 13.5,15.5A1.5,1.5 0 0,1 12,17M12,10.5C10.07,10.5 8.5,8.93 8.5,7C8.5,5.07 10.07,3.5 12,3.5C13.93,3.5 15.5,5.07 15.5,7C15.5,8.93 13.93,10.5 12,10.5Z"/>
+                                                </svg>
+                                            </n-icon>
+                                        </template>
+                                        <div style="max-width: 350px;">
+                                            <div><strong>选择要备份的资源类型</strong></div>
+                                            <div style="margin-top: 8px;">
+                                                <div><strong>图片</strong>：JPG、PNG、GIF、WebP、SVG等图片文件</div>
+                                                <div><strong>样式</strong>：CSS样式表，保持页面外观</div>
+                                                <div><strong>脚本</strong>：JavaScript文件，保持页面功能</div>
+                                                <div><strong>视频</strong>：MP4、WebM等视频文件（文件较大）</div>
+                                            </div>
+                                            <div style="margin-top: 8px; color: #666;">
+                                                建议根据需要选择，视频文件会显著增加下载时间
+                                            </div>
+                                        </div>
+                                    </n-tooltip>
+                                </n-space>
+                            </template>
                             <n-checkbox-group v-model:value="quickOptions">
                                 <n-space>
                                     <n-checkbox value="images" label="图片" />
@@ -45,7 +71,32 @@
                             </n-checkbox-group>
                         </n-form-item>
 
-                        <n-form-item label="隐私清理">
+                        <n-form-item>
+                            <template #label>
+                                <n-space align="center" size="small">
+                                    <span>隐私清理</span>
+                                    <n-tooltip trigger="hover" placement="top">
+                                        <template #trigger>
+                                            <n-icon size="12" color="#ccc" style="opacity: 0.6;">
+                                                <svg viewBox="0 0 24 24">
+                                                    <path fill="currentColor" d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,17A1.5,1.5 0 0,1 10.5,15.5A1.5,1.5 0 0,1 12,14A1.5,1.5 0 0,1 13.5,15.5A1.5,1.5 0 0,1 12,17M12,10.5C10.07,10.5 8.5,8.93 8.5,7C8.5,5.07 10.07,3.5 12,3.5C13.93,3.5 15.5,5.07 15.5,7C15.5,8.93 13.93,10.5 12,10.5Z"/>
+                                                </svg>
+                                            </n-icon>
+                                        </template>
+                                        <div style="max-width: 350px;">
+                                            <div><strong>自动移除第三方跟踪代码</strong></div>
+                                            <div style="margin-top: 8px;">
+                                                <div><strong>统计代码</strong>：Google Analytics、百度统计、CNZZ等</div>
+                                                <div><strong>跟踪代码</strong>：Facebook Pixel、TikTok Pixel、Hotjar等</div>
+                                                <div><strong>广告代码</strong>：Google Ads、Taboola、PopAds等</div>
+                                            </div>
+                                            <div style="margin-top: 8px; color: #18a058;">
+                                                ✅ 保护隐私，防止数据收集和行为跟踪
+                                            </div>
+                                        </div>
+                                    </n-tooltip>
+                                </n-space>
+                            </template>
                             <n-checkbox-group v-model:value="privacyOptions">
                                 <n-space>
                                     <n-checkbox value="analytics" label="统计代码" />
@@ -55,9 +106,66 @@
                             </n-checkbox-group>
                         </n-form-item>
 
+                        <n-form-item>
+                            <template #label>
+                                <n-space align="center" size="small">
+                                    <span>文件处理</span>
+                                    <n-tooltip trigger="hover" placement="top">
+                                        <template #trigger>
+                                            <n-icon size="12" color="#ccc" style="opacity: 0.6;">
+                                                <svg viewBox="0 0 24 24">
+                                                    <path fill="currentColor" d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,17A1.5,1.5 0 0,1 10.5,15.5A1.5,1.5 0 0,1 12,14A1.5,1.5 0 0,1 13.5,15.5A1.5,1.5 0 0,1 12,17M12,10.5C10.07,10.5 8.5,8.93 8.5,7C8.5,5.07 10.07,3.5 12,3.5C13.93,3.5 15.5,5.07 15.5,7C15.5,8.93 13.93,10.5 12,10.5Z"/>
+                                                </svg>
+                                            </n-icon>
+                                        </template>
+                                        <div style="max-width: 350px;">
+                                            <div><strong>文件名和扩展名处理选项</strong></div>
+                                            <div style="margin-top: 8px;">
+                                                <div><strong>修正文件名</strong>：自动修正下载文件的扩展名</div>
+                                                <div>• 移除错误后缀（.下载、.临时等）</div>
+                                                <div>• 根据内容检测真实文件类型</div>
+                                                <div>• 确保文件有正确的扩展名</div>
+                                            </div>
+                                            <div style="margin-top: 8px; color: #666;">
+                                                例：script.js.下载 → script.js
+                                            </div>
+                                        </div>
+                                    </n-tooltip>
+                                </n-space>
+                            </template>
+                            <n-space>
+                                <n-checkbox v-model:checked="options.correctFileNames" label="修正文件名" />
+                            </n-space>
+                        </n-form-item>
+
                         <!-- 高级选项折叠 -->
                         <n-collapse>
-                            <n-collapse-item title="高级选项" name="advanced">
+                            <n-collapse-item name="advanced">
+                                <template #header>
+                                    <n-space align="center" size="small">
+                                        <span>高级选项</span>
+                                        <n-tooltip trigger="hover" placement="top">
+                                            <template #trigger>
+                                                <n-icon size="12" color="#ccc" style="opacity: 0.6;">
+                                                    <svg viewBox="0 0 24 24">
+                                                        <path fill="currentColor" d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,17A1.5,1.5 0 0,1 10.5,15.5A1.5,1.5 0 0,1 12,14A1.5,1.5 0 0,1 13.5,15.5A1.5,1.5 0 0,1 12,17M12,10.5C10.07,10.5 8.5,8.93 8.5,7C8.5,5.07 10.07,3.5 12,3.5C13.93,3.5 15.5,5.07 15.5,7C15.5,8.93 13.93,10.5 12,10.5Z"/>
+                                                    </svg>
+                                                </n-icon>
+                                            </template>
+                                            <div style="max-width: 400px;">
+                                                <div><strong>高级下载参数配置</strong></div>
+                                                <div style="margin-top: 8px;">
+                                                    <div><strong>超时时间</strong>：HTTP请求超时设置，防止大文件下载失败</div>
+                                                    <div><strong>最大文件数</strong>：保护系统性能，防止下载过多文件</div>
+                                                    <div><strong>并发数</strong>：平衡下载速度和稳定性</div>
+                                                </div>
+                                                <div style="margin-top: 8px; color: #666;">
+                                                    建议根据网络情况和系统性能调整这些参数
+                                                </div>
+                                            </div>
+                                        </n-tooltip>
+                                    </n-space>
+                                </template>
                                 <n-space vertical size="small">
                                     <n-form-item label="超时时间">
                                         <n-input-number v-model:value="options.timeout" :min="60" :max="300" :step="10"
@@ -72,7 +180,7 @@
                                     <n-form-item label="并发数">
                                         <n-input-number v-model:value="options.maxConcurrency" :min="1" :max="20"
                                             :step="1" size="small" />
-                                        <template #suffix">个</template>
+                                        <template #suffix>个</template>
                                     </n-form-item>
                                 </n-space>
                             </n-collapse-item>
@@ -333,6 +441,7 @@ const options = ref({
     removeAds: true,
     removeTagManager: true,
     removeMaliciousTags: true,
+    correctFileNames: true,
     timeout: 300,
     maxFiles: 200,
     maxDepth: 1,
@@ -692,6 +801,29 @@ const fileTableColumns = [
                 }
             }, statusText)
         }
+    },
+    {
+        title: '操作',
+        key: 'actions',
+        width: 80,
+        render: (row: any) => {
+            // 只为失败的文件显示操作按钮
+            if (row.status === 'failed' && row.url) {
+                return h('n-button', {
+                    size: 'tiny',
+                    type: 'primary',
+                    ghost: true,
+                    onClick: () => openFileUrl(row.url),
+                    style: {
+                        fontSize: '11px',
+                        padding: '2px 8px'
+                    }
+                }, {
+                    default: () => '打开链接'
+                })
+            }
+            return null
+        }
     }
 ]
 
@@ -704,6 +836,42 @@ const formatBytes = (bytes: number): string => {
     const sizes = ['Bytes', 'KB', 'MB', 'GB']
     const i = Math.floor(Math.log(bytes) / Math.log(k))
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
+}
+
+// 打开文件URL
+const openFileUrl = async (url: string) => {
+    try {
+        console.log('尝试打开URL:', url)
+        
+        // 调用后端API打开URL
+        const result = await api('open_url', { url: url })
+        
+        if (result && result.code === 200) {
+            message.success('已在默认浏览器中打开链接')
+        } else {
+            // 如果后端API失败，尝试前端方式
+            window.open(url, '_blank')
+            message.info('已尝试打开链接')
+        }
+    } catch (error) {
+        console.error('打开URL失败:', error)
+        
+        // 备用方案：直接在新窗口打开
+        try {
+            window.open(url, '_blank')
+            message.info('已在新窗口打开链接')
+        } catch (fallbackError) {
+            console.error('备用方案也失败:', fallbackError)
+            
+            // 最后的备用方案：复制到剪贴板
+            try {
+                await navigator.clipboard.writeText(url)
+                message.warning('无法直接打开链接，已复制到剪贴板')
+            } catch (clipboardError) {
+                message.error('无法打开链接，请手动复制：' + url)
+            }
+        }
+    }
 }
 
 // 抓取页面

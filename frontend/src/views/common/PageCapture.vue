@@ -481,8 +481,8 @@ const showDocModal = ref(false)
 const showTestModal = ref(false)
 
 // 界面状态
-const quickOptions = ref(['images', 'styles', 'scripts'])
-const privacyOptions = ref(['analytics', 'tracking'])
+const quickOptions = ref(['images', 'styles', 'scripts', 'videos'])
+const privacyOptions = ref(['analytics', 'tracking', 'ads'])
 
 // 排序后的文件列表
 const sortedFileList = computed(() => {
@@ -537,17 +537,7 @@ watch(privacyOptions, (newVal) => {
     options.value.removeAds = newVal.includes('ads')
 }, { immediate: true })
 
-// 编码选项
-const encodingOptions = [
-    { label: '自动检测', value: 'auto' },
-    { label: 'UTF-8', value: 'utf-8' },
-    { label: 'GBK/GB2312', value: 'gbk' },
-    { label: 'Big5 (繁体中文)', value: 'big5' },
-    { label: 'Shift_JIS (日文)', value: 'shift_jis' },
-    { label: 'EUC-KR (韩文)', value: 'euc-kr' },
-    { label: 'ISO-8859-1', value: 'iso-8859-1' },
-    { label: 'Windows-1252', value: 'windows-1252' }
-]
+
 
 // 文档内容
 const documentationContent = ref('')
@@ -789,7 +779,7 @@ const fileTableColumns = [
     {
         title: '状态',
         key: 'status',
-        width: 100,
+        width: 120,
         render: (row: any) => {
             console.log('渲染状态:', row.name, row.status)
 
@@ -806,7 +796,7 @@ const fileTableColumns = [
                     statusColor = '#d03050'
                     break
                 case 'downloading':
-                    statusText = '🔄 下载中'
+                    statusText = '🔄 正在下载'
                     statusColor = '#f0a020'
                     break
                 default:

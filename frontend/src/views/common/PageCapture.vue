@@ -42,7 +42,8 @@
                                         <template #trigger>
                                             <n-icon size="12" color="#ccc" style="opacity: 0.6;">
                                                 <svg viewBox="0 0 24 24">
-                                                    <path fill="currentColor" d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,17A1.5,1.5 0 0,1 10.5,15.5A1.5,1.5 0 0,1 12,14A1.5,1.5 0 0,1 13.5,15.5A1.5,1.5 0 0,1 12,17M12,10.5C10.07,10.5 8.5,8.93 8.5,7C8.5,5.07 10.07,3.5 12,3.5C13.93,3.5 15.5,5.07 15.5,7C15.5,8.93 13.93,10.5 12,10.5Z"/>
+                                                    <path fill="currentColor"
+                                                        d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,17A1.5,1.5 0 0,1 10.5,15.5A1.5,1.5 0 0,1 12,14A1.5,1.5 0 0,1 13.5,15.5A1.5,1.5 0 0,1 12,17M12,10.5C10.07,10.5 8.5,8.93 8.5,7C8.5,5.07 10.07,3.5 12,3.5C13.93,3.5 15.5,5.07 15.5,7C15.5,8.93 13.93,10.5 12,10.5Z" />
                                                 </svg>
                                             </n-icon>
                                         </template>
@@ -79,7 +80,8 @@
                                         <template #trigger>
                                             <n-icon size="12" color="#ccc" style="opacity: 0.6;">
                                                 <svg viewBox="0 0 24 24">
-                                                    <path fill="currentColor" d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,17A1.5,1.5 0 0,1 10.5,15.5A1.5,1.5 0 0,1 12,14A1.5,1.5 0 0,1 13.5,15.5A1.5,1.5 0 0,1 12,17M12,10.5C10.07,10.5 8.5,8.93 8.5,7C8.5,5.07 10.07,3.5 12,3.5C13.93,3.5 15.5,5.07 15.5,7C15.5,8.93 13.93,10.5 12,10.5Z"/>
+                                                    <path fill="currentColor"
+                                                        d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,17A1.5,1.5 0 0,1 10.5,15.5A1.5,1.5 0 0,1 12,14A1.5,1.5 0 0,1 13.5,15.5A1.5,1.5 0 0,1 12,17M12,10.5C10.07,10.5 8.5,8.93 8.5,7C8.5,5.07 10.07,3.5 12,3.5C13.93,3.5 15.5,5.07 15.5,7C15.5,8.93 13.93,10.5 12,10.5Z" />
                                                 </svg>
                                             </n-icon>
                                         </template>
@@ -114,7 +116,8 @@
                                         <template #trigger>
                                             <n-icon size="12" color="#ccc" style="opacity: 0.6;">
                                                 <svg viewBox="0 0 24 24">
-                                                    <path fill="currentColor" d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,17A1.5,1.5 0 0,1 10.5,15.5A1.5,1.5 0 0,1 12,14A1.5,1.5 0 0,1 13.5,15.5A1.5,1.5 0 0,1 12,17M12,10.5C10.07,10.5 8.5,8.93 8.5,7C8.5,5.07 10.07,3.5 12,3.5C13.93,3.5 15.5,5.07 15.5,7C15.5,8.93 13.93,10.5 12,10.5Z"/>
+                                                    <path fill="currentColor"
+                                                        d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,17A1.5,1.5 0 0,1 10.5,15.5A1.5,1.5 0 0,1 12,14A1.5,1.5 0 0,1 13.5,15.5A1.5,1.5 0 0,1 12,17M12,10.5C10.07,10.5 8.5,8.93 8.5,7C8.5,5.07 10.07,3.5 12,3.5C13.93,3.5 15.5,5.07 15.5,7C15.5,8.93 13.93,10.5 12,10.5Z" />
                                                 </svg>
                                             </n-icon>
                                         </template>
@@ -148,7 +151,8 @@
                                             <template #trigger>
                                                 <n-icon size="12" color="#ccc" style="opacity: 0.6;">
                                                     <svg viewBox="0 0 24 24">
-                                                        <path fill="currentColor" d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,17A1.5,1.5 0 0,1 10.5,15.5A1.5,1.5 0 0,1 12,14A1.5,1.5 0 0,1 13.5,15.5A1.5,1.5 0 0,1 12,17M12,10.5C10.07,10.5 8.5,8.93 8.5,7C8.5,5.07 10.07,3.5 12,3.5C13.93,3.5 15.5,5.07 15.5,7C15.5,8.93 13.93,10.5 12,10.5Z"/>
+                                                        <path fill="currentColor"
+                                                            d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,17A1.5,1.5 0 0,1 10.5,15.5A1.5,1.5 0 0,1 12,14A1.5,1.5 0 0,1 13.5,15.5A1.5,1.5 0 0,1 12,17M12,10.5C10.07,10.5 8.5,8.93 8.5,7C8.5,5.07 10.07,3.5 12,3.5C13.93,3.5 15.5,5.07 15.5,7C15.5,8.93 13.93,10.5 12,10.5Z" />
                                                     </svg>
                                                 </n-icon>
                                             </template>
@@ -257,7 +261,7 @@
                                 <span class="progress-label">{{ getPhaseText(captureProgress.phase) }}</span>
                                 <span class="progress-count">{{ captureProgress.completedFiles }}/{{
                                     captureProgress.totalFiles
-                                }}</span>
+                                    }}</span>
                             </div>
                             <n-progress type="line"
                                 :percentage="Math.round((captureProgress.completedFiles / Math.max(captureProgress.totalFiles, 1)) * 100)"
@@ -323,7 +327,7 @@
                             <n-space>
                                 <n-tag type="success">成功: {{ getFileStats().completed }}</n-tag>
                                 <n-tag v-if="getFileStats().failed > 0" type="error">失败: {{ getFileStats().failed
-                                }}</n-tag>
+                                    }}</n-tag>
                                 <n-tag type="info">总计: {{ captureProgress.fileList.length }}</n-tag>
                             </n-space>
                         </div>
@@ -647,10 +651,35 @@ const fileTableColumns = [
                 displayName = `${start}...${end}`
             }
 
+            // 判断是否可以点击（有URL就可以点击）
+            const isClickable = !!row.url
+
             return h('div', {
                 class: 'file-name-cell',
                 title: fullPath, // 完整路径作为tooltip
-                style: { display: 'flex', alignItems: 'center' }
+                style: {
+                    display: 'flex',
+                    alignItems: 'center',
+                    cursor: isClickable ? 'pointer' : 'default',
+                    padding: '2px 4px',
+                    borderRadius: '4px',
+                    transition: 'all 0.2s ease'
+                },
+                onClick: isClickable ? () => window.open(row.url, '_blank') : undefined,
+                onMouseenter: isClickable ? (e) => {
+                    const target = e.target as HTMLElement
+                    if (target) {
+                        target.style.backgroundColor = '#f0f8ff'
+                        target.style.transform = 'scale(1.02)'
+                    }
+                } : undefined,
+                onMouseleave: isClickable ? (e) => {
+                    const target = e.target as HTMLElement
+                    if (target) {
+                        target.style.backgroundColor = 'transparent'
+                        target.style.transform = 'scale(1)'
+                    }
+                } : undefined
             }, [
                 h('n-icon', {
                     style: { marginRight: '6px', fontSize: '12px' }
@@ -661,7 +690,9 @@ const fileTableColumns = [
                     style: {
                         overflow: 'hidden',
                         textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap'
+                        whiteSpace: 'nowrap',
+                        color: isClickable ? '#1890ff' : 'inherit',
+                        textDecoration: isClickable ? 'underline' : 'none'
                     }
                 }, displayName)
             ])
@@ -801,29 +832,6 @@ const fileTableColumns = [
                 }
             }, statusText)
         }
-    },
-    {
-        title: '操作',
-        key: 'actions',
-        width: 80,
-        render: (row: any) => {
-            // 只为失败的文件显示操作按钮
-            if (row.status === 'failed' && row.url) {
-                return h('n-button', {
-                    size: 'tiny',
-                    type: 'primary',
-                    ghost: true,
-                    onClick: () => openFileUrl(row.url),
-                    style: {
-                        fontSize: '11px',
-                        padding: '2px 8px'
-                    }
-                }, {
-                    default: () => '打开链接'
-                })
-            }
-            return null
-        }
     }
 ]
 
@@ -842,10 +850,10 @@ const formatBytes = (bytes: number): string => {
 const openFileUrl = async (url: string) => {
     try {
         console.log('尝试打开URL:', url)
-        
+
         // 调用后端API打开URL
         const result = await api('open_url', { url: url })
-        
+
         if (result && result.code === 200) {
             message.success('已在默认浏览器中打开链接')
         } else {
@@ -855,14 +863,14 @@ const openFileUrl = async (url: string) => {
         }
     } catch (error) {
         console.error('打开URL失败:', error)
-        
+
         // 备用方案：直接在新窗口打开
         try {
             window.open(url, '_blank')
             message.info('已在新窗口打开链接')
         } catch (fallbackError) {
             console.error('备用方案也失败:', fallbackError)
-            
+
             // 最后的备用方案：复制到剪贴板
             try {
                 await navigator.clipboard.writeText(url)

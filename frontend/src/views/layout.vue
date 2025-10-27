@@ -38,6 +38,7 @@
                     <n-layout-content content-style="padding: 8px;" class="main-content"
                         :class="{ 'content-loading-parent': isContentLoading }">
                         <div class="content-wrapper" :class="{ 'content-loading': isContentLoading }">
+
                             <router-view v-slot="{ Component }" :key="$route.fullPath">
                                 <transition name="fade" mode="out-in">
                                     <keep-alive>
@@ -71,7 +72,7 @@ import { storeToRefs } from 'pinia'
 import { useSidebarStore } from '@/store/sidebar'
 import { useRoute, useRouter } from 'vue-router'
 import { getMenus, reloadMenus } from '@/components/menu'
-import { NIcon, useMessage, useDialog, NSpin } from 'naive-ui'
+import { NIcon, useMessage } from 'naive-ui'
 import { setGlobalInstances } from '@/api'
 import ColorfulIcons from '@/components/ColorfulIcons.vue'
 import loadingGif from '@/assets/img/loading.gif'
@@ -101,7 +102,8 @@ const preventScroll = (e: Event) => {
 // 阻止键盘滚动的事件处理函数
 const preventKeyboardScroll = (e: KeyboardEvent) => {
     // 阻止方向键、空格键、Page Up/Down 等滚动按键
-    if ([32, 33, 34, 35, 36, 37, 38, 39, 40].includes(e.keyCode)) {
+    const scrollKeys = ['Space', 'PageUp', 'PageDown', 'End', 'Home', 'ArrowLeft', 'ArrowUp', 'ArrowRight', 'ArrowDown']
+    if (scrollKeys.includes(e.code)) {
         e.preventDefault()
         e.stopPropagation()
     }
@@ -199,6 +201,8 @@ const globalLoading = {
 
 // 提供给子组件
 provide('globalLoading', globalLoading)
+
+
 
 const menuData = ref<any[]>([])
 const menuOptions = ref<any[]>([])
@@ -512,7 +516,6 @@ watch(boolroute, (newVal) => {
     -webkit-user-drag: none;
     -moz-user-drag: none;
     -o-user-drag: none;
-    user-drag: none;
     /* 防止图片被选中 */
     -webkit-user-select: none;
     -moz-user-select: none;

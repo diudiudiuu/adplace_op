@@ -1935,7 +1935,7 @@ func (s *PageCaptureService) downloadResourceSync(resourceURL, resourceType stri
 
 	// 生成本地路径
 	localPath := s.generateLocalPath(resourceURL, resourceType)
-	
+
 	// 修正文件扩展名（如果启用了该选项）
 	if s.currentOptions.CorrectFileNames {
 		contentType := resp.Header.Get("Content-Type")
@@ -2058,7 +2058,7 @@ func (s *PageCaptureService) generateLocalPath(resourceURL, resourceType string)
 	if s.currentOptions.CorrectFileNames {
 		filename = s.removeIncorrectExtensions(filename, resourceType)
 	}
-	
+
 	// 对于视频文件，尝试保持原始扩展名
 	if resourceType == "videos" {
 		originalExt := strings.ToLower(path.Ext(filename))
@@ -2104,11 +2104,11 @@ func (s *PageCaptureService) getExtensionByType(resourceType string) string {
 // correctFileExtension 根据资源类型和内容修正文件扩展名
 func (s *PageCaptureService) correctFileExtension(originalPath string, resourceType string, content []byte, contentType string) string {
 	s.debugPrintf("修正文件扩展名: %s (类型: %s, Content-Type: %s)\n", originalPath, resourceType, contentType)
-	
+
 	// 获取原始文件名（不含路径）
 	fileName := path.Base(originalPath)
 	dir := path.Dir(originalPath)
-	
+
 	// 移除查询参数和锚点
 	if idx := strings.Index(fileName, "?"); idx != -1 {
 		fileName = fileName[:idx]
@@ -2116,22 +2116,22 @@ func (s *PageCaptureService) correctFileExtension(originalPath string, resourceT
 	if idx := strings.Index(fileName, "#"); idx != -1 {
 		fileName = fileName[:idx]
 	}
-	
+
 	// 根据资源类型和内容特征确定正确的扩展名
 	correctExt := s.detectCorrectExtension(resourceType, content, contentType, fileName)
-	
+
 	// 如果文件名已经有正确的扩展名，直接返回
 	if strings.HasSuffix(strings.ToLower(fileName), correctExt) {
 		correctedPath := path.Join(dir, fileName)
 		s.debugPrintf("文件扩展名已正确: %s\n", correctedPath)
 		return correctedPath
 	}
-	
+
 	// 移除错误的扩展名并添加正确的扩展名
 	nameWithoutExt := s.removeIncorrectExtensions(fileName, resourceType)
 	correctedFileName := nameWithoutExt + correctExt
 	correctedPath := path.Join(dir, correctedFileName)
-	
+
 	s.debugPrintf("文件扩展名已修正: %s -> %s\n", originalPath, correctedPath)
 	return correctedPath
 }
@@ -2139,7 +2139,7 @@ func (s *PageCaptureService) correctFileExtension(originalPath string, resourceT
 // detectCorrectExtension 检测正确的文件扩展名
 func (s *PageCaptureService) detectCorrectExtension(resourceType string, content []byte, contentType string, fileName string) string {
 	s.debugPrintf("检测文件扩展名: 类型=%s, Content-Type=%s, 文件名=%s\n", resourceType, contentType, fileName)
-	
+
 	// 首先根据Content-Type判断
 	if contentType != "" {
 		contentTypeLower := strings.ToLower(contentType)
@@ -2147,9 +2147,9 @@ func (s *PageCaptureService) detectCorrectExtension(resourceType string, content
 		case strings.Contains(contentTypeLower, "text/css"):
 			s.debugPrintf("根据Content-Type检测为CSS文件\n")
 			return ".css"
-		case strings.Contains(contentTypeLower, "text/javascript") || 
-			 strings.Contains(contentTypeLower, "application/javascript") ||
-			 strings.Contains(contentTypeLower, "application/x-javascript"):
+		case strings.Contains(contentTypeLower, "text/javascript") ||
+			strings.Contains(contentTypeLower, "application/javascript") ||
+			strings.Contains(contentTypeLower, "application/x-javascript"):
 			s.debugPrintf("根据Content-Type检测为JS文件\n")
 			return ".js"
 		case strings.Contains(contentTypeLower, "image/jpeg"):
@@ -2174,18 +2174,18 @@ func (s *PageCaptureService) detectCorrectExtension(resourceType string, content
 			return ".webm"
 		}
 	}
-	
+
 	// 如果Content-Type不可靠，根据内容特征判断
 	if len(content) > 0 {
 		// 检查更多内容以提高准确性
 		checkLength := min(len(content), 2000)
 		contentStr := string(content[:checkLength])
 		contentLower := strings.ToLower(contentStr)
-		
+
 		s.debugPrintf("分析文件内容特征 (前%d字节)\n", checkLength)
-		
+
 		// 优先进行跨类型检测，因为resourceType可能不准确
-		
+
 		// CSS文件特征检测
 		cssIndicators := []string{
 			"{", "}", "color:", "background:", "font-", "margin:", "padding:",
@@ -2202,7 +2202,7 @@ func (s *PageCaptureService) detectCorrectExtension(resourceType string, content
 			s.debugPrintf("内容特征检测为CSS文件 (得分: %d)\n", cssScore)
 			return ".css"
 		}
-		
+
 		// JavaScript文件特征检测
 		jsIndicators := []string{
 			"function", "var ", "let ", "const ", "return", "if(", "else",
@@ -2220,7 +2220,7 @@ func (s *PageCaptureService) detectCorrectExtension(resourceType string, content
 			s.debugPrintf("内容特征检测为JS文件 (得分: %d)\n", jsScore)
 			return ".js"
 		}
-		
+
 		// 图片文件头检测
 		if len(content) >= 4 {
 			// JPEG文件头
@@ -2244,19 +2244,19 @@ func (s *PageCaptureService) detectCorrectExtension(resourceType string, content
 				return ".webp"
 			}
 		}
-		
+
 		// SVG文件特征
 		if strings.Contains(contentLower, "<svg") || strings.Contains(contentLower, "xmlns=\"http://www.w3.org/2000/svg\"") {
 			s.debugPrintf("内容特征检测为SVG图片\n")
 			return ".svg"
 		}
-		
+
 		// HTML文件特征
 		if strings.Contains(contentLower, "<html") || strings.Contains(contentLower, "<!doctype") {
 			s.debugPrintf("内容特征检测为HTML文件\n")
 			return ".html"
 		}
-		
+
 		// 根据原始resourceType进行备用检测
 		switch resourceType {
 		case "css":
@@ -2271,10 +2271,10 @@ func (s *PageCaptureService) detectCorrectExtension(resourceType string, content
 			}
 		}
 	}
-	
+
 	// 最后根据原始文件名中的扩展名判断（更智能的检测）
 	lowerFileName := strings.ToLower(fileName)
-	
+
 	// 按优先级检测文件名中的扩展名
 	extensionMap := map[string]string{
 		".css":   ".css",
@@ -2295,28 +2295,28 @@ func (s *PageCaptureService) detectCorrectExtension(resourceType string, content
 		".avi":   ".avi",
 		".mov":   ".mov",
 	}
-	
+
 	for ext, correctExt := range extensionMap {
 		if strings.Contains(lowerFileName, ext) {
 			s.debugPrintf("文件名中检测到扩展名: %s -> %s\n", ext, correctExt)
 			return correctExt
 		}
 	}
-	
+
 	// 特殊处理：根据文件名模式推断
-	if strings.Contains(lowerFileName, "jquery") || strings.Contains(lowerFileName, "bootstrap") || 
-	   strings.Contains(lowerFileName, "angular") || strings.Contains(lowerFileName, "react") ||
-	   strings.Contains(lowerFileName, "vue") || strings.Contains(lowerFileName, "lodash") {
+	if strings.Contains(lowerFileName, "jquery") || strings.Contains(lowerFileName, "bootstrap") ||
+		strings.Contains(lowerFileName, "angular") || strings.Contains(lowerFileName, "react") ||
+		strings.Contains(lowerFileName, "vue") || strings.Contains(lowerFileName, "lodash") {
 		s.debugPrintf("根据知名库名推断为JS文件\n")
 		return ".js"
 	}
-	
+
 	if strings.Contains(lowerFileName, "style") || strings.Contains(lowerFileName, "theme") ||
-	   strings.Contains(lowerFileName, "bootstrap") && resourceType == "css" {
+		strings.Contains(lowerFileName, "bootstrap") && resourceType == "css" {
 		s.debugPrintf("根据样式文件名推断为CSS文件\n")
 		return ".css"
 	}
-	
+
 	// 默认根据资源类型返回
 	defaultExt := s.getExtensionByType(resourceType)
 	s.debugPrintf("使用默认扩展名: %s\n", defaultExt)
@@ -2326,9 +2326,9 @@ func (s *PageCaptureService) detectCorrectExtension(resourceType string, content
 // removeIncorrectExtensions 移除错误的扩展名
 func (s *PageCaptureService) removeIncorrectExtensions(fileName string, resourceType string) string {
 	s.debugPrintf("清理文件名: '%s' (类型: %s)\n", fileName, resourceType)
-	
+
 	result := fileName
-	
+
 	// 移除查询参数和锚点
 	if idx := strings.Index(result, "?"); idx != -1 {
 		result = result[:idx]
@@ -2336,7 +2336,7 @@ func (s *PageCaptureService) removeIncorrectExtensions(fileName string, resource
 	if idx := strings.Index(result, "#"); idx != -1 {
 		result = result[:idx]
 	}
-	
+
 	// 移除常见的错误后缀（包括中文）
 	incorrectSuffixes := []string{
 		// 英文后缀
@@ -2351,13 +2351,13 @@ func (s *PageCaptureService) removeIncorrectExtensions(fileName string, resource
 		".part", ".crdownload", ".downloading",
 		".1", ".2", ".3", ".copy", ".orig",
 	}
-	
+
 	// 多次清理，直到没有更多后缀可以移除
 	changed := true
 	for changed {
 		changed = false
 		oldResult := result
-		
+
 		for _, suffix := range incorrectSuffixes {
 			if strings.HasSuffix(result, suffix) {
 				result = result[:len(result)-len(suffix)]
@@ -2366,7 +2366,7 @@ func (s *PageCaptureService) removeIncorrectExtensions(fileName string, resource
 				break
 			}
 		}
-		
+
 		// 移除末尾的点和空格
 		newResult := strings.TrimRight(result, ". ")
 		if newResult != result {
@@ -2374,17 +2374,17 @@ func (s *PageCaptureService) removeIncorrectExtensions(fileName string, resource
 			changed = true
 		}
 	}
-	
+
 	// 特殊处理：如果文件名包含版本号或哈希，保留主要部分
 	result = s.extractMainFileName(result, resourceType)
-	
+
 	// 如果结果为空或只有扩展名，生成一个默认名称
 	if result == "" || strings.HasPrefix(result, ".") || len(result) < 2 {
 		hash := fmt.Sprintf("%x", md5.Sum([]byte(fileName)))[:8]
 		result = resourceType + "_" + hash
 		s.debugPrintf("生成默认文件名: %s\n", result)
 	}
-	
+
 	s.debugPrintf("文件名清理完成: '%s' -> '%s'\n", fileName, result)
 	return result
 }
@@ -2394,11 +2394,11 @@ func (s *PageCaptureService) extractMainFileName(fileName string, resourceType s
 	if fileName == "" {
 		return ""
 	}
-	
+
 	// 对于包含版本号的文件，尝试提取主要名称
 	// 例如: jquery-3.5.1.min -> jquery
 	// 例如: bootstrap.bundle.min -> bootstrap
-	
+
 	parts := strings.Split(fileName, ".")
 	if len(parts) > 1 {
 		// 移除常见的修饰词
@@ -2410,14 +2410,14 @@ func (s *PageCaptureService) extractMainFileName(fileName string, resourceType s
 				mainParts = append(mainParts, part)
 			}
 		}
-		
+
 		if len(mainParts) > 0 {
 			result := strings.Join(mainParts, ".")
 			s.debugPrintf("提取主文件名: %s -> %s\n", fileName, result)
 			return result
 		}
 	}
-	
+
 	// 对于包含连字符的文件名，取第一部分
 	if strings.Contains(fileName, "-") {
 		parts := strings.Split(fileName, "-")
@@ -2426,7 +2426,7 @@ func (s *PageCaptureService) extractMainFileName(fileName string, resourceType s
 			return parts[0]
 		}
 	}
-	
+
 	return fileName
 }
 
@@ -2436,7 +2436,7 @@ func (s *PageCaptureService) isVersionOrModifier(part string) bool {
 	if matched, _ := regexp.MatchString(`^\d+(\.\d+)*$`, part); matched {
 		return true
 	}
-	
+
 	// 常见修饰词
 	modifiers := []string{
 		"min", "minified", "compressed",
@@ -2448,13 +2448,13 @@ func (s *PageCaptureService) isVersionOrModifier(part string) bool {
 		"es5", "es6", "es2015", "es2017", "es2018",
 		"umd", "cjs", "esm", "amd",
 	}
-	
+
 	for _, modifier := range modifiers {
 		if part == modifier {
 			return true
 		}
 	}
-	
+
 	return false
 }
 
@@ -2618,7 +2618,7 @@ func (s *PageCaptureService) saveAllFiles(htmlContent string) error {
 	s.debugPrintf("开始保存 %d 个资源文件\n", len(s.resources))
 	savedCount := 0
 	totalResources := len(s.resources)
-	
+
 	for url, resource := range s.resources {
 		savedCount++
 		s.debugPrintf("保存资源文件 %d/%d: %s -> %s\n", savedCount, totalResources, url, resource.LocalPath)

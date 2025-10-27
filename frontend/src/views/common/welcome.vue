@@ -49,6 +49,8 @@
                     <p>获取最新的服务器和项目信息</p>
                 </div>
 
+
+
                 <div class="feature-card clickable logout-card" @click="handleLogout">
                     <div class="feature-icon logout-icon">
                         <n-icon size="28">
@@ -84,7 +86,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, inject } from 'vue'
 import { useRouter } from 'vue-router'
 import { useMessage, useDialog } from 'naive-ui'
 import { handleUnauthorized } from '@/api'
@@ -92,9 +94,6 @@ import dataManager from '@/utils/dataManager'
 import { reloadMenus } from '@/components/menu'
 import {
     ServerOutline,
-    FolderOutline,
-    TerminalOutline,
-    HeartOutline,
     SunnyOutline,
     BulbOutline,
     LogOutOutline,
@@ -104,6 +103,9 @@ import {
 const router = useRouter()
 const message = useMessage()
 const dialog = useDialog()
+
+// 获取全局loading实例
+const globalLoading = inject('globalLoading') as any
 
 const isRefreshing = ref(false)
 const cacheInfo = ref(dataManager.getCacheInfo())
@@ -116,25 +118,31 @@ const refreshData = async () => {
     if (isRefreshing.value) return
     
     isRefreshing.value = true
-    const loadingMessage = message.loading('正在获取最新数据...', { duration: 0 })
+    
+    // 优先使用全局loading，不可用时使用message loading作为备用方案
+    let loadingMsg = null
+    if (globalLoading && globalLoading.show) {
+        globalLoading.show('正在获取最新数据...')
+    } else {
+        loadingMsg = message.loading('正在获取最新数据...', { duration: 0 })
+    }
     
     try {
-        // 刷新数据管理器的数据
         await dataManager.refreshData()
-        // 重新加载菜单
         await reloadMenus()
         
-        loadingMessage.destroy()
         message.success('数据刷新成功！')
-        
-        // 更新缓存信息显示
         cacheInfo.value = dataManager.getCacheInfo()
-        console.log('Data refreshed:', cacheInfo.value)
     } catch (error) {
         console.error('Failed to refresh data:', error)
-        loadingMessage.destroy()
         message.error('数据刷新失败，请稍后重试')
     } finally {
+        // 隐藏loading
+        if (globalLoading && globalLoading.hide) {
+            globalLoading.hide()
+        } else if (loadingMsg) {
+            loadingMsg.destroy()
+        }
         isRefreshing.value = false
     }
 }
@@ -212,6 +220,7 @@ const handleLogout = () => {
     from {
         transform: rotate(0deg);
     }
+
     to {
         transform: rotate(360deg);
     }
@@ -486,10 +495,13 @@ const handleLogout = () => {
 
 /* 动画 */
 @keyframes gentle-pulse {
-    0%, 100% {
+
+    0%,
+    100% {
         transform: scale(1);
         opacity: 1;
     }
+
     50% {
         transform: scale(1.05);
         opacity: 0.8;
@@ -513,6 +525,7 @@ const handleLogout = () => {
         opacity: 0;
         transform: translateY(30px);
     }
+
     to {
         opacity: 1;
         transform: translateY(0);

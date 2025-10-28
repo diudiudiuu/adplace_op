@@ -167,6 +167,11 @@ class DataManager {
         console.log('DataManager: All data cleared')
     }
 
+    // 获取缓存的服务器数据（同步方法，不触发API调用）
+    getCachedServerData(): any[] {
+        return this.serverData
+    }
+
     // 获取缓存状态信息
     getCacheInfo(): { hasCache: boolean; age?: number; count: number } {
         const timestamp = localStorage.getItem(this.SERVER_DATA_TIMESTAMP_KEY)

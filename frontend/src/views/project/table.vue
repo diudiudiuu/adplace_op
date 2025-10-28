@@ -32,6 +32,24 @@
         <n-modal v-model:show="isFormVisible" preset="dialog" :title="isEditMode ? '编辑' : '添加'"
             style="width: 600px; max-width: 90vw;">
             <n-form :model="formData" label-placement="left" label-width="180">
+                <!-- 一键填写按钮 - 只在添加客户套餐时显示 -->
+                <n-form-item v-if="!isEditMode && isClientModel()">
+                    <template #label>
+                        <span style="color: #666;">快速填写</span>
+                    </template>
+                    <n-button type="info" @click="autoFillClientInfo" size="small">
+                        <template #icon>
+                            <n-icon>
+                                <CheckmarkOutline />
+                            </n-icon>
+                        </template>
+                        一键填写项目信息
+                    </n-button>
+                    <n-text depth="3" style="margin-left: 12px; font-size: 12px;">
+                        自动填写客户ID和端口信息
+                    </n-text>
+                </n-form-item>
+                
                 <n-form-item v-for="field in fields" :key="field" :label="field" v-if="shouldShowField(field)" required>
                     <template v-if="fieldsType[field]['type'] === 'enum'">
                         <n-radio-group v-model:value="formData[field]">
@@ -285,12 +303,39 @@ const handlePageSizeChange = (pageSize: number) => {
     pagination.value.page = 1 // 重置到第一页
 }
 
+// 判断是否为客户套餐管理
+const isClientModel = () => {
+    const result = props.model.constructor.name === 'Client' || 
+                   props.model.tableName === 'tb_client' ||
+                   (props.model.fields && props.model.fields.includes('client_id'))
+    
+    // 添加调试信息
+    console.log('isClientModel check:', {
+        constructorName: props.model.constructor.name,
+        tableName: props.model.tableName,
+        hasClientIdField: props.model.fields && props.model.fields.includes('client_id'),
+        result: result
+    })
+    
+    return result
+}
+
 // biome-ignore lint/suspicious/noExplicitAny: <explanation>
 const isPrimaryKey = (field: any) => field === primaryKey
 // biome-ignore lint/suspicious/noExplicitAny: <explanation>
 const shouldShowField = (field: any) => isEditMode.value || field !== primaryKey
 
 const openForm = async (editMode: boolean, row = {}) => {
+    console.log('openForm called:', {
+        editMode: editMode,
+        isClientModel: isClientModel(),
+        modelInfo: {
+            constructorName: props.model.constructor.name,
+            tableName: props.model.tableName,
+            fields: props.model.fields
+        }
+    })
+    
     // 如果是添加模式，检查是否达到最大记录数限制
     if (!editMode && isMaxRecordsReached.value) {
         message.warning(maxRecordsMessage.value)
@@ -312,7 +357,7 @@ const openForm = async (editMode: boolean, row = {}) => {
     }
     if (!editMode) {
         // 如果是套餐管理且是添加模式，先获取项目信息设置默认端口
-        if (props.model.constructor.name === 'Client') {
+        if (isClientModel()) {
             await setDefaultPortsFromProject()
         }
         
@@ -324,7 +369,7 @@ const openForm = async (editMode: boolean, row = {}) => {
                     continue
                 }
                 // 如果是client_id字段，设置为项目ID
-                if (field === 'client_id' && props.model.constructor.name === 'Client') {
+                if (field === 'client_id' && isClientModel()) {
                     formData.value[field] = props.projectId
                 } else {
                     formData.value[field] = fieldsType[field].value
@@ -466,6 +511,67 @@ const handleChange = async (field: string) => {
     }
 }
 
+// 一键填写客户信息 - 只使用本地缓存数据
+const autoFillClientInfo = () => {
+    try {
+        // 设置基本默认值
+        formData.value.client_id = props.projectId
+        formData.value.api_port = '9000'
+        formData.value.front_port = '3000'
+        
+        console.log('一键填写：设置基本默认值', {
+            client_id: formData.value.client_id,
+            api_port: formData.value.api_port,
+            front_port: formData.value.front_port
+        })
+        
+        // 从本地缓存获取项目信息（不进行API调用）
+        const cachedServers = dataManager.getCachedServerData()
+        let projectInfo = null
+        
+        // 在缓存的服务器数据中查找项目信息
+        for (const server of cachedServers) {
+            if (server.project_list && Array.isArray(server.project_list)) {
+                const project = server.project_list.find((p: any) => p.project_id === props.projectId)
+                if (project) {
+                    projectInfo = project
+                    break
+                }
+            }
+        }
+        
+        console.log('从缓存获取的项目信息:', projectInfo)
+        
+        if (projectInfo) {
+            // 使用缓存中的端口信息
+            if (projectInfo.api_port && String(projectInfo.api_port).trim() !== '') {
+                formData.value.api_port = String(projectInfo.api_port).trim()
+                console.log('一键填写：从缓存更新API端口', formData.value.api_port)
+            }
+            
+            if (projectInfo.front_port && String(projectInfo.front_port).trim() !== '') {
+                formData.value.front_port = String(projectInfo.front_port).trim()
+                console.log('一键填写：从缓存更新前端端口', formData.value.front_port)
+            }
+            
+            message.success('项目信息填写完成！')
+        } else {
+            console.log('缓存中未找到项目信息，使用默认配置')
+            message.info('使用默认端口配置')
+        }
+        
+        console.log('一键填写完成:', {
+            client_id: formData.value.client_id,
+            api_port: formData.value.api_port,
+            front_port: formData.value.front_port
+        })
+        
+    } catch (error) {
+        console.error('一键填写失败:', error)
+        message.error('填写失败，请手动输入')
+    }
+}
+
 // 从项目信息设置默认端口
 const setDefaultPortsFromProject = async () => {
     try {
@@ -505,15 +611,15 @@ const setDefaultPortsFromProject = async () => {
 
 // 获取字段占位符
 const getFieldPlaceholder = (field: string) => {
-    if (props.model.constructor.name === 'Client') {
+    if (isClientModel()) {
         if (field === 'client_id') {
-            return isEditMode.value ? '请输入客户ID' : '默认使用项目ID'
+            return isEditMode.value ? '请输入客户ID' : '点击上方"一键填写"按钮自动填写'
         }
         if (field === 'api_port') {
-            return isEditMode.value ? '请输入API端口' : '默认使用项目API端口'
+            return isEditMode.value ? '请输入API端口' : '点击上方"一键填写"按钮自动填写'
         }
         if (field === 'front_port') {
-            return isEditMode.value ? '请输入前端端口' : '默认使用项目前端端口'
+            return isEditMode.value ? '请输入前端端口' : '点击上方"一键填写"按钮自动填写'
         }
     }
     return `请输入${field}`

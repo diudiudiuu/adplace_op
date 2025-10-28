@@ -2,6 +2,7 @@ package main
 
 import (
 	"adsplat/services"
+	"adsplat/utils"
 	"context"
 	"encoding/base64"
 	"encoding/json"
@@ -2075,4 +2076,9 @@ func (a *App) OpenDirectory(directoryPath string) string {
 	response := ApiResponse{Code: 200, Msg: "目录已打开"}
 	result, _ := json.Marshal(response)
 	return string(result)
+}
+
+// Base64Md5 密码加密 - 先base64，然后MD5
+func (a *App) Base64Md5(params string) string {
+	return utils.Base64Md5(params)
 }

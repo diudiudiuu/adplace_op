@@ -32,6 +32,11 @@ class AuthUser extends Base {
             password: {
                 type: 'string',
                 value: '',
+                disabled: true,
+                button: {
+                    text: '生成新密码',
+                    action: 'generateNewPassword',
+                },
             },
             level: {
                 type: 'enum',

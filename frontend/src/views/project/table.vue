@@ -106,6 +106,31 @@
                 </n-space>
             </template>
         </n-modal>
+
+        <!-- 密码生成对话框 -->
+        <n-modal v-model:show="isPasswordModalVisible" preset="dialog" title="生成新密码" style="width: 450px;">
+            <n-form label-placement="left" label-width="100">
+                <n-form-item label="新密码" required>
+                    <n-input-group>
+                        <n-input 
+                            v-model:value="newPassword" 
+                            placeholder="请输入新密码" 
+                            :maxlength="10"
+                            show-count
+                        />
+                        <n-button type="info" @click="generateRandomPassword">
+                            随机6位
+                        </n-button>
+                    </n-input-group>
+                </n-form-item>
+            </n-form>
+            <template #action>
+                <n-space>
+                    <n-button @click="cancelPasswordGeneration">取消</n-button>
+                    <n-button type="primary" @click="saveAndCopyPassword" :disabled="!newPassword.trim()">保存并复制</n-button>
+                </n-space>
+            </template>
+        </n-modal>
     </div>
 </template>
 
@@ -178,6 +203,11 @@ const tableData = ref([])
 const formData = ref({})
 const isFormVisible = ref(false)
 const isEditMode = ref(false)
+
+// 密码生成相关状态
+const isPasswordModalVisible = ref(false)
+const newPassword = ref('')
+const currentPasswordField = ref('')
 
 const fields = props.model.fields
 const fieldsType = props.model.fieldsType
@@ -444,6 +474,17 @@ const handleClick = async (field: string) => {
     console.log('handleClick called for field:', field)
     
     const fieldConfig = fieldsType[field]
+    
+    // 处理生成新密码
+    if (fieldConfig && fieldConfig['button'] && fieldConfig['button']['action'] === 'generateNewPassword') {
+        console.log('Generate new password button clicked for field:', field)
+        currentPasswordField.value = field
+        newPassword.value = ''
+        isPasswordModalVisible.value = true
+        return
+    }
+    
+    // 处理生成License Key
     if (fieldConfig && fieldConfig['button'] && fieldConfig['button']['action'] === 'generateLicenseKey') {
         console.log('Generating license key via button click, expire_time:', formData.value.expire_time)
         
@@ -606,6 +647,58 @@ const setDefaultPortsFromProject = async () => {
         formData.value.api_port = '9000'
         formData.value.front_port = '3000'
         message.warning('获取项目端口信息失败，使用默认值')
+    }
+}
+
+// 生成随机密码 - 6位半角英数字
+const generateRandomPassword = () => {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'
+    let result = ''
+    for (let i = 0; i < 6; i++) {
+        result += chars.charAt(Math.floor(Math.random() * chars.length))
+    }
+    newPassword.value = result
+    console.log('Generated random password:', result)
+}
+
+// 取消密码生成
+const cancelPasswordGeneration = () => {
+    isPasswordModalVisible.value = false
+    newPassword.value = ''
+    currentPasswordField.value = ''
+}
+
+// 保存并复制密码
+const saveAndCopyPassword = async () => {
+    if (!newPassword.value.trim()) {
+        message.warning('请输入新密码')
+        return
+    }
+    
+    try {
+        // 先复制明文密码到剪贴板
+        const plainPassword = newPassword.value
+        await navigator.clipboard.writeText(plainPassword)
+        
+        // 调用后端加密API
+        console.log('Calling base64_md5 API with password:', plainPassword)
+        const encryptedPassword = await api('base64_md5', { params: plainPassword })
+        
+        console.log('Encrypted password:', encryptedPassword)
+        
+        // 将加密后的密码设置到表单字段
+        formData.value[currentPasswordField.value] = encryptedPassword
+        
+        // 关闭对话框
+        isPasswordModalVisible.value = false
+        newPassword.value = ''
+        currentPasswordField.value = ''
+        
+        message.success('密码已生成并复制到剪贴板')
+        
+    } catch (error) {
+        console.error('Password encryption failed:', error)
+        message.error('密码加密失败: ' + error.message)
     }
 }
 

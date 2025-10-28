@@ -84,6 +84,7 @@ const apiMap: Record<string, (data: any) => Promise<string>> = {
     'save_zip_to_directory': (data: any) => window.go!.main!.App!.SaveZipToDirectory(data.sourcePath, data.targetDirectory, data.fileName),
     'open_directory': (data: any) => window.go!.main!.App!.OpenDirectory(data.path),
     'stop_capture': (data: any) => window.go!.main!.App!.StopCapture(),
+    'base64_md5': (data: any) => window.go!.main!.App!.Base64Md5(data.params),
 };
 
 // API 调用函数 - 纯净的 API 调用，不处理 loading
@@ -99,6 +100,14 @@ const api = async (uri: string, data: any) => {
         // 检查授权
         if (!isAuthorized()) {
             return uri === 'list' ? [] : {};
+        }
+
+        // 特殊处理 base64_md5 API - 直接调用，返回字符串
+        if (uri === 'base64_md5') {
+            console.log(`API ${uri}: Direct call for string result`);
+            const result = await window.go!.main!.App!.Base64Md5(data.params);
+            console.log(`API ${uri}: Direct result:`, result);
+            return result;
         }
 
         // 准备请求数据
@@ -160,6 +169,12 @@ const api = async (uri: string, data: any) => {
         // 处理 list API
         if (uri === 'list' || uri === 'server_list') {
             return Array.isArray(parsedData) ? parsedData : [];
+        }
+
+        // 处理加密API - 直接返回字符串结果（在解密逻辑之前处理）
+        if (uri === 'base64_md5') {
+            console.log('base64_md5 API response:', parsedData);
+            return parsedData;
         }
 
         // 处理服务器管理API和SSH测试API

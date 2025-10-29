@@ -2,12 +2,7 @@
     <n-layout class="login-layout">
         <n-layout-content class="login-content">
             <n-space justify="center" align="center" style="height: 100vh">
-                <n-card 
-                    class="login-card"
-                    :bordered="true"
-                    size="large"
-                    style="width: 400px; max-width: 90vw"
-                >
+                <n-card class="login-card" :bordered="true" size="large" style="width: 400px; max-width: 90vw">
                     <template #header>
                         <n-space justify="center">
                             <div class="hero-avatar">
@@ -18,25 +13,16 @@
                         <n-h2 style="text-align: center; margin: 16px 0 8px 0">
                             欢迎回来
                         </n-h2>
-                        <p style="text-align: center; margin: 0; color: #7f8c8d; font-size: 14px;">
+                        <p
+                            style="text-align: center; margin: 0; color: #2d3748; font-size: 14px; font-weight: 500; text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);">
                             请输入授权密钥和验证码以继续
                         </p>
                     </template>
-                    
-                    <n-form 
-                        size="large" 
-                        @submit.prevent="submitForm"
-                        :show-label="false"
-                    >
+
+                    <n-form size="large" @submit.prevent="submitForm" :show-label="false">
                         <n-form-item>
-                            <n-input 
-                                type="password" 
-                                placeholder="请输入您的专属授权密钥" 
-                                v-model:value="param.authorization" 
-                                size="large"
-                                show-password-on="mousedown"
-                                clearable
-                            >
+                            <n-input type="password" placeholder="请输入您的专属授权密钥" v-model:value="param.authorization"
+                                size="large" show-password-on="mousedown" clearable>
                                 <template #prefix>
                                     <n-icon>
                                         <LockClosedOutline />
@@ -44,18 +30,11 @@
                                 </template>
                             </n-input>
                         </n-form-item>
-                        
+
                         <n-form-item>
                             <div class="captcha-row">
-                                <n-input 
-                                    type="text" 
-                                    placeholder="请输入验证码" 
-                                    v-model:value="param.captcha" 
-                                    size="large"
-                                    clearable
-                                    maxlength="4"
-                                    class="captcha-input"
-                                >
+                                <n-input type="text" placeholder="请输入验证码" v-model:value="param.captcha" size="large"
+                                    clearable maxlength="4" class="captcha-input">
                                     <template #prefix>
                                         <n-icon>
                                             <ShieldCheckmarkOutline />
@@ -65,14 +44,8 @@
                                 <Captcha @change="onCaptchaChange" ref="captchaRef" />
                             </div>
                         </n-form-item>
-                        
-                        <n-button 
-                            type="primary" 
-                            size="large" 
-                            @click="submitForm" 
-                            block
-                            :loading="loading"
-                        >
+
+                        <n-button type="primary" size="large" @click="submitForm" block :loading="loading">
                             开始我的数字之旅
                         </n-button>
                     </n-form>
@@ -127,15 +100,15 @@ const submitForm = async () => {
 
     loading.value = true
     const loadingMessage = message.loading('正在为您开启美好体验...', { duration: 0 })
-    
+
     try {
         // 模拟验证过程
         await new Promise(resolve => setTimeout(resolve, 1000))
-        
+
         loadingMessage.destroy()
         setAuthorization(param.authorization)
         message.success('欢迎回来！准备开始您的精彩旅程')
-        
+
         await new Promise(resolve => setTimeout(resolve, 500))
         await router.push('/')
     } catch (error) {
@@ -150,27 +123,31 @@ const submitForm = async () => {
 <style scoped>
 .login-layout {
     height: 100vh;
-    background-image: url('@/assets/img/login-bg.jpg');
-    background-size: cover;
-    background-position: center;
-    background-repeat: no-repeat;
-    background-attachment: fixed;
+    width: 100vw;
+    background-image: url('@/assets/img/login-bg.jpg') !important;
+    background-size: cover !important;
+    background-position: center center !important;
+    background-repeat: no-repeat !important;
+    background-attachment: fixed !important;
+    position: relative;
+    overflow: hidden;
 }
 
 .login-content {
     height: 100%;
-    background: rgba(0, 0, 0, 0.3);
-    backdrop-filter: blur(2px);
-    -webkit-backdrop-filter: blur(2px);
+    width: 100%;
+    background: transparent;
+    position: relative;
+    z-index: 1;
 }
 
 .login-card {
     border-radius: 16px !important;
-    background: rgba(255, 255, 255, 0.95) !important;
-    backdrop-filter: blur(20px) !important;
-    -webkit-backdrop-filter: blur(20px) !important;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3) !important;
-    border: 1px solid rgba(255, 255, 255, 0.8) !important;
+    background: rgba(255, 255, 255, 0.4) !important;
+    backdrop-filter: blur(8px) !important;
+    -webkit-backdrop-filter: blur(8px) !important;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15) !important;
+    border: 1px solid rgba(255, 255, 255, 0.3) !important;
 }
 
 :deep(.n-card-header) {
@@ -192,8 +169,9 @@ const submitForm = async () => {
 }
 
 :deep(.n-h2) {
-    font-weight: 600;
-    color: #2c3e50;
+    font-weight: 700;
+    color: #1a202c;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
 /* 登录卡片动画 */
@@ -206,6 +184,7 @@ const submitForm = async () => {
         opacity: 0;
         transform: translateY(30px);
     }
+
     to {
         opacity: 1;
         transform: translateY(0);
@@ -214,18 +193,32 @@ const submitForm = async () => {
 
 /* 输入框样式优化 */
 :deep(.n-input) {
-    background: rgba(255, 255, 255, 0.9) !important;
-    border: 1px solid rgba(255, 255, 255, 0.6) !important;
+    background: rgba(255, 255, 255, 0.5) !important;
+    border: 1px solid rgba(255, 255, 255, 0.4) !important;
     border-radius: 8px !important;
+    backdrop-filter: blur(5px) !important;
+    -webkit-backdrop-filter: blur(5px) !important;
+    color: #1a202c !important;
+    font-weight: 500 !important;
+}
+
+:deep(.n-input .n-input__input-el) {
+    color: #1a202c !important;
+    font-weight: 500 !important;
+}
+
+:deep(.n-input .n-input__placeholder) {
+    color: #4a5568 !important;
+    font-weight: 400 !important;
 }
 
 :deep(.n-input:hover) {
-    background: rgba(255, 255, 255, 1) !important;
+    background: rgba(255, 255, 255, 0.6) !important;
     border-color: rgba(99, 102, 241, 0.5) !important;
 }
 
 :deep(.n-input.n-input--focus) {
-    background: rgba(255, 255, 255, 1) !important;
+    background: rgba(255, 255, 255, 0.7) !important;
     border-color: rgba(99, 102, 241, 0.8) !important;
     box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2) !important;
 }
@@ -281,16 +274,20 @@ const submitForm = async () => {
     from {
         transform: rotate(0deg);
     }
+
     to {
         transform: rotate(360deg);
     }
 }
 
 @keyframes gentle-pulse {
-    0%, 100% {
+
+    0%,
+    100% {
         transform: scale(1);
         opacity: 1;
     }
+
     50% {
         transform: scale(1.05);
         opacity: 0.8;
@@ -314,31 +311,37 @@ const submitForm = async () => {
     flex: 1;
 }
 
+/* 移除额外的背景层，使用主背景 */
+
 /* 响应式设计 */
 @media (max-width: 768px) {
     .login-layout {
         background-attachment: scroll;
     }
-    
+
+    .login-layout::before {
+        background-attachment: scroll;
+    }
+
     .login-card {
         margin: 20px !important;
         width: calc(100vw - 40px) !important;
         max-width: none !important;
     }
-    
+
     :deep(.n-card-header) {
         padding: 24px 24px 12px !important;
     }
-    
+
     :deep(.n-card__content) {
         padding: 12px 24px 24px !important;
     }
-    
+
     .avatar-image {
         width: 60px;
         height: 60px;
     }
-    
+
     .captcha-row {
         gap: 8px;
     }

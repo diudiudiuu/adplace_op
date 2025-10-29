@@ -121,7 +121,7 @@ class MenuManager {
     }
 
     // 加载菜单数据
-    async loadMenus(): Promise<Menus[]> {
+    async loadMenus(useExistingData = false): Promise<Menus[]> {
         // 如果正在加载，等待完成
         if (this.isLoading) {
             return new Promise((resolve) => {
@@ -155,8 +155,10 @@ class MenuManager {
 
         try {
             // 使用数据管理器获取服务器数据
-            const serverList = await dataManager.getServerData();
-            console.log('MenuManager: Received server list:', serverList);
+            const serverList = useExistingData
+                ? dataManager.getCachedServerData()
+                : await dataManager.getServerData();
+            console.log('MenuManager: Received server list:', serverList, 'useExistingData:', useExistingData);
 
             if (!Array.isArray(serverList) || serverList.length === 0) {
                 console.log('MenuManager: No server data available');
@@ -209,7 +211,7 @@ class MenuManager {
         if (!skipDataRefresh) {
             await dataManager.refreshData();
         }
-        return this.loadMenus();
+        return this.loadMenus(skipDataRefresh);
     }
 
     // 清除菜单（用于退出登录）
@@ -241,7 +243,7 @@ const menuManager = MenuManager.getInstance();
 
 // 兼容原有接口
 export const getMenus = () => menuManager.loadMenus();
-export const reloadMenus = () => menuManager.reloadMenus();
+export const reloadMenus = (skipDataRefresh = false) => menuManager.reloadMenus(skipDataRefresh);
 export const clearMenus = () => menuManager.clearMenus();
 export const getCurrentMenus = () => menuManager.getCurrentMenus();
 

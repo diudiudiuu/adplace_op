@@ -130,7 +130,9 @@ const refreshData = async () => {
     try {
         // welcome页面的刷新要求：不管前端后端是否过期，都要重新取最新数据
         // 使用forceRefresh=true强制刷新，清除前端缓存
-        await dataManager.refreshData()
+        const serverData = await dataManager.refreshData()
+        console.log('Welcome: Data refreshed, server count:', serverData.length)
+        
         // 重新加载菜单，但跳过数据刷新（因为上面已经刷新过了）
         await reloadMenus(true)
         

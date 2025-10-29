@@ -266,20 +266,13 @@ func (a *App) ProjectDelete(serverID, projectID, authorization, clientJson strin
 	return string(result)
 }
 
-// Exec 执行SQL (对应 Rust 的 exec 函数)
-func (a *App) Exec(projectID, sql, sqlType, authorization, clientJson string) string {
-	log.Printf("Exec called with projectID: %s, sql: %s, sqlType: %s, authorization: %s",
-		projectID, sql, sqlType, authorization)
+// ExecWithProjectURL 执行SQL（前端传递项目URL，避免后端查询KV）
+func (a *App) ExecWithProjectURL(projectAPIURL, sql, sqlType, authorization string) string {
+	log.Printf("ExecWithProjectURL called with projectAPIURL: %s, sql: %s, sqlType: %s",
+		projectAPIURL, sql, sqlType)
 
-	// 获取项目信息
-	project, err := a.jsonService.GetProjectByID(projectID, authorization, clientJson)
-	if err != nil {
-		log.Printf("Failed to get project info: %v", err)
-		return `{"code": 500, "msg": "Failed to get project info"}`
-	}
-
-	if project == nil {
-		return `{"code": 404, "msg": "Project not found"}`
+	if projectAPIURL == "" {
+		return `{"code": 400, "msg": "Project API URL is required"}`
 	}
 
 	// 加密 SQL
@@ -290,7 +283,7 @@ func (a *App) Exec(projectID, sql, sqlType, authorization, clientJson string) st
 	}
 
 	// 构建请求URL
-	apiURL := fmt.Sprintf("%s/dbexec", project.ProjectAPIURL)
+	apiURL := fmt.Sprintf("%s/dbexec", projectAPIURL)
 
 	// 准备表单数据
 	formData := url.Values{}

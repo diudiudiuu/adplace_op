@@ -6,7 +6,9 @@
                     <template #trigger>
                         <n-button type="primary" @click="handleParse">
                             <template #icon>
-                                <n-icon><ClipboardOutline /></n-icon>
+                                <n-icon>
+                                    <ClipboardOutline />
+                                </n-icon>
                             </template>
                             粘贴
                         </n-button>
@@ -17,7 +19,9 @@
                     <template #trigger>
                         <n-button type="info" @click="handleAnalyze" :disabled="isDisabled">
                             <template #icon>
-                                <n-icon><CodeOutline /></n-icon>
+                                <n-icon>
+                                    <CodeOutline />
+                                </n-icon>
                             </template>
                             解析
                         </n-button>
@@ -36,7 +40,9 @@
                 <template #trigger>
                     <n-button type="primary" @click="handleCancle">
                         <template #icon>
-                            <n-icon><ArrowBackOutline /></n-icon>
+                            <n-icon>
+                                <ArrowBackOutline />
+                            </n-icon>
                         </template>
                         返回
                     </n-button>
@@ -44,30 +50,20 @@
                 返回
             </n-tooltip>
             <n-divider />
-            <n-progress
-                type="line"
-                :percentage="progress"
-                :height="18"
-                :border-radius="4"
-                fill-border-radius="4"
-                processing
-            />
+            <n-progress type="line" :percentage="progress" :height="18" :border-radius="4" fill-border-radius="4"
+                processing />
             <n-divider />
-            <n-data-table
-                :columns="columns"
-                :data="tableData"
-                :pagination="false"
-            />
+            <n-data-table :columns="columns" :data="tableData" :pagination="false" />
         </div>
     </div>
 </template>
-  
+
 <script setup>
 import { ref, defineProps, computed, h } from 'vue'
 import { NButton, NIcon, NTag, NSpace } from 'naive-ui'
-import { 
-    ClipboardOutline, 
-    CodeOutline, 
+import {
+    ClipboardOutline,
+    CodeOutline,
     ArrowBackOutline,
     PlayOutline,
     TrashOutline
@@ -220,7 +216,6 @@ const handleExecute = async (row) => {
         projectId: props.projectId,
         sql: row.content,
         sqlType: 'insert',
-        authorization: localStorage.getItem('authorization'),
     })
         .then((res) => {
             if (res.code === 200) {
@@ -250,8 +245,8 @@ const handleCancle = async () => {
     isDisabled.value = true
 }
 </script>
-  
-  <style scoped>
+
+<style scoped>
 .terminal-pre {
     padding: 10px;
     border-radius: 8px;
@@ -271,4 +266,3 @@ const handleCancle = async () => {
     font-size: 12px;
 }
 </style>
-  

@@ -63,6 +63,7 @@ const apiMap: Record<string, (data: any) => Promise<string>> = {
     'project_form': (data: any) => window.go!.main!.App!.ProjectForm(data.serverId, data.projectInfo, data.authorization, data.client_json),
     'project_delete': (data: any) => window.go!.main!.App!.ProjectDelete(data.serverId, data.projectId, data.authorization, data.client_json),
     'exec': (data: any) => window.go!.main!.App!.Exec(data.projectId, data.sql, data.sqlType, data.authorization, data.client_json),
+    'exec_with_project_url': (data: any) => window.go!.main!.App!.ExecWithProjectURL(data.projectApiUrl, data.sql, data.sqlType, data.authorization),
     'test_401': () => window.go!.main!.App!.TestUnauthorized(),
     'cloudflare_get_dns': (data: any) => window.go!.main!.App!.CloudflareGetDNSRecords(data.api_token, data.zone_id, data.name || '', data.type || ''),
     'cloudflare_configure_dns': (data: any) => window.go!.main!.App!.CloudflareConfigureDNSRecord(data.api_token, data.zone_id, data.name, data.type, data.content, data.proxied || true),

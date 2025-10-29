@@ -21,7 +21,7 @@ export function CloudflarePagesGetDomains(arg1:string,arg2:string,arg3:string):P
 
 export function DownloadFile(arg1:string):Promise<string>;
 
-export function Exec(arg1:string,arg2:string,arg3:string,arg4:string,arg5:string):Promise<string>;
+export function ExecWithProjectURL(arg1:string,arg2:string,arg3:string,arg4:string):Promise<string>;
 
 export function GenerateProjectConfig(arg1:string,arg2:string,arg3:string):Promise<string>;
 

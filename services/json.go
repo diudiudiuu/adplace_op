@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"time"
 )
 
 // ServerData 服务器数据结构
@@ -36,19 +35,13 @@ type ProjectData struct {
 
 // JsonService JSON数据管理服务
 type JsonService struct {
-	kvService     *KvService
-	cache         []ServerData
-	cacheTime     int64
-	cacheDuration int64 // 缓存持续时间（毫秒）
+	kvService *KvService
 }
 
 // NewJsonService 创建JSON服务实例
 func NewJsonService() *JsonService {
 	return &JsonService{
-		kvService:     NewKvService(),
-		cache:         []ServerData{},
-		cacheTime:     0,
-		cacheDuration: 2 * 60 * 60 * 1000, // 2小时缓存（毫秒）
+		kvService: NewKvService(),
 	}
 }
 
@@ -58,26 +51,14 @@ func (s *JsonService) LoadJsonFile(authorization, clientJson string) ([]ServerDa
 	return servers, err
 }
 
-// LoadJsonFileWithResponse 加载JSON数据并返回KV响应
+// LoadJsonFileWithResponse 加载JSON数据并返回KV响应（无后端缓存，每次都从KV获取最新数据）
 func (s *JsonService) LoadJsonFileWithResponse(authorization, clientJson string) ([]ServerData, *KvResponse, error) {
 	log.Printf("LoadJsonFileWithResponse called with authorization: %s, clientJson: %s", authorization, clientJson)
 
-	// 检查缓存是否有效
-	currentTime := time.Now().UnixMilli()
-	if s.cacheTime > 0 && (currentTime-s.cacheTime) < s.cacheDuration && len(s.cache) > 0 {
-		log.Printf("Using cached data, age: %d ms", currentTime-s.cacheTime)
-		return s.cache, nil, nil
-	}
-
-	log.Printf("Cache expired or empty, fetching from KV store")
+	log.Printf("Fetching data from KV store (no backend cache)")
 	resp, err := s.kvService.GetKey(clientJson, authorization)
 	if err != nil {
 		log.Printf("Failed to get KV data: %v", err)
-		// 如果有缓存数据，返回缓存数据
-		if len(s.cache) > 0 {
-			log.Printf("Returning cached data due to KV error")
-			return s.cache, nil, err
-		}
 		return []ServerData{}, nil, err
 	}
 
@@ -127,10 +108,7 @@ func (s *JsonService) LoadJsonFileWithResponse(authorization, clientJson string)
 			s.SaveJsonFile(servers, authorization, clientJson)
 		}
 
-		// 更新缓存
-		s.cache = servers
-		s.cacheTime = time.Now().UnixMilli()
-		log.Printf("Successfully loaded %d servers and updated cache", len(servers))
+		log.Printf("Successfully loaded %d servers (no backend cache)", len(servers))
 		return servers, resp, nil
 	}
 
@@ -138,10 +116,7 @@ func (s *JsonService) LoadJsonFileWithResponse(authorization, clientJson string)
 	log.Printf("No data found, creating empty data")
 	emptyData := []ServerData{}
 	s.SaveJsonFile(emptyData, authorization, clientJson)
-	
-	// 更新缓存
-	s.cache = emptyData
-	s.cacheTime = time.Now().UnixMilli()
+
 	return emptyData, resp, nil
 }
 
@@ -156,20 +131,12 @@ func (s *JsonService) SaveJsonFile(data []ServerData, authorization, clientJson 
 	log.Printf("Saving JSON data: %s", string(jsonData))
 
 	_, err = s.kvService.UpdateKey(clientJson, string(jsonData), authorization)
-	
-	// 清除缓存，强制下次重新获取
-	if err == nil {
-		s.clearCache()
-		log.Printf("Cache cleared after successful save")
-	}
-	
-	return err
-}
 
-// clearCache 清除缓存
-func (s *JsonService) clearCache() {
-	s.cache = []ServerData{}
-	s.cacheTime = 0
+	if err == nil {
+		log.Printf("Data saved successfully (no backend cache to clear)")
+	}
+
+	return err
 }
 
 // GetServerByID 根据ID获取服务器信息

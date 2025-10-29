@@ -291,11 +291,17 @@ const columns = computed(() => {
 const fetchData = async () => {
     globalLoading.show('正在加载数据...')
     try {
-        const res = await api('exec', {
-            projectId: props.projectId,
+        // 从缓存获取项目信息，避免后端查询KV
+        const projectInfo = await dataManager.getProjectById(props.projectId)
+        if (!projectInfo || !projectInfo.project_api_url) {
+            message.error('无法获取项目信息')
+            return
+        }
+
+        const res = await api('exec_with_project_url', {
+            projectApiUrl: projectInfo.project_api_url,
             sql: props.model.selects(),
             sqlType: 'selects',
-            authorization: localStorage.getItem('authorization'),
         })
         if (res.code === 200) {
             tableData.value = res.data.result || []
@@ -434,11 +440,19 @@ const confirmDelete = (row: any) => {
 const deleteEntry = async (row: any) => {
     globalLoading.show('正在删除数据...')
     props.model.formData = row
-    const res = await api('exec', {
-        projectId: props.projectId,
+    
+    // 从缓存获取项目信息，避免后端查询KV
+    const projectInfo = await dataManager.getProjectById(props.projectId)
+    if (!projectInfo || !projectInfo.project_api_url) {
+        message.error('无法获取项目信息')
+        globalLoading.hide()
+        return
+    }
+    
+    const res = await api('exec_with_project_url', {
+        projectApiUrl: projectInfo.project_api_url,
         sql: props.model.delete(),
         sqlType: 'delete',
-        authorization: localStorage.getItem('authorization'),
     })
     if (res.code === 200) {
         message.success('删除成功')
@@ -453,11 +467,19 @@ const submitForm = async (action: string) => {
     globalLoading.show(action === 'insert' ? '正在添加数据...' : '正在更新数据...')
     isFormVisible.value = false
     props.model.formData = formData.value
-    const res = await api('exec', {
-        projectId: props.projectId,
+    
+    // 从缓存获取项目信息，避免后端查询KV
+    const projectInfo = await dataManager.getProjectById(props.projectId)
+    if (!projectInfo || !projectInfo.project_api_url) {
+        message.error('无法获取项目信息')
+        globalLoading.hide()
+        return
+    }
+    
+    const res = await api('exec_with_project_url', {
+        projectApiUrl: projectInfo.project_api_url,
         sql: action === 'insert' ? props.model.insert() : props.model.update(),
         sqlType: action,
-        authorization: localStorage.getItem('authorization'),
     })
     if (res.code !== 200) {
         message.error(action === 'insert' ? '添加失败' : '编辑失败')

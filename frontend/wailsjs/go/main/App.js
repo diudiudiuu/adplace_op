@@ -42,8 +42,8 @@ export function DownloadFile(arg1) {
   return window['go']['main']['App']['DownloadFile'](arg1);
 }
 
-export function Exec(arg1, arg2, arg3, arg4, arg5) {
-  return window['go']['main']['App']['Exec'](arg1, arg2, arg3, arg4, arg5);
+export function ExecWithProjectURL(arg1, arg2, arg3, arg4) {
+  return window['go']['main']['App']['ExecWithProjectURL'](arg1, arg2, arg3, arg4);
 }
 
 export function GenerateProjectConfig(arg1, arg2, arg3) {

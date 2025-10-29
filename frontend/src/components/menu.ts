@@ -201,12 +201,14 @@ class MenuManager {
     }
 
     // 重新加载菜单（用于授权后刷新）
-    async reloadMenus(): Promise<Menus[]> {
+    async reloadMenus(skipDataRefresh = false): Promise<Menus[]> {
         this.hasLoaded = false;
         this.menus = [];
         this.clearCache(); // 清除缓存
-        // 同时刷新数据管理器的数据
-        await dataManager.refreshData();
+        // 只有在需要时才刷新数据管理器的数据
+        if (!skipDataRefresh) {
+            await dataManager.refreshData();
+        }
         return this.loadMenus();
     }
 

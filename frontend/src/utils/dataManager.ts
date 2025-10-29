@@ -2,6 +2,7 @@ import api from '@/api'
 import { isAuthorized } from '@/utils/auth'
 
 // 数据管理器 - 统一管理服务器数据的缓存和获取
+// 注意：缓存只在前端进行，后端每次都从KV服务获取最新数据
 class DataManager {
     private static instance: DataManager
     private serverData: any[] = []
@@ -13,35 +14,56 @@ class DataManager {
 
     static getInstance(): DataManager {
         if (!DataManager.instance) {
+            console.log('DataManager: Creating new instance')
             DataManager.instance = new DataManager()
             // 初始化时尝试从缓存加载
             DataManager.instance.loadFromCache()
+        } else {
+            console.log('DataManager: Returning existing instance')
         }
         return DataManager.instance
     }
 
     // 从缓存加载数据
     private loadFromCache(): void {
+        console.log('DataManager: loadFromCache called')
         try {
             const cachedData = localStorage.getItem(this.SERVER_DATA_CACHE_KEY)
             const cachedTimestamp = localStorage.getItem(this.SERVER_DATA_TIMESTAMP_KEY)
+            
+            console.log('DataManager: Cache check', {
+                hasCachedData: !!cachedData,
+                hasCachedTimestamp: !!cachedTimestamp,
+                cachedDataLength: cachedData ? cachedData.length : 0
+            })
 
             if (cachedData && cachedTimestamp) {
                 const timestamp = parseInt(cachedTimestamp)
                 const now = Date.now()
+                const age = now - timestamp
+                
+                console.log('DataManager: Cache age check', {
+                    timestamp,
+                    now,
+                    age,
+                    cacheDuration: this.CACHE_DURATION,
+                    isExpired: age >= this.CACHE_DURATION
+                })
 
                 // 检查缓存是否过期
-                if (now - timestamp < this.CACHE_DURATION) {
+                if (age < this.CACHE_DURATION) {
                     this.serverData = JSON.parse(cachedData)
                     this.hasLoaded = true
                     console.log('DataManager: Loaded server data from cache', {
                         count: this.serverData.length,
-                        age: Math.round((now - timestamp) / 1000 / 60) + ' minutes'
+                        age: Math.round(age / 1000 / 60) + ' minutes'
                     })
                 } else {
                     console.log('DataManager: Cache expired, will reload')
                     this.clearCache()
                 }
+            } else {
+                console.log('DataManager: No cache data found')
             }
         } catch (error) {
             console.error('DataManager: Failed to load from cache:', error)
@@ -71,14 +93,24 @@ class DataManager {
 
     // 获取服务器数据（优先使用缓存）
     async getServerData(forceRefresh = false): Promise<any[]> {
+        console.log('DataManager: getServerData called', {
+            forceRefresh,
+            hasLoaded: this.hasLoaded,
+            isLoading: this.isLoading,
+            cacheCount: this.serverData.length,
+            isAuthorized: isAuthorized()
+        })
+
         // 如果强制刷新，清除缓存状态
         if (forceRefresh) {
+            console.log('DataManager: Force refresh requested, clearing cache')
             this.hasLoaded = false
             this.clearCache()
         }
 
         // 如果正在加载，等待完成
         if (this.isLoading) {
+            console.log('DataManager: Already loading, waiting...')
             return new Promise((resolve) => {
                 const checkLoading = () => {
                     if (!this.isLoading) {
@@ -93,7 +125,9 @@ class DataManager {
 
         // 如果已经加载过且不是强制刷新，直接返回缓存数据
         if (this.hasLoaded && !forceRefresh) {
-            console.log('DataManager: Returning cached server data')
+            console.log('DataManager: Returning cached server data', {
+                count: this.serverData.length
+            })
             return Promise.resolve(this.serverData)
         }
 
@@ -197,7 +231,5 @@ class DataManager {
 }
 
 // 导出单例实例
-const dataManager = DataManager.getInstance()
-
-export default dataManager
+export default DataManager.getInstance()
 export { DataManager }
